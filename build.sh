@@ -179,8 +179,10 @@ build_jruby_truffle() {
 	# http://lafo.ssw.uni-linz.ac.at/graalvm/jruby/doc/
 	# to run the vm:
 	#JAVACMD=${wrkdir}/graal/jdk1.8.0-internal/product/bin/java ${wrkdir}/jruby/bin/jruby -X+T -J-server ...
-	# To check graal is enabled:
-	# puts Truffle.graal?
+
+	echo "--> Check graal is enabled in JRuby+Truffle"
+	graal_en=`JAVACMD=${wrkdir}/graal/jdk1.8.0-internal/product/bin/java ${wrkdir}/jruby/bin/jruby -X+T -J-server -e "puts Truffle.graal?"`
+	if ! [ "${graal_en}" = "true" ]; then echo "graal was not enabled!!!" && exit 1; fi
 }
 
 
