@@ -150,15 +150,37 @@ build_jdk() {
 	PATH=${JDK_BUILD_PATH} make all || exit $?
 }
 
+# XXX read more into the SERVER versions. Are we using the right one?
 MX="PATH=${wrkdir}/graal/mxtool:${PATH} EXTRA_JAVA_HOMES=/usr/lib/jvm/java-7-openjdk-amd64 JAVA_HOME=${wrkdir}/openjdk/build/linux-x86_64-normal-server-release/images/j2sdk-image/ DEFAULT_VM=server mx"
 build_graal() {
 	echo "\n===> Download and build graal\n"
+	if [ -f ${wrkdir}/graal/jdk1.8.0-internal/product/bin/javac ]; then return; fi
 	cd ${wrkdir}
 	if ! [ -d ${wrkdir}/graal ]; then
 		hg clone http://hg.openjdk.java.net/graal/graal || exit $?
 	fi
 	cd graal
 	env ${MX} build
+	# '${MX} vm' runs the vm
+}
+
+
+JRUBY_V=828fad30c11c1254d184b8b72d56ae9918fecdb9
+build_jruby_truffle() {
+	cd ${wrkdir}
+	if ! [ -d ${wrkdir}/jruby ]; then
+		git clone https://github.com/jruby/jruby.git || exit $?
+	fi
+	cd ${wrkdir}/jruby || exit $?
+	git checkout ${JRUBY_V} || exit $?
+	./mvnw || exit $?
+	GRAAL_BIN=${wrkdir}/graal/jdk1.8.0-internal/product/bin/java ${wrkdir}/jruby/bin/jruby ${wrkdir}/jruby/tool/jt.rb build || exit $?
+
+	# http://lafo.ssw.uni-linz.ac.at/graalvm/jruby/doc/
+	# to run the vm:
+	#JAVACMD=${wrkdir}/graal/jdk1.8.0-internal/product/bin/java ${wrkdir}/jruby/bin/jruby -X+T -J-server ...
+	# To check graal is enabled:
+	# puts Truffle.graal?
 }
 
 
@@ -210,3 +232,4 @@ build_v8
 build_gmake
 build_jdk
 build_graal
+build_jruby_truffle
