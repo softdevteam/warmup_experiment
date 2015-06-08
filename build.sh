@@ -1,5 +1,7 @@
 #! /bin/sh
 
+# This assumes a linux x86_64 machine. We used Debian 8.
+
 missing=0
 check_for () {
 	which $1 > /dev/null 2> /dev/null
@@ -32,6 +34,7 @@ if [ $? -eq 0 ]; then
 else
     MYMAKE=make
 fi
+check_for bash
 
 if [ $missing -eq 1 ]; then
     exit 1
@@ -69,17 +72,17 @@ build_luajit() {
 	$MYMAKE || exit $?
 }
 
+PYPYV=2.6.0
 build_pypy() {
 	cd ${wrkdir} || exit $?
-	echo "\n===> Download PyPy\n"
-	PYPYV=2.3.1
+	echo "\n===> Download and build PyPy\n"
+	if [ -f ${wrkdir}/pypy/pypy/goal/pypy-c ]; then return; fi
 	wget https://bitbucket.org/pypy/pypy/downloads/pypy-${PYPYV}-src.tar.bz2 || exit $?
 	bunzip2 -c - pypy-${PYPYV}-src.tar.bz2 | tar xf -
 	mv pypy-${PYPYV}-src pypy
 	cd pypy/pypy/goal/
-	echo "\n===> Build normal PyPy\n"
 	usession=`mktemp -d`
-	PYPY_USESSION_DIR=$usession $PYTHON ../../rpython/bin/rpython -Ojit --output=pypy || exit $?
+	PYPY_USESSION_DIR=$usession $PYTHON ../../rpython/bin/rpython -Ojit || exit $?
 	rm -rf $usession
 }
 
@@ -112,6 +115,35 @@ build_v8() {
 	PATH=${OLDPATH}
 }
 
+# There is a bug in the JDK8 build system which makes it incompatible with GNU make 4
+# http://stackoverflow.com/questions/21246042/scrambled-arguments-when-building-openjdk
+# Let's build 3.82 then.
+GMAKE_V=3.82
+build_gmake() {
+	echo "\n===> Download and build gmake-${GMAKE_V}\n"
+	if [ -f ${wrkdir}/make-${GMAKE_V}/make ]; then return; fi
+	cd ${wrkdir} || exit $?
+	wget http://ftp.gnu.org/gnu/make/make-${GMAKE_V}.tar.gz || exit $?
+	tar zxvf make-${GMAKE_V}.tar.gz || exit $?
+	cd make-${GMAKE_V} || exit $?
+	./configure || exit $?
+	make || exit $?
+}
+
+JDK_DIST=openjdk-8-src-b132-03_mar_2014.zip
+build_jdk() {
+	echo "\n===> Download and build JDK8\n"
+	if [ -f ${wrkdir}/openjdk/build/linux-x86_64-normal-server-release/jdk/bin/javac ]; then return; fi
+	cd ${wrkdir} || exit $?
+	if ! [ -f "${wrkdir}/openjdk-8-src-b132-03_mar_2014.zip" ]; then
+		wget http://www.java.net/download/openjdk/jdk8/promoted/b132/${JDK_DIST} || exit $?
+	fi
+	unzip ${JDK_DIST} || exit $?
+	cd openjdk || exit $?
+	JDK_BUILD_PATH=${wrkdir}/make-${GMAKE_V}:${PATH}
+	PATH=${JDK_BUILD_PATH} bash configure || exit $?
+	PATH=${JDK_BUILD_PATH} make || exit $?
+}
 
 fetch_external_benchmarks() {
 	echo "\n===> Download and build misc benchmarks\n"
@@ -156,5 +188,7 @@ EOF
 
 build_cpython
 build_luajit
-#build_pypy
+build_pypy
 build_v8
+build_gmake
+build_jdk
