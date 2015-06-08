@@ -26,8 +26,13 @@ if [ $? -eq 0 ]; then
 else
     PYTHON=`which python2.7`
 fi
+
+# java versions need to be jdk7
+# we will build a jdk 8 later.
+# graal build needs both of these!
 check_for java
 check_for javac
+
 which gmake > /dev/null 2> /dev/null
 if [ $? -eq 0 ]; then
     MYMAKE=gmake
@@ -142,8 +147,20 @@ build_jdk() {
 	cd openjdk || exit $?
 	JDK_BUILD_PATH=${wrkdir}/make-${GMAKE_V}:${PATH}
 	PATH=${JDK_BUILD_PATH} bash configure || exit $?
-	PATH=${JDK_BUILD_PATH} make || exit $?
+	PATH=${JDK_BUILD_PATH} make all || exit $?
 }
+
+MX="PATH=${wrkdir}/graal/mxtool:${PATH} EXTRA_JAVA_HOMES=/usr/lib/jvm/java-7-openjdk-amd64 JAVA_HOME=${wrkdir}/openjdk/build/linux-x86_64-normal-server-release/images/j2sdk-image/ DEFAULT_VM=server mx"
+build_graal() {
+	echo "\n===> Download and build graal\n"
+	cd ${wrkdir}
+	if ! [ -d ${wrkdir}/graal ]; then
+		hg clone http://hg.openjdk.java.net/graal/graal || exit $?
+	fi
+	cd graal
+	env ${MX} build
+}
+
 
 fetch_external_benchmarks() {
 	echo "\n===> Download and build misc benchmarks\n"
@@ -192,3 +209,4 @@ build_pypy
 build_v8
 build_gmake
 build_jdk
+build_graal
