@@ -49,6 +49,8 @@ wrkdir=`pwd`/work
 mkdir -p ${wrkdir}
 echo "===> Working in $wrkdir"
 
+PATCH_DIR=`pwd`/patches/
+
 CPYTHONV=2.7.10
 build_cpython() {
 	cd ${wrkdir} || exit $?
@@ -167,8 +169,10 @@ build_graal() {
 
 JRUBY_V=828fad30c11c1254d184b8b72d56ae9918fecdb9
 build_jruby_truffle() {
+	echo "\n===> Download and build truffle+jruby\n"
 	cd ${wrkdir}
-	if ! [ -d ${wrkdir}/jruby ]; then
+	if [ -f ${wrkdir}/jruby/bin/jruby ]; then return; fi
+	if ! [ -d ${wrkdir/jruby }; then
 		git clone https://github.com/jruby/jruby.git || exit $?
 	fi
 	cd ${wrkdir}/jruby || exit $?
@@ -183,6 +187,23 @@ build_jruby_truffle() {
 	echo "--> Check graal is enabled in JRuby+Truffle"
 	graal_en=`JAVACMD=${wrkdir}/graal/jdk1.8.0-internal/product/bin/java ${wrkdir}/jruby/bin/jruby -X+T -J-server -e "puts Truffle.graal?"`
 	if ! [ "${graal_en}" = "true" ]; then echo "graal was not enabled!!!" && exit 1; fi
+}
+
+
+HHVM_VERSION=HHVM-3.7.1
+build_hhvm() {
+	echo "\n===> Download and build HHVM\n"
+	cd ${wrkdir} || exit $?
+	if ! [ -d ${wrkdir}/hhvm ]; then
+		git clone https://github.com/facebook/hhvm.git || exit $?
+	fi
+	cd hhvm || exit $?
+	git checkout ${HHVM_VERSION} || exit $?
+	git submodule update --init --recursive || exit $?
+	patch -Ep1 < ${PATCH_DIR}/hhvm_clock_gettime_monotonic.diff || exit $?
+	patch -Ep1 < ${PATCH_DIR}/hhvm_cmake.diff || exit $?
+	sh -c "cmake -DMYSQL_UNIX_SOCK_ADDR=/dev/null -DBOOST_LIBRARYDIR=/usr/lib/x86_64-linux-gnu/ . && make" || exit $?
+	# vm is ${wrkdir}/hhvm/hphp/hhvm/php
 }
 
 
@@ -235,3 +256,4 @@ build_gmake
 build_jdk
 build_graal
 build_jruby_truffle
+build_hhvm
