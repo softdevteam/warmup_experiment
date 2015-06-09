@@ -1,7 +1,14 @@
-all:
-	./build.sh
-	./run_benchmarks.sh
-	python format_results.py
+all: build bench
 
-loc:
-	./loc.sh
+.PHONY: build bench
+
+build:
+	./build.sh
+
+bench:
+	if ! [ -d krun ]; then \
+		git clone https://github.com/softdevteam/krun.git; \
+	fi
+	# XXX command to run here
+
+# XXX target to format results.
