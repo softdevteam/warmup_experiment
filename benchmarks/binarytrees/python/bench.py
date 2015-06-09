@@ -24,12 +24,12 @@ def check_tree(tree):
     if not isinstance(tree, Tree): return tree
     return tree.item + check_tree(tree.left) - check_tree(tree.right)
 
-def main():
+def run_iter(n):
     min_depth = 4
-    max_depth = max(min_depth + 2, int(sys.argv[1]))
+    max_depth = max(min_depth + 2, n)
     stretch_depth = max_depth + 1
 
-    print "stretch tree of depth %d\t check:" % stretch_depth, check_tree(make_tree(0, stretch_depth))
+    #print "stretch tree of depth %d\t check:" % stretch_depth, check_tree(make_tree(0, stretch_depth))
 
     long_lived_tree = make_tree(0, max_depth)
 
@@ -40,9 +40,7 @@ def main():
         for i in xrange(1, iterations + 1):
             check += check_tree(make_tree(i, depth)) + check_tree(make_tree(-i, depth))
 
-        print "%d\t trees of depth %d\t check:" % (iterations * 2, depth), check
+        #print "%d\t trees of depth %d\t check:" % (iterations * 2, depth), check
         iterations /= 4
 
-    print "long lived tree of depth %d\t check:" % max_depth, check_tree(long_lived_tree)
-
-main()
+    #print "long lived tree of depth %d\t check:" % max_depth, check_tree(long_lived_tree)

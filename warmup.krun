@@ -1,0 +1,39 @@
+from krun.variants import PythonVariant, LuaVariant, JavaVariant
+
+VARIANTS = {
+    "default-java": JavaVariant(entry_point="KrunEntry", subdir="java"),
+    "default-luajit": LuaVariant(entry_point="bench.lua", subdir="lua"),
+    "default-python": PythonVariant(entry_point="bench.py", subdir="python"),
+}
+
+
+VMS = {
+	'PyPy': {
+		'path': '/opt/pypy/pypy-c',
+		'variants': ['default-python'],
+		'n_iterations': 1500,
+		'warm_upon_iter': 0,
+	},
+	'Java': {
+		'path': 'java',
+		'variants': ['default-java'],
+		'n_iterations': 150,
+		'warm_upon_iter': 0,
+	},
+	'LuaJIT': {
+		'path': 'luajit',
+		'variants': ['default-luajit'],
+		'n_iterations': 1500,
+		'warm_upon_iter': 0,
+	},
+}
+
+
+BENCHMARKS = {
+	'binarytrees': 2,
+}
+
+SKIP = []
+
+N_EXECUTIONS = 1  # Number of fresh processes.
+N_GRAPHS_PER_BENCH = 1

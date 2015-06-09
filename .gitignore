@@ -2,3 +2,6 @@ krun
 libkalibera
 work
 **/*.swp
+**/*.pyc
+**/*.class
+warmup_results.json
