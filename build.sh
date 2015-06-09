@@ -190,9 +190,10 @@ build_jruby_truffle() {
 }
 
 
-HHVM_VERSION=HHVM-3.7.1
+kHVM_VERSION=HHVM-3.7.1
 build_hhvm() {
 	echo "\n===> Download and build HHVM\n"
+	if [ -f ${wrkdir}/hhvm/hphp/hhvm/php ]; then return; fi
 	cd ${wrkdir} || exit $?
 	if ! [ -d ${wrkdir}/hhvm ]; then
 		git clone https://github.com/facebook/hhvm.git || exit $?
@@ -257,3 +258,5 @@ build_jdk
 build_graal
 build_jruby_truffle
 build_hhvm
+
+#fetch_external_benchmarks # XXX
