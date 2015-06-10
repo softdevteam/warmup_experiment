@@ -11,19 +11,19 @@ VARIANTS = {
 
 VMS = {
 	'PyPy': {
-		'path': '/opt/pypy/pypy-c',
+		'path': 'work/pypy/pypy/goal/pypy-c',
 		'variants': ['default-python'],
 		'n_iterations': 1,
 		'warm_upon_iter': 0,
 	},
 	'Java': {
-		'path': 'java',
+		'path': 'work/openjdk/build/linux-x86_64-normal-server-release/jdk/bin/java',
 		'variants': ['default-java'],
 		'n_iterations': 1,
 		'warm_upon_iter': 0,
 	},
 	'LuaJIT': {
-		'path': 'luajit',
+		'path': 'work/luajit/src/luajit',
 		'variants': ['default-luajit'],
 		'n_iterations': 1,
 		'warm_upon_iter': 0,
