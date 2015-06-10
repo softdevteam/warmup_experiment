@@ -1,9 +1,10 @@
-from krun.variants import PythonVariant, LuaVariant, JavaVariant
+from krun.variants import PythonVariant, LuaVariant, JavaVariant, PHPVariant
 
 VARIANTS = {
     "default-java": JavaVariant(entry_point="KrunEntry", subdir="java"),
     "default-luajit": LuaVariant(entry_point="bench.lua", subdir="lua"),
     "default-python": PythonVariant(entry_point="bench.py", subdir="python"),
+    "default-php": PHPVariant(entry_point="bench.php", subdir="php"),
 }
 
 
@@ -11,19 +12,25 @@ VMS = {
 	'PyPy': {
 		'path': '/opt/pypy/pypy-c',
 		'variants': ['default-python'],
-		'n_iterations': 1500,
+		'n_iterations': 1,
 		'warm_upon_iter': 0,
 	},
 	'Java': {
 		'path': 'java',
 		'variants': ['default-java'],
-		'n_iterations': 150,
+		'n_iterations': 1,
 		'warm_upon_iter': 0,
 	},
 	'LuaJIT': {
 		'path': 'luajit',
 		'variants': ['default-luajit'],
-		'n_iterations': 1500,
+		'n_iterations': 1,
+		'warm_upon_iter': 0,
+	},
+	'HHVM': {
+		'path': 'work/hhvm/hphp/hhvm/php',
+		'variants': ['default-php'],
+		'n_iterations': 1,
 		'warm_upon_iter': 0,
 	},
 }

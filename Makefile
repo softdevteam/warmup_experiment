@@ -1,3 +1,5 @@
+PYTHON ?= python2.7
+
 all: build bench
 
 .PHONY: build bench
@@ -12,6 +14,6 @@ bench:
 	if ! [ -d libkalibera ]; then \
 		git clone https://github.com/softdevteam/libkalibera.git; \
 	fi
-	# XXX command to run here
+	${PYTHON} krun/krun.py warmup.krun
 
 # XXX target to format results.
