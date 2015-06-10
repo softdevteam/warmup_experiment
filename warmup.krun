@@ -34,14 +34,14 @@ VMS = {
 		'n_iterations': 1,
 		'warm_upon_iter': 0,
 	},
-    'TruffleRuby' : {
-        'path': 'work/jruby/bin/jruby',
-        'vm_args': ['-X+T', '-J-server'],  # enable graal/truffle
-        'vm_env': {'JAVACMD': 'work/graal/jdk1.8.0-internal/product/bin/java'},
+	'TruffleRuby' : {
+		'path': 'work/jruby/bin/jruby',
+		'vm_args': ['-X+T', '-J-server'],  # enable graal/truffle
+		'vm_env': {'JAVACMD': 'work/graal/jdk1.8.0-internal/product/bin/java'},
 		'variants': ['default-ruby'],
 		'n_iterations': 1,
 		'warm_upon_iter': 0,
-    },
+	},
 }
 
 
