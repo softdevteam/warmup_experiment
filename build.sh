@@ -172,7 +172,7 @@ build_jruby_truffle() {
 	echo "\n===> Download and build truffle+jruby\n"
 	cd ${wrkdir}
 	if [ -f ${wrkdir}/jruby/bin/jruby ]; then return; fi
-	if ! [ -d ${wrkdir/jruby }; then
+	if ! [ -d ${wrkdir}/jruby ]; then
 		git clone https://github.com/jruby/jruby.git || exit $?
 	fi
 	cd ${wrkdir}/jruby || exit $?

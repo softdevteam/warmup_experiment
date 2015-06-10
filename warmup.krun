@@ -1,10 +1,11 @@
-from krun.variants import PythonVariant, LuaVariant, JavaVariant, PHPVariant
+from krun.variants import PythonVariant, LuaVariant, JavaVariant, PHPVariant, RubyVariant
 
 VARIANTS = {
     "default-java": JavaVariant(entry_point="KrunEntry", subdir="java"),
     "default-luajit": LuaVariant(entry_point="bench.lua", subdir="lua"),
     "default-python": PythonVariant(entry_point="bench.py", subdir="python"),
     "default-php": PHPVariant(entry_point="bench.php", subdir="php"),
+    "default-ruby": RubyVariant(entry_point="bench.rb", subdir="ruby"),
 }
 
 
@@ -33,6 +34,14 @@ VMS = {
 		'n_iterations': 1,
 		'warm_upon_iter': 0,
 	},
+    'TruffleRuby' : {
+        'path': 'work/jruby/bin/jruby',
+        'vm_args': ['-X+T', '-J-server'],  # enable graal/truffle
+        'vm_env': {'JAVACMD': 'work/graal/jdk1.8.0-internal/product/bin/java'},
+		'variants': ['default-ruby'],
+		'n_iterations': 1,
+		'warm_upon_iter': 0,
+    },
 }
 
 
