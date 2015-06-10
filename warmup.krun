@@ -49,7 +49,8 @@ BENCHMARKS = {
 	'binarytrees': 2,
 }
 
-SKIP = []
+# list of "bench:vm:variant"
+SKIP = ["*:TruffleRuby:*"]
 
 N_EXECUTIONS = 1  # Number of fresh processes.
 N_GRAPHS_PER_BENCH = 1
