@@ -1,4 +1,5 @@
-from krun.variants import PythonVariant, LuaVariant, JavaVariant, PHPVariant, RubyVariant
+from krun.variants import (PythonVariant, LuaVariant, JavaVariant, PHPVariant,
+		           RubyVariant, JavascriptVariant)
 
 VARIANTS = {
     "default-java": JavaVariant(entry_point="KrunEntry", subdir="java"),
@@ -6,6 +7,7 @@ VARIANTS = {
     "default-python": PythonVariant(entry_point="bench.py", subdir="python"),
     "default-php": PHPVariant(entry_point="bench.php", subdir="php"),
     "default-ruby": RubyVariant(entry_point="bench.rb", subdir="ruby"),
+    "default-javascript": JavascriptVariant(entry_point="bench.js", subdir="javascript"),
 }
 
 
@@ -42,6 +44,12 @@ VMS = {
 		'n_iterations': 1,
 		'warm_upon_iter': 0,
 	},
+	'V8': {
+		'path': 'work/v8/out/native/d8',
+		'variants': ['default-javascript'],
+		'n_iterations': 1,
+		'warm_upon_iter': 0,
+	},
 }
 
 
@@ -50,7 +58,7 @@ BENCHMARKS = {
 }
 
 # list of "bench:vm:variant"
-SKIP = ["*:TruffleRuby:*"]
+SKIP=[]
 
 N_EXECUTIONS = 1  # Number of fresh processes.
 N_GRAPHS_PER_BENCH = 1
