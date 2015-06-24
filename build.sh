@@ -45,7 +45,10 @@ if [ $missing -eq 1 ]; then
     exit 1
 fi
 
-wrkdir=`pwd`/work
+HERE=`pwd`
+wrkdir=${HERE}/work
+PATCH_DIR=${HERE}/patches
+
 mkdir -p ${wrkdir}
 echo "===> Working in $wrkdir"
 
@@ -214,34 +217,35 @@ of the Java Richards benchmark at:
   http://web.archive.org/web/20050825101121/http://www.sunlabs.com/people/mario/java_benchmarking/index.html
 EOF
 
-	echo -n "Have you read and agreed to these terms? [Ny] "
-	read answer
+	echo -n "Have you read and agreed to these terms? [Ny] " || exit $?
+	read answer || exit $?
 	case "$answer" in
 	    y | Y) ;;
 	    *) exit 1;;
 	esac
 
-	t=`mktemp -d`
-	cd $t
-	wget http://www.wolczko.com/richdbsrc.zip || exit $?
+	t=`mktemp -d` || exit $?
+	cd $t || exit $?
+    wget http://www.wolczko.com/richdbsrc.zip || exit $?
 	unzip richdbsrc.zip || exit $?
 	mv Benchmark.java Program.java COM/sun/labs/kanban/richards_deutsch_acc_virtual/ || exit $?
 	cd COM/sun/labs/kanban/richards_deutsch_acc_virtual || exit $?
 	mv Richards.java richards.java || exit $?
-	patch < $wrkdir/patches/java_richards.patch || exit $?
-	cp *.java $wrkdir/benchmarks || exit $?
+	patch < ${PATCH_DIR}/java_richards.patch || exit $?
+	cp *.java ${HERE}/benchmarks/richards/java || exit $?
 	rm -fr $t
 
-	t=`mktemp -d`
-	cd $t
-	wget http://hotpy.googlecode.com/svn-history/r96/trunk/benchmarks/java/dhry.java \
-	  http://hotpy.googlecode.com/svn-history/r96/trunk/benchmarks/java/GlobalVariables.java \
-	  http://hotpy.googlecode.com/svn-history/r96/trunk/benchmarks/java/DhrystoneConstants.java \
-	  http://hotpy.googlecode.com/svn-history/r96/trunk/benchmarks/java/Record_Type.java || exit $?
-	patch < $wrkdir/patches/java_dhrystone.patch || exit $?
-	mv dhry.java dhrystone.java
-	cp *.java $wrkdir/benchmarks
-	rm -fr $t
+	# XXX hook these in later.
+	#t=`mktemp -d`
+	#cd $t
+	#wget http://hotpy.googlecode.com/svn-history/r96/trunk/benchmarks/java/dhry.java \
+	#  http://hotpy.googlecode.com/svn-history/r96/trunk/benchmarks/java/GlobalVariables.java \
+	#  http://hotpy.googlecode.com/svn-history/r96/trunk/benchmarks/java/DhrystoneConstants.java \
+	#  http://hotpy.googlecode.com/svn-history/r96/trunk/benchmarks/java/Record_Type.java || exit $?
+	#patch < $wrkdir/patches/java_dhrystone.patch || exit $?
+	#mv dhry.java dhrystone.java
+	#cp *.java $wrkdir/benchmarks
+	#rm -fr $t
 }
 
 # main
@@ -256,4 +260,4 @@ build_graal
 build_jruby_truffle
 build_hhvm
 
-#fetch_external_benchmarks # XXX
+fetch_external_benchmarks
