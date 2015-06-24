@@ -1,11 +1,16 @@
 PYTHON ?= python2.7
+HERE != pwd
 
-all: build bench
+all: build-vms build-benchmarks build-benchs bench
 
-.PHONY: build bench
+.PHONY: build-vms build-benchs bench
 
-build:
+build-vms:
 	./build.sh
+
+build-benchs:
+	cd benchmarks && \
+		${MAKE} JAVAC=${HERE}/work/openjdk/build/linux-x86_64-normal-server-release/jdk/bin/javac
 
 bench:
 	if ! [ -d krun ]; then \
@@ -14,6 +19,6 @@ bench:
 	if ! [ -d libkalibera ]; then \
 		git clone https://github.com/softdevteam/libkalibera.git; \
 	fi
-	env LD_LIBRARY_PATH=`pwd`/krun/libkruntime ${PYTHON} krun/krun.py warmup.krun
+	env LD_LIBRARY_PATH=${HERE}/krun/libkruntime ${PYTHON} krun/krun.py warmup.krun
 
 # XXX target to format results.
