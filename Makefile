@@ -14,6 +14,6 @@ bench:
 	if ! [ -d libkalibera ]; then \
 		git clone https://github.com/softdevteam/libkalibera.git; \
 	fi
-	${PYTHON} krun/krun.py warmup.krun
+	env LD_LIBRARY_PATH=`pwd`/krun/libkruntime ${PYTHON} krun/krun.py warmup.krun
 
 # XXX target to format results.
