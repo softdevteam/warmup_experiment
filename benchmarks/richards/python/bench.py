@@ -395,28 +395,34 @@ class Richards(object):
 
         return True
 
-def entry_point(iterations):
+#def entry_point(iterations):
+#    r = Richards()
+#    startTime = time.time()
+#    result = r.run(iterations)
+#    endTime = time.time()
+#    return result, startTime, endTime
+#
+#def main(entry_point = entry_point, iterations = 10):
+#    print "Richards benchmark (Python) starting... [%r]" % entry_point
+#    result, startTime, endTime = entry_point(iterations)
+#    if not result:
+#        print "Incorrect results!"
+#        return -1
+#    print "finished."
+#    total_s = endTime - startTime
+#    print "Total time for %d iterations: %.2f secs" %(iterations,total_s)
+#    print "Average time per iteration: %.2f ms" %(total_s*1000/iterations)
+#    return 42
+#
+#if __name__ == '__main__':
+#    import sys
+#    if len(sys.argv) >= 2:
+#        main(iterations = int(sys.argv[1]))
+#    else:
+#        main()
+
+def run_iter(n):
+    global taskWorkArea;
     r = Richards()
-    startTime = time.time()
-    result = r.run(iterations)
-    endTime = time.time()
-    return result, startTime, endTime
-
-def main(entry_point = entry_point, iterations = 10):
-    print "Richards benchmark (Python) starting... [%r]" % entry_point
-    result, startTime, endTime = entry_point(iterations)
-    if not result:
-        print "Incorrect results!"
-        return -1
-    print "finished."
-    total_s = endTime - startTime
-    print "Total time for %d iterations: %.2f secs" %(iterations,total_s)
-    print "Average time per iteration: %.2f ms" %(total_s*1000/iterations)
-    return 42
-
-if __name__ == '__main__':
-    import sys
-    if len(sys.argv) >= 2:
-        main(iterations = int(sys.argv[1]))
-    else:
-        main()
+    res = r.run(n)
+    assert(res)

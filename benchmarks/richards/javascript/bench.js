@@ -70,11 +70,14 @@ function runRichards(iters) {
           "Error during execution: queueCount = " + scheduler.queueCount +
           ", holdCount = " + scheduler.holdCount + ".";
       throw new Error(msg);
+      return false;
     }
   }
+  return true;
 }
 
-var COUNT = 1000;
+//var COUNT = 1000; !!! bug in original!
+var COUNT = 10000;
 
 /**
  * These two constants specify how many times a packet is queued and
@@ -83,8 +86,11 @@ var COUNT = 1000;
  * correct run so if the actual queue or hold count is different from
  * the expected there must be a bug in the implementation.
  **/
-var EXPECTED_QUEUE_COUNT = 2322;
-var EXPECTED_HOLD_COUNT = 928;
+//var EXPECTED_QUEUE_COUNT = 2322;
+//var EXPECTED_HOLD_COUNT = 928;
+
+var EXPECTED_QUEUE_COUNT = 23246;
+var EXPECTED_HOLD_COUNT = 9297;
 
 
 /**
@@ -535,4 +541,9 @@ Packet.prototype.toString = function () {
   return "Packet";
 };
 
-runRichards(arguments[0]);
+function run_iter(n) {
+    res = runRichards(n);
+    if (res != true) {
+        throw "failed!";
+    }
+}

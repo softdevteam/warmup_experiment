@@ -12,10 +12,10 @@ MAXTASKS = 6
 $layout = 0
 
 
-def main()
-   reps = Integer(ARGV.shift || 10)
+def main(reps)
+   #reps = Integer(ARGV.shift || 10)
    
-   startTicks = Process.times.utime
+   #startTicks = Process.times.utime
    
    s = Scheduler.new 
    for i in 0..reps 
@@ -39,12 +39,17 @@ def main()
      s.addDeviceTask(DEVICEA, 4000, nil) 
      s.addDeviceTask(DEVICEB, 5000, nil)           
      s.schedule
+
+     if s.getCounts != [9297, 23246]
+        return false
+     end
    end
    
-   stopTicks = Process.times.utime  
-   frequency = 1000
-   print "Total time for #{reps} iterations: #{stopTicks-startTicks}s\n"
-   print "Average time per iteration: #{Integer(((stopTicks-startTicks)/reps)*1000)}ms\n"
+   #stopTicks = Process.times.utime  
+   #frequency = 1000
+   #print "Total time for #{reps} iterations: #{stopTicks-startTicks}s\n"
+   #print "Average time per iteration: #{Integer(((stopTicks-startTicks)/reps)*1000)}ms\n"
+   return true
 end
 
 
@@ -67,6 +72,10 @@ class Scheduler
       @queueCount = 0
       @holdCount = 0
    end   
+
+   def getCounts()
+       return [@queueCount, @holdCount]
+   end
    
    def reset()
       @table = Array.new(MAXTASKS,nil)
@@ -387,4 +396,7 @@ class Packet
 
 end
 
-main
+def run_iter(n)
+    res = main(n)
+    assert(n)
+end

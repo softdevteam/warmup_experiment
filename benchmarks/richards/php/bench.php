@@ -156,6 +156,10 @@ function trace($a) {
 
 class TaskWorkArea {
 	function __construct() {
+        $this->reset();
+    }
+
+    function reset() {
 		$this->taskTab = array();
 		for ($i = 0; $i < TASKTABSIZE; $i++) {
 			$this->taskTab[] = null;
@@ -378,8 +382,9 @@ class Richards {
 		global $taskWorkArea;
 
 		for ($i = 0; $i < $iterations; $i++) {
-			$taskWorkArea->holdCount = 0;
-			$taskWorkArea->qpktCount = 0;
+            $taskWorkArea->reset();
+			//$taskWorkArea->holdCount = 0;
+			//$taskWorkArea->qpktCount = 0;
 			$task_state = new TaskState();
 			new IdleTask(I_IDLE, 1, 10000, $task_state->running(),
 						 new IdleTaskRec());
@@ -426,6 +431,7 @@ class Richards {
 
 $taskWorkArea = new TaskWorkArea();
 
+/*
 $number_of_runs = 100;
 if ($argc > 1) {
 	$number_of_runs = $argv[1] + 0;
@@ -443,5 +449,13 @@ if (!$res) {
 	$ms = $total * 1000 / $number_of_runs;
 	printf("Average time per iteration: $ms\n");
 }
+*/
+
+function run_iter($n) {
+    $r = new Richards();
+    $res = $r->run($n);
+    assert($res);
+}
+
 
 ?>
