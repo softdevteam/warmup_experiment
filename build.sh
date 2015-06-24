@@ -164,7 +164,7 @@ build_graal() {
 }
 
 
-JRUBY_V=828fad30c11c1254d184b8b72d56ae9918fecdb9
+JRUBY_V=b0b724952eaf283ea03fd39517243ac509e5932a
 build_jruby_truffle() {
 	echo "\n===> Download and build truffle+jruby\n"
 	cd ${wrkdir}
