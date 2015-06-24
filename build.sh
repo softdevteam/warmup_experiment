@@ -107,17 +107,14 @@ build_v8() {
 	cd depot_tools || exit $?
 	git checkout ${DEPOT_V} || exit $?
 
-	#wget https://github.com/v8/v8-git-mirror/archive/${V8_V}.tar.gz -O v8-${V8_V}.tar.gz || exit $?
-	#tar xfz v8-${V8_V}.tar.gz || exit $?
-	#mv v8-git-mirror-${V8_V}/ v8 || exit $?
-	#cd ${wrkdir}/v8
 	# The build actually requires that you clone using this git wrapper tool
 	cd ${wrkdir}
 	OLDPATH=${PATH}
 	PATH=${wrkdir}/depot_tools:${PATH}
 	fetch v8 || exit $?
-	cd v8
+	cd v8 || exit $?
 	git checkout ${V8_V} || exit $?
+	patch -Ep1 < ${PATCH_DIR}/v8_clock_gettime_monotonic.diff || exit $?
 	make native || exit $?
 	PATH=${OLDPATH}
 }
