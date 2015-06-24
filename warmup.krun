@@ -55,6 +55,7 @@ VMS = {
 
 BENCHMARKS = {
 	'binarytrees': 18,
+	'richards': 100,
 }
 
 # list of "bench:vm:variant"
