@@ -3,7 +3,7 @@ from krun.variants import (PythonVariant, LuaVariant, JavaVariant, PHPVariant,
 
 VARIANTS = {
     "default-java": JavaVariant(entry_point="KrunEntry", subdir="java"),
-    "default-luajit": LuaVariant(entry_point="bench.lua", subdir="lua"),
+    "default-lua": LuaVariant(entry_point="bench.lua", subdir="lua"),
     "default-python": PythonVariant(entry_point="bench.py", subdir="python"),
     "default-php": PHPVariant(entry_point="bench.php", subdir="php"),
     "default-ruby": RubyVariant(entry_point="bench.rb", subdir="ruby"),
@@ -26,7 +26,7 @@ VMS = {
 	},
 	'LuaJIT': {
 		'path': 'work/luajit/src/luajit',
-		'variants': ['default-luajit'],
+		'variants': ['default-lua'],
 		'n_iterations': 1,
 		'warm_upon_iter': 0,
 	},
