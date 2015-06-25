@@ -69,7 +69,7 @@ class fasta {
       }
 
       String descStr = ">" + id + " " + desc + '\n';
-      writer.write(descStr.getBytes());
+      //writer.write(descStr.getBytes());
 
       int bufferIndex = 0;
       while (nChars > 0) {
@@ -81,7 +81,7 @@ class fasta {
          }
 
          if (bufferIndex == BUFFER_SIZE) {
-            writer.write(buffer, 0, bufferIndex);
+            //writer.write(buffer, 0, bufferIndex);
             bufferIndex = 0;
          }
 
@@ -92,7 +92,7 @@ class fasta {
          nChars -= chunkSize;
       }
 
-      writer.write(buffer, 0, bufferIndex);
+      //writer.write(buffer, 0, bufferIndex);
    }
 
     static final void makeRepeatFasta(
@@ -113,7 +113,7 @@ class fasta {
        }
 
         String descStr = ">" + id + " " + desc + '\n';
-        writer.write(descStr.getBytes());
+        //writer.write(descStr.getBytes());
 
         int bufferIndex = 0;
         while (nChars > 0) {
@@ -125,7 +125,7 @@ class fasta {
          }
 
            if (bufferIndex == BUFFER_SIZE) {
-                writer.write(buffer, 0, bufferIndex);
+                //writer.write(buffer, 0, bufferIndex);
                 bufferIndex = 0;
            }
 
@@ -141,22 +141,22 @@ class fasta {
            nChars -= chunkSize;
         }
 
-       writer.write(buffer, 0, bufferIndex);
+       //writer.write(buffer, 0, bufferIndex);
     }
 
-    public static void main(String[] args) throws IOException
+    public static void runIter(int n) throws IOException
     {
-        int n = 1000;
+        //int n = 1000;
 //        int n = 25000000;
-        if (args.length > 0) {
-         n = Integer.parseInt(args[0]);
-      }
+        //if (args.length > 0) {
+        // n = Integer.parseInt(args[0]);
+      //}
 
-        OutputStream out = System.out;
+        OutputStream out = null;// System.out;
         makeRepeatFasta("ONE", "Homo sapiens alu", ALU, n * 2, out);
         makeRandomFasta("TWO", "IUB ambiguity codes", IUB, n * 3, out);
         makeRandomFasta("THREE", "Homo sapiens frequency", HOMO_SAPIENS, n * 5, out);
-        out.close();
+        //out.close();
     }
 
     public static final class FloatProbFreq {

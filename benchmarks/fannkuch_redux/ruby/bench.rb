@@ -2,7 +2,7 @@
 # http://shootout.alioth.debian.org/
 # Contributed by Wesley Moxam
 
-def fannkuch(n)
+def run_iter(n)
   sign, maxflips, sum = 1, 0, 0
 
   p = [nil].concat((1..n).to_a)
@@ -59,6 +59,6 @@ def fannkuch(n)
   end
 end
 
-n = (ARGV[0] || 1).to_i
-sum, flips = fannkuch(n)
-printf "%d\nPfannkuchen(%d) = %d\n", sum, n, flips
+#n = (ARGV[0] || 1).to_i
+#sum, flips = fannkuch(n)
+#printf "%d\nPfannkuchen(%d) = %d\n", sum, n, flips

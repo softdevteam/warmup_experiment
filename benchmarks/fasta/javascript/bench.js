@@ -46,12 +46,12 @@ function fastaRepeat(n, seq) {
   while (n>0) {
     if (n<lenOut) lenOut = n;
     if (seqi + lenOut < seq.length) {
-      print( seq.substring(seqi, seqi+lenOut) );
+      //print( seq.substring(seqi, seqi+lenOut) );
       seqi += lenOut;
     } else {
       var s = seq.substring(seqi);
       seqi = lenOut - s.length;
-      print( s + seq.substring(0, seqi) );
+      //print( s + seq.substring(0, seqi) );
     }
     n -= lenOut;
   }
@@ -71,18 +71,20 @@ function fastaRandom(n, table) {
         }
       }
     }
-    print( line.join('') );
+    //print( line.join('') );
     n -= line.length;
   }
 }
 
-var n = arguments[0]
+function run_iter(n) {
+    //var n = arguments[0]
 
-print(">ONE Homo sapiens alu")
-fastaRepeat(2*n, ALU)
+    //print(">ONE Homo sapiens alu")
+    fastaRepeat(2*n, ALU)
 
-print(">TWO IUB ambiguity codes")
-fastaRandom(3*n, IUB)
+    //print(">TWO IUB ambiguity codes")
+    fastaRandom(3*n, IUB)
 
-print(">THREE Homo sapiens frequency")
-fastaRandom(5*n, HomoSap)
+    //print(">THREE Homo sapiens frequency")
+    fastaRandom(5*n, HomoSap)
+}

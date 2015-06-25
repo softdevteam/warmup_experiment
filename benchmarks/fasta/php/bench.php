@@ -48,7 +48,7 @@ function makeRandomFasta(&$genelist, $n) {
          }
          $pick[$j++] = $k;
       }
-      echo $pick;
+      //echo $pick;
    }
 
    // last, partial line
@@ -66,7 +66,6 @@ function makeRandomFasta(&$genelist, $n) {
          $pick[$j++] = $k;
       }
       $pick[$w] = "\n";
-      echo substr($pick, 0, $w+1);
    }
 
 }
@@ -77,12 +76,12 @@ function makeRepeatFasta($s, $n) {
    while ($n > 0) {
       if ($n < $lineLength) $lineLength = $n;
       if ($i + $lineLength < $sLength){
-         print(substr($s,$i,$lineLength)); print("\n");
+         //print(substr($s,$i,$lineLength)); print("\n");
          $i += $lineLength;
       } else {
-         print(substr($s,$i));
+         //print(substr($s,$i));
          $i = $lineLength - ($sLength - $i);
-         print(substr($s,0,$i)); print("\n");
+         //print(substr($s,0,$i)); print("\n");
       }
       $n -= $lineLength;
    }
@@ -126,19 +125,23 @@ $alu =
    'AGGCGGAGGTTGCAGTGAGCCGAGATCGCGCCACTGCACTCC' .
    'AGCCTGGGCGACAGAGCGAGACTCCGTCTCAAAAA';
 
-$n = 1000;
+function run_iter($n) {
+    //$n = 1000;
+    global $iub, $homosapiens, $alu;
 
-if ($_SERVER['argc'] > 1) $n = $_SERVER['argv'][1];
+    //if ($_SERVER['argc'] > 1) $n = $_SERVER['argv'][1];
 
-makeCumulative($iub);
-makeCumulative($homosapiens);
+    makeCumulative($iub);
+    makeCumulative($homosapiens);
 
-echo ">ONE Homo sapiens alu\n";
-makeRepeatFasta($alu, $n*2);
+    //echo ">ONE Homo sapiens alu\n";
+    makeRepeatFasta($alu, $n*2);
 
-echo ">TWO IUB ambiguity codes\n";
-makeRandomFasta($iub, $n*3);
+    //echo ">TWO IUB ambiguity codes\n";
+    makeRandomFasta($iub, $n*3);
 
-echo ">THREE Homo sapiens frequency\n";
-makeRandomFasta($homosapiens, $n*5);
+    //echo ">THREE Homo sapiens frequency\n";
+    makeRandomFasta($homosapiens, $n*5);
+}
+
 ?>

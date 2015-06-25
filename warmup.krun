@@ -57,7 +57,9 @@ BENCHMARKS = {
 	#'binarytrees': 18,
 	#'richards': 100,
 	#'spectralnorm': 3000,
-	'nbody': 1000000,
+	#'nbody': 1000000,
+    #'fasta': 1000000,
+    'fannkuch_redux': 10,
 }
 
 # list of "bench:vm:variant"

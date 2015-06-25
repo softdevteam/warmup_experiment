@@ -59,9 +59,10 @@ def repeatFasta(src, n):
     s = src + src + src[:n % r]
     for j in xrange(n // width):
         i = j*width % r
-        print s[i:i+width]
+        #print s[i:i+width]
     if n % width:
-        print s[-(n % width):]
+        #print s[-(n % width):]
+        pass
 
 def randomFasta(table, n):
     global randomLUT, randomGenState
@@ -77,28 +78,28 @@ def randomFasta(table, n):
         for i in xrange(width):
             rgs = rlut[rgs]
             la(lut[rgs])
-        print ''.join(line_buffer)
+        #print ''.join(line_buffer)
         line_buffer[:] = []
     if n % width:
         for i in xrange(n % width):
             rgs = rlut[rgs]
             la(lut[rgs])
-        print ''.join(line_buffer)
+        #print ''.join(line_buffer)
     
     randomGenState = rgs
 
-def main():
-    n = int(sys.argv[1])
+def run_iter(n):
+    #n = int(sys.argv[1])
 
     makeRandomLUT()
 
-    print '>ONE Homo sapiens alu'
+    #print '>ONE Homo sapiens alu'
     repeatFasta(alu, n*2)
 
-    print '>TWO IUB ambiguity codes'
+    #print '>TWO IUB ambiguity codes'
     randomFasta(iub, n*3)
 
-    print '>THREE Homo sapiens frequency'
+    #print '>THREE Homo sapiens frequency'
     randomFasta(homosapiens, n*5)
     
-main()
+#main()

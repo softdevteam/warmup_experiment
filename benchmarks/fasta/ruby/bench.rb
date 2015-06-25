@@ -10,7 +10,7 @@ GR_IM = 139968.0
 GR_IA = 3877.0
 GR_IC = 29573.0
 
-alu =
+@alu =
    "GGCCGGGCGCGGTGGCTCACGCCTGTAATCCCAGCACTTTGG"+
    "GAGGCCGAGGCGGGCGGATCACCTGAGGTCAGGAGTTCGAGA"+
    "CCAGCCTGGCCAACATGGTGAAACCCCGTCTCTACTAAAAAT"+
@@ -19,7 +19,7 @@ alu =
    "AGGCGGAGGTTGCAGTGAGCCGAGATCGCGCCACTGCACTCC"+
    "AGCCTGGGCGACAGAGCGAGACTCCGTCTCAAAAA"
 
-iub = [
+@iub = [
     ["a", 0.27],
     ["c", 0.12],
     ["g", 0.12],
@@ -38,7 +38,7 @@ iub = [
     ["Y", 0.02],
 ]
 
-homosapiens = [
+@homosapiens = [
     ["a", 0.3029549426680],
     ["c", 0.1979883004921],
     ["g", 0.1975473066391],
@@ -51,7 +51,7 @@ def make_repeat_fasta(src, n)
     l = src.length
     s = src * ((n / l) + 1)
     s.slice!(n, l)
-    puts (s.scan(/.{1,#{width}}/).join("\n"))
+    #puts (s.scan(/.{1,#{width}}/).join("\n"))
 end
 
 def make_random_fasta(table, n)
@@ -67,23 +67,26 @@ def make_random_fasta(table, n)
       collector += "next #{va.inspect} if #{vb.inspect} > rand\n"
     end
 
-    eval <<-EOF
-      (1..(n/width)).each do |i|
-        puts rwidth.collect{#{collector}}.join
-      end
-      if n%width != 0
-        puts (1..(n%width)).collect{#{collector}}.join
-      end
-    EOF
+    #eval <<-EOF
+    #  (1..(n/width)).each do |i|
+    #    puts rwidth.collect{#{collector}}.join
+    #  end
+    #  if n%width != 0
+    #    puts (1..(n%width)).collect{#{collector}}.join
+    #  end
+    #EOF
 end
 
-n = (ARGV[0] or 27).to_i
+# work around ruby scoping using lambda
+def run_iter(n)
+    #n = (ARGV[0] or 27).to_i
 
-puts ">ONE Homo sapiens alu"
-make_repeat_fasta(alu, n*2)
+    #puts ">ONE Homo sapiens alu"
+    make_repeat_fasta(@alu, n*2)
 
-puts ">TWO IUB ambiguity codes"
-make_random_fasta(iub, n*3)
+    #puts ">TWO IUB ambiguity codes"
+    make_random_fasta(@iub, n*3)
 
-puts ">THREE Homo sapiens frequency"
-make_random_fasta(homosapiens, n*5)
+    #puts ">THREE Homo sapiens frequency"
+    make_random_fasta(@homosapiens, n*5)
+end

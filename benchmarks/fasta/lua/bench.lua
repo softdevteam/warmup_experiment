@@ -10,33 +10,36 @@ local function random(max)
 end
 
 local function make_repeat_fasta(id, desc, s, n)
-  local write, sub = io.write, string.sub
-  write(">", id, " ", desc, "\n")
+  --local write, sub = io.write, string.sub
+  --write(">", id, " ", desc, "\n")
   local p, sn, s2 = 1, #s, s..s
   for i=60,n,60 do
-    write(sub(s2, p, p + 59), "\n")
+    --write(sub(s2, p, p + 59), "\n")
     p = p + 60; if p > sn then p = p - sn end
   end
   local tail = n % 60
-  if tail > 0 then write(sub(s2, p, p + tail-1), "\n") end
+  --if tail > 0 then write(sub(s2, p, p + tail-1), "\n") end
 end
 
 local function make_random_fasta(id, desc, bs, n)
-  io.write(">", id, " ", desc, "\n")
+  --io.write(">", id, " ", desc, "\n")
   loadstring([=[
-    local write, char, unpack, n, random = io.write, string.char, unpack, ...
+    --local write, char, unpack, n, random = io.write, string.char, unpack, ...
     local buf, p = {}, 1
     for i=60,n,60 do
       for j=p,p+59 do ]=]..bs..[=[ end
       buf[p+60] = 10; p = p + 61
-      if p >= 2048 then write(char(unpack(buf, 1, p-1))); p = 1 end
+      if p >= 2048 then
+          --write(char(unpack(buf, 1, p-1)));
+          p = 1
+      end
     end
     local tail = n % 60
     if tail > 0 then
       for j=p,p+tail-1 do ]=]..bs..[=[ end
       p = p + tail; buf[p] = 10; p = p + 1
     end
-    write(char(unpack(buf, 1, p-1)))
+    --write(char(unpack(buf, 1, p-1)))
   ]=], desc)(n, random)
 end
 
@@ -92,7 +95,9 @@ local homosapiens = make_bisect{
   { "t", 0.3015094502008 },
 }
 
-local N = tonumber(arg and arg[1]) or 1000
-make_repeat_fasta('ONE', 'Homo sapiens alu', alu, N*2)
-make_random_fasta('TWO', 'IUB ambiguity codes', iub, N*3)
-make_random_fasta('THREE', 'Homo sapiens frequency', homosapiens, N*5)
+function run_iter(N)
+    --local N = tonumber(arg and arg[1]) or 1000
+    make_repeat_fasta('ONE', 'Homo sapiens alu', alu, N*2)
+    make_random_fasta('TWO', 'IUB ambiguity codes', iub, N*3)
+    make_random_fasta('THREE', 'Homo sapiens frequency', homosapiens, N*5)
+end

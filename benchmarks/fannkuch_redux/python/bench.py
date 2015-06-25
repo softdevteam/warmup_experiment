@@ -6,7 +6,7 @@
 #    converted to Python by Buck Golemon
 #    modified by Justin Peel
 
-def fannkuch(n):
+def run_iter(n):
     maxFlipsCount = 0
     permSign = True
     checksum = 0
@@ -47,10 +47,10 @@ def fannkuch(n):
             else:
                 r = nm
                 if not count[r]:
-                    print( checksum )
+                    #print( checksum )
                     return maxFlipsCount
             count[r] -= 1
-from sys import argv
-n = int(argv[1])
+#from sys import argv
+#n = int(argv[1])
 
-print(( "Pfannkuchen(%i) = %i" % (n, fannkuch(n)) ))
+#print(( "Pfannkuchen(%i) = %i" % (n, fannkuch(n)) ))

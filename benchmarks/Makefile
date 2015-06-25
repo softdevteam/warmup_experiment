@@ -4,7 +4,9 @@ JAVAC ?=	javac
 BENCHMARKS = 		binarytrees \
 					richards \
 			spectralnorm \
-			nbody
+			nbody \
+			fasta \
+			fannkuch_redux
 all:
 	for i in ${BENCHMARKS}; do \
 		echo "Building java benchmark $${i}..."; \
