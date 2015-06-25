@@ -15,11 +15,12 @@ public class spectralnorm
 	
 	private static final NumberFormat formatter = new DecimalFormat("#.000000000");
 	
-	public static void main(String[] args) {
-		int n = 100;
-		if (args.length > 0) n = Integer.parseInt(args[0]);
+	public static void runIter(int n) {
+		//int n = 100;
+		//if (args.length > 0) n = Integer.parseInt(args[0]);
 		
-		System.out.println(formatter.format(new spectralnorm().Approximate(n)));
+		//System.out.println(formatter.format(new spectralnorm().Approximate(n)));
+		new spectralnorm().Approximate(n);
 	}
 	
 	private final double Approximate(int n) {

@@ -52,8 +52,8 @@ def eval_AtA_times_u (u, out, tmp):
     eval_A_times_u (u, tmp)
     eval_At_times_u (tmp, out)
 
-def main():
-    n = int (argv [1])
+def run_iter(n):
+    #n = int (argv [1])
     u = array("d", [1]) * n
     v = array("d", [1]) * n
     tmp = array("d", [1]) * n
@@ -69,6 +69,4 @@ def main():
         vBv += ue * ve
         vv  += ve * ve
     
-    print("%0.9f" % (sqrt(vBv/vv)))
-
-main() 
+    #print("%0.9f" % (sqrt(vBv/vv)))

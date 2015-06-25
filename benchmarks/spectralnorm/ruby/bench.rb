@@ -32,16 +32,18 @@ def eval_AtA_times_u(u)
 	return eval_At_times_u(eval_A_times_u(u))
 end
 
-n = ARGV[0].to_i
-u=[1]*n
-for i in 1..10
-        v=eval_AtA_times_u(u)
-        u=eval_AtA_times_u(v)
+def run_iter(n)
+    #n = ARGV[0].to_i
+    u=[1]*n
+    for i in 1..10
+            v=eval_AtA_times_u(u)
+            u=eval_AtA_times_u(v)
+    end
+    vBv=0
+    vv=0
+    for i in 0..n-1
+            vBv += u[i]*v[i]
+            vv += v[i]*v[i]
+    end
+    #print "%0.9f" % (Math.sqrt(vBv/vv)), "\n"
 end
-vBv=0
-vv=0
-for i in 0..n-1
-        vBv += u[i]*v[i]
-        vv += v[i]*v[i]
-end
-print "%0.9f" % (Math.sqrt(vBv/vv)), "\n"

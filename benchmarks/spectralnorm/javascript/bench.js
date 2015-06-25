@@ -33,7 +33,7 @@ function AtAu(u,v,w) {
   Atu(w,v);
 }
 
-function spectralnorm(n) {
+function run_iter(n) {
   var storage_ = new ArrayBuffer(n * 24);
   var u = new Float64Array(storage_, 0, n),
       v = new Float64Array(storage_, 8*n, n),
@@ -53,4 +53,4 @@ function spectralnorm(n) {
   return Math.sqrt(vBv/vv);
 }
 
-print(spectralnorm(arguments[0]).toFixed(9));
+//print(spectralnorm(arguments[0]).toFixed(9));

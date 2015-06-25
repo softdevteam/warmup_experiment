@@ -28,16 +28,19 @@ local function AtAv(x, y, t, N)
   Atv(t, y, N)
 end
 
-local N = tonumber(arg and arg[1]) or 100
-local u, v, t = {}, {}, {}
-for i=1,N do u[i] = 1 end
+function run_iter(N)
+  --local N = tonumber(arg and arg[1]) or 100
+  local u, v, t = {}, {}, {}
+  for i=1,N do u[i] = 1 end
 
-for i=1,10 do AtAv(u, v, t, N) AtAv(v, u, t, N) end
+  for i=1,10 do AtAv(u, v, t, N) AtAv(v, u, t, N) end
 
-local vBv, vv = 0, 0
-for i=1,N do
-  local ui, vi = u[i], v[i]
-  vBv = vBv + ui*vi
-  vv = vv + vi*vi
+  local vBv, vv = 0, 0
+  for i=1,N do
+    local ui, vi = u[i], v[i]
+    vBv = vBv + ui*vi
+    vv = vv + vi*vi
+  end
 end
-io.write(string.format("%0.9f\n", math.sqrt(vBv / vv)))
+
+--io.write(string.format("%0.9f\n", math.sqrt(vBv / vv)))
