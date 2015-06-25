@@ -3,7 +3,8 @@ JAVAC ?=	javac
 
 BENCHMARKS = 		binarytrees \
 					richards \
-			spectralnorm
+			spectralnorm \
+			nbody
 all:
 	for i in ${BENCHMARKS}; do \
 		echo "Building java benchmark $${i}..."; \

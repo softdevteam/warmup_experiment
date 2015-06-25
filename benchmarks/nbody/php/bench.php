@@ -70,31 +70,33 @@ for ($i=0,$m=count($bodies); $i<$m; $i++)
    for ($j=$i+1; $j<$m; $j++) 
       $pairs[] = array(&$bodies[$i], &$bodies[$j]);
 
-$n = $argv[1];
+function run_iter($n) {
+    //$n = $argv[1];
 
-printf("%0.9f\n", energy($bodies));
+    //printf("%0.9f\n", energy($bodies));
 
-$i=0; 
-do {
+    $i=0; 
+    do {
 
-    foreach ($pairs as &$p) {
-	$a=&$p[0]; $b=&$p[1];
-	$dx=$a[0]-$b[0]; $dy=$a[1]-$b[1]; $dz=$a[2]-$b[2];
+        foreach ($pairs as &$p) {
+        $a=&$p[0]; $b=&$p[1];
+        $dx=$a[0]-$b[0]; $dy=$a[1]-$b[1]; $dz=$a[2]-$b[2];
 
-	$dist = sqrt($dx*$dx + $dy*$dy + $dz*$dz);
-	$mag = 0.01/($dist*$dist*$dist);
-	$mag_a = $a[6]*$mag; $mag_b = $b[6]*$mag;
-	
-	$a[3]-=$dx*$mag_b; $a[4]-=$dy*$mag_b; $a[5]-=$dz*$mag_b;
-	$b[3]+=$dx*$mag_a; $b[4]+=$dy*$mag_a; $b[5]+=$dz*$mag_a;
-    } 
+        $dist = sqrt($dx*$dx + $dy*$dy + $dz*$dz);
+        $mag = 0.01/($dist*$dist*$dist);
+        $mag_a = $a[6]*$mag; $mag_b = $b[6]*$mag;
+        
+        $a[3]-=$dx*$mag_b; $a[4]-=$dy*$mag_b; $a[5]-=$dz*$mag_b;
+        $b[3]+=$dx*$mag_a; $b[4]+=$dy*$mag_a; $b[5]+=$dz*$mag_a;
+        } 
 
-    foreach ($bodies as &$b) {
-        $b[0]+=0.01*$b[3]; $b[1]+=0.01*$b[4]; $b[2]+=0.01*$b[5];
-    } 
+        foreach ($bodies as &$b) {
+            $b[0]+=0.01*$b[3]; $b[1]+=0.01*$b[4]; $b[2]+=0.01*$b[5];
+        } 
 
-} while(++$i<$n);
+    } while(++$i<$n);
 
-printf("%0.9f\n", energy($bodies));
+    //printf("%0.9f\n", energy($bodies));
+}
 
 ?>

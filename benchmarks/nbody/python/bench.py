@@ -92,7 +92,7 @@ def report_energy(bodies=SYSTEM, pairs=PAIRS, e=0.0):
         e -= (m1 * m2) / ((dx * dx + dy * dy + dz * dz) ** 0.5)
     for (r, [vx, vy, vz], m) in bodies:
         e += m * (vx * vx + vy * vy + vz * vz) / 2.
-    print "%.9f" % e
+    #print "%.9f" % e
 
 def offset_momentum(ref, bodies=SYSTEM, px=0.0, py=0.0, pz=0.0):
 
@@ -105,11 +105,8 @@ def offset_momentum(ref, bodies=SYSTEM, px=0.0, py=0.0, pz=0.0):
     v[1] = py / m
     v[2] = pz / m
 
-def main(n, ref='sun'):
+def run_iter(n, ref='sun'):
     offset_momentum(BODIES[ref])
     report_energy()
     advance(0.01, n)
     report_energy()
-
-if __name__ == '__main__':
-    main(int(sys.argv[1]))

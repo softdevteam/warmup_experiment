@@ -56,17 +56,18 @@ VMS = {
 BENCHMARKS = {
 	#'binarytrees': 18,
 	#'richards': 100,
-	'spectralnorm': 3000,
+	#'spectralnorm': 3000,
+	'nbody': 1000000,
 }
 
 # list of "bench:vm:variant"
 SKIP=[
-    "*:PyPy:*",
+    #"*:PyPy:*",
     #"*:Java:*",
-    "*:LuaJIT:*",
-    "*:HHVM:*",
-    "*:TruffleRuby:*",
-    "*:V8:*",
+    #"*:LuaJIT:*",
+    #"*:HHVM:*",
+    #"*:TruffleRuby:*",
+    #"*:V8:*",
 ]
 
 N_EXECUTIONS = 1  # Number of fresh processes.

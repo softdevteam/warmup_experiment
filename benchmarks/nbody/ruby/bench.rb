@@ -124,22 +124,24 @@ BODIES = [
 ]
 
 
-n = Integer(ARGV[0])
+def run_iter(n)
+    #n = Integer(ARGV[0])
 
-offset_momentum(BODIES)
+    offset_momentum(BODIES)
 
-puts "%.9f" % energy(BODIES)
+    #puts "%.9f" % energy(BODIES)
 
-nbodies = BODIES.size
-dt = 0.01
+    nbodies = BODIES.size
+    dt = 0.01
 
-n.times do
-  i = 0
-  while i < nbodies
-    b = BODIES[i]
-    b.move_from_i(BODIES, nbodies, dt, i + 1)
-    i += 1
-  end
+    n.times do
+      i = 0
+      while i < nbodies
+        b = BODIES[i]
+        b.move_from_i(BODIES, nbodies, dt, i + 1)
+        i += 1
+      end
+    end
+
+    #puts "%.9f" % energy(BODIES)
 end
-
-puts "%.9f" % energy(BODIES)

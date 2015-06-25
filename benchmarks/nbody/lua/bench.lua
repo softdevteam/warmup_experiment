@@ -112,10 +112,12 @@ local function offsetMomentum(b, nbody)
   b[1].vz = -pz / SOLAR_MASS
 end
 
-local N = tonumber(arg and arg[1]) or 1000
-local nbody = #bodies
+function run_iter(N)
+  --local N = tonumber(arg and arg[1]) or 1000
+  local nbody = #bodies
 
-offsetMomentum(bodies, nbody)
-io.write( string.format("%0.9f",energy(bodies, nbody)), "\n")
-for i=1,N do advance(bodies, nbody, 0.01) end
-io.write( string.format("%0.9f",energy(bodies, nbody)), "\n")
+  offsetMomentum(bodies, nbody)
+  --io.write( string.format("%0.9f",energy(bodies, nbody)), "\n")
+  for i=1,N do advance(bodies, nbody, 0.01) end
+  --io.write( string.format("%0.9f",energy(bodies, nbody)), "\n")
+end
