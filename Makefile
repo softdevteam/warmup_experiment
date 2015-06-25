@@ -12,9 +12,10 @@ build-benchs:
 	cd benchmarks && \
 		${MAKE} JAVAC=${HERE}/work/openjdk/build/linux-x86_64-normal-server-release/jdk/bin/javac
 
-bench:
+bench: build-benchs
 	if ! [ -d krun ]; then \
-		git clone https://github.com/softdevteam/krun.git; \
+		git clone https://github.com/softdevteam/krun.git && \
+		cd krun && make; \
 	fi
 	if ! [ -d libkalibera ]; then \
 		git clone https://github.com/softdevteam/libkalibera.git; \
