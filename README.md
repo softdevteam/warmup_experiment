@@ -4,9 +4,11 @@ This is a work in progress. Watch this space.
 
 ## License
 
+```
 All original files are under the following MIT license:
 
   Copyright (c)2012 Carl Friedrich Bolz and Laurence Tratt
+  Copyright (c)2015 King's College London
 
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
@@ -42,4 +44,4 @@ The LUA Richards benchmark is in the public domain:
 The Java Richards benchmark license is at:
   http://web.archive.org/web/20050825101121/http://www.sunlabs.com/people/mario/java_benchmarking/index.html
   (see also http://www.wolczko.com/java_benchmarking.html)
-  
+``` 
