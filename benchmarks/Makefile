@@ -2,7 +2,7 @@ HERE !=		pwd
 JAVAC ?=	javac
 
 BENCHMARKS = 		binarytrees \
-					richards \
+			richards \
 			spectralnorm \
 			nbody \
 			fasta \
