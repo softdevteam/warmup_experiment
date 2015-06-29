@@ -10,5 +10,6 @@ BENCHMARKS = 		binarytrees \
 all:
 	for i in ${BENCHMARKS}; do \
 		echo "Building java benchmark $${i}..."; \
-		cd ${HERE}/$${i}/java && ${JAVAC} *.java; \
+		cd ${HERE}/$${i}/java && \
+		CLASSPATH=../../../krun/krun/iteration_runners/ ${JAVAC} *.java; \
 		done

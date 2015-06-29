@@ -1,6 +1,6 @@
 
-class KrunEntry {
-  public static void run_iter(int param) {
+class KrunEntry implements BaseKrunEntry {
+  public void run_iter(int param) {
       nbody.runIter(param);
   }
 }
