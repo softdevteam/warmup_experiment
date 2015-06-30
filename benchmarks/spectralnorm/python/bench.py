@@ -70,3 +70,4 @@ def run_iter(n):
         vv  += ve * ve
     
     #print("%0.9f" % (sqrt(vBv/vv)))
+    "%0.9f" % (sqrt(vBv/vv))

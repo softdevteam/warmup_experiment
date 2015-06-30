@@ -46,4 +46,5 @@ def run_iter(n)
             vv += v[i]*v[i]
     end
     #print "%0.9f" % (Math.sqrt(vBv/vv)), "\n"
+    "%0.9f" % (Math.sqrt(vBv/vv))
 end
