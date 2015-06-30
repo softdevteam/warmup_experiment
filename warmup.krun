@@ -5,6 +5,8 @@ from krun.variants import (PythonVariant, LuaVariant, JavaVariant, PHPVariant,
 DIR = os.getcwd()
 JKRUNTIME_DIR = os.path.join(DIR, "krun", "libkruntime", "")
 
+HEAP_LIMIT = 2097152  # K == 2Gb
+
 VARIANTS = {
     "default-java": JavaVariant(entry_point="KrunEntry", subdir="java"),
     "default-lua": LuaVariant(entry_point="bench.lua", subdir="lua"),
