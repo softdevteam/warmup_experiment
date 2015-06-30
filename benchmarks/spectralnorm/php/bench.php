@@ -61,6 +61,6 @@ function run_iter($n) {
     ++$i;
   }
   //printf("%0.9f\n", sqrt($vBv/$vv));
-  sprintf("%0.9f\n", sqrt($vBv/$vv));
+  sqrt($vBv/$vv); // other benchmarks don't do string formatting either
 }
 ?>
