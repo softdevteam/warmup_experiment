@@ -74,6 +74,7 @@ function run_iter($n) {
     //$n = $argv[1];
 
     //printf("%0.9f\n", energy($bodies));
+    energy($bodies);
 
     $i=0; 
     do {
@@ -97,6 +98,7 @@ function run_iter($n) {
     } while(++$i<$n);
 
     //printf("%0.9f\n", energy($bodies));
+    sprintf("%0.9f\n", energy($bodies));
 }
 
 ?>

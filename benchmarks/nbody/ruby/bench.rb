@@ -130,6 +130,7 @@ def run_iter(n)
     offset_momentum(BODIES)
 
     #puts "%.9f" % energy(BODIES)
+    "%.9f" % energy(BODIES)
 
     nbodies = BODIES.size
     dt = 0.01
@@ -144,4 +145,5 @@ def run_iter(n)
     end
 
     #puts "%.9f" % energy(BODIES)
+    "%.9f" % energy(BODIES)
 end
