@@ -77,11 +77,14 @@ function makeRepeatFasta($s, $n) {
       if ($n < $lineLength) $lineLength = $n;
       if ($i + $lineLength < $sLength){
          //print(substr($s,$i,$lineLength)); print("\n");
+         $no_use = substr($s,$i,$lineLength);
          $i += $lineLength;
       } else {
          //print(substr($s,$i));
+         $no_use = substr($s,$i);
          $i = $lineLength - ($sLength - $i);
          //print(substr($s,0,$i)); print("\n");
+         $no_use = substr($s,0,$i);
       }
       $n -= $lineLength;
    }

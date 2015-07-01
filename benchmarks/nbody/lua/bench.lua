@@ -118,6 +118,8 @@ function run_iter(N)
 
   offsetMomentum(bodies, nbody)
   --io.write( string.format("%0.9f",energy(bodies, nbody)), "\n")
+  string.format("%0.9f",energy(bodies, nbody))
   for i=1,N do advance(bodies, nbody, 0.01) end
   --io.write( string.format("%0.9f",energy(bodies, nbody)), "\n")
+  string.format("%0.9f",energy(bodies, nbody))
 end

@@ -1,5 +1,11 @@
+import os
 from krun.variants import (PythonVariant, LuaVariant, JavaVariant, PHPVariant,
 		           RubyVariant, JavascriptVariant)
+
+DIR = os.getcwd()
+JKRUNTIME_DIR = os.path.join(DIR, "krun", "libkruntime", "")
+
+HEAP_LIMIT = 2097152  # K == 2Gb
 
 VARIANTS = {
     "default-java": JavaVariant(entry_point="KrunEntry", subdir="java"),
@@ -10,7 +16,6 @@ VARIANTS = {
     "default-javascript": JavascriptVariant(entry_point="bench.js", subdir="javascript"),
 }
 
-
 VMS = {
 	'PyPy': {
 		'path': 'work/pypy/pypy/goal/pypy-c',
@@ -19,7 +24,8 @@ VMS = {
 		'warm_upon_iter': 0,
 	},
 	'Java': {
-		'path': 'work/openjdk/build/linux-x86_64-normal-server-release/jdk/bin/java',
+		'path': 'work/openjdk/build/linux-x86_64-normal-server-release/images/j2sdk-image/bin/java',
+		'vm_args': ["-Djava.library.path=%s" % JKRUNTIME_DIR],
 		'variants': ['default-java'],
 		'n_iterations': 1,
 		'warm_upon_iter': 0,

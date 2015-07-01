@@ -47,11 +47,13 @@ function fastaRepeat(n, seq) {
     if (n<lenOut) lenOut = n;
     if (seqi + lenOut < seq.length) {
       //print( seq.substring(seqi, seqi+lenOut) );
+      seq.substring(seqi, seqi+lenOut);
       seqi += lenOut;
     } else {
       var s = seq.substring(seqi);
       seqi = lenOut - s.length;
       //print( s + seq.substring(0, seqi) );
+      s + seq.substring(0, seqi);
     }
     n -= lenOut;
   }
@@ -72,6 +74,7 @@ function fastaRandom(n, table) {
       }
     }
     //print( line.join('') );
+    line.join('');
     n -= line.length;
   }
 }

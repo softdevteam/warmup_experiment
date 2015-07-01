@@ -10,15 +10,17 @@ local function random(max)
 end
 
 local function make_repeat_fasta(id, desc, s, n)
-  --local write, sub = io.write, string.sub
+  local write, sub = io.write, string.sub
   --write(">", id, " ", desc, "\n")
   local p, sn, s2 = 1, #s, s..s
   for i=60,n,60 do
     --write(sub(s2, p, p + 59), "\n")
+    sub(s2, p, p + 59)
     p = p + 60; if p > sn then p = p - sn end
   end
   local tail = n % 60
   --if tail > 0 then write(sub(s2, p, p + tail-1), "\n") end
+  if tail > 0 then sub(s2, p, p + tail-1) end
 end
 
 local function make_random_fasta(id, desc, bs, n)
@@ -31,6 +33,7 @@ local function make_random_fasta(id, desc, bs, n)
       buf[p+60] = 10; p = p + 61
       if p >= 2048 then
           --write(char(unpack(buf, 1, p-1)));
+          char(unpack(buf, 1, p-1));
           p = 1
       end
     end
@@ -40,6 +43,7 @@ local function make_random_fasta(id, desc, bs, n)
       p = p + tail; buf[p] = 10; p = p + 1
     end
     --write(char(unpack(buf, 1, p-1)))
+    char(unpack(buf, 1, p-1))
   ]=], desc)(n, random)
 end
 

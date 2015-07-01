@@ -41,6 +41,7 @@ function run_iter(N)
     vBv = vBv + ui*vi
     vv = vv + vi*vi
   end
+  return math.sqrt(vBv / vv)
 end
 
 --io.write(string.format("%0.9f\n", math.sqrt(vBv / vv)))

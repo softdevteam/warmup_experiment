@@ -60,9 +60,10 @@ def repeatFasta(src, n):
     for j in xrange(n // width):
         i = j*width % r
         #print s[i:i+width]
+        s[i:i+width]
     if n % width:
         #print s[-(n % width):]
-        pass
+        s[-(n % width):]
 
 def randomFasta(table, n):
     global randomLUT, randomGenState
@@ -79,12 +80,14 @@ def randomFasta(table, n):
             rgs = rlut[rgs]
             la(lut[rgs])
         #print ''.join(line_buffer)
+        ''.join(line_buffer)
         line_buffer[:] = []
     if n % width:
         for i in xrange(n % width):
             rgs = rlut[rgs]
             la(lut[rgs])
         #print ''.join(line_buffer)
+        ''.join(line_buffer)
     
     randomGenState = rgs
 

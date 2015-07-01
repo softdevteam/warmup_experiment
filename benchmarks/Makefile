@@ -2,7 +2,7 @@ HERE !=		pwd
 JAVAC ?=	javac
 
 BENCHMARKS = 		binarytrees \
-					richards \
+			richards \
 			spectralnorm \
 			nbody \
 			fasta \
@@ -10,5 +10,6 @@ BENCHMARKS = 		binarytrees \
 all:
 	for i in ${BENCHMARKS}; do \
 		echo "Building java benchmark $${i}..."; \
-		cd ${HERE}/$${i}/java && ${JAVAC} *.java; \
+		cd ${HERE}/$${i}/java && \
+		CLASSPATH=../../../krun/iterations_runners/ ${JAVAC} *.java; \
 		done

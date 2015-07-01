@@ -52,6 +52,7 @@ def make_repeat_fasta(src, n)
     s = src * ((n / l) + 1)
     s.slice!(n, l)
     #puts (s.scan(/.{1,#{width}}/).join("\n"))
+    s.scan(/.{1,#{width}}/).join("\n")
 end
 
 def make_random_fasta(table, n)
@@ -67,6 +68,7 @@ def make_random_fasta(table, n)
       collector += "next #{va.inspect} if #{vb.inspect} > rand\n"
     end
 
+    # Looks like eval can't deal with comments inside
     #eval <<-EOF
     #  (1..(n/width)).each do |i|
     #    puts rwidth.collect{#{collector}}.join
@@ -75,6 +77,14 @@ def make_random_fasta(table, n)
     #    puts (1..(n%width)).collect{#{collector}}.join
     #  end
     #EOF
+    eval <<-EOF
+      (1..(n/width)).each do |i|
+        rwidth.collect{#{collector}}.join
+      end
+      if n%width != 0
+        (1..(n%width)).collect{#{collector}}.join
+      end
+    EOF
 end
 
 # work around ruby scoping using lambda

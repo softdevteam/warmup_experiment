@@ -70,6 +70,7 @@ class fasta {
 
       String descStr = ">" + id + " " + desc + '\n';
       //writer.write(descStr.getBytes());
+      descStr.getBytes();
 
       int bufferIndex = 0;
       while (nChars > 0) {
@@ -114,6 +115,7 @@ class fasta {
 
         String descStr = ">" + id + " " + desc + '\n';
         //writer.write(descStr.getBytes());
+        descStr.getBytes();
 
         int bufferIndex = 0;
         while (nChars > 0) {

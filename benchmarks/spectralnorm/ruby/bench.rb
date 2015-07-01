@@ -46,4 +46,5 @@ def run_iter(n)
             vv += v[i]*v[i]
     end
     #print "%0.9f" % (Math.sqrt(vBv/vv)), "\n"
+    Math.sqrt(vBv/vv) # other benchmarks don't do string formatting
 end

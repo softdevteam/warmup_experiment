@@ -279,8 +279,10 @@ run_iter = function(n) {
      Saturn(bodyBuffer, 2),Uranus(bodyBuffer, 3),Neptune(bodyBuffer, 4) 
   ));
   //print(bodies.energy().toFixed(9));
+  bodies.energy().toFixed(9);
   for (var i=0; i<n; i++){ bodies.advance(0.01); }
   //print(bodies.energy().toFixed(9));
+  bodies.energy().toFixed(9);
 }
 
 //runTest(n);
