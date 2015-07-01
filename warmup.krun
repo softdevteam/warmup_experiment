@@ -1,6 +1,6 @@
 import os
 from krun.variants import (PythonVariant, LuaVariant, JavaVariant, PHPVariant,
-		           RubyVariant, JavascriptVariant)
+		           JRubyVariant, V8Variant)
 
 DIR = os.getcwd()
 JKRUNTIME_DIR = os.path.join(DIR, "krun", "libkruntime", "")
@@ -13,8 +13,8 @@ VARIANTS = {
     "default-lua": LuaVariant(entry_point="bench.lua", subdir="lua"),
     "default-python": PythonVariant(entry_point="bench.py", subdir="python"),
     "default-php": PHPVariant(entry_point="bench.php", subdir="php"),
-    "default-ruby": RubyVariant(entry_point="bench.rb", subdir="ruby"),
-    "default-javascript": JavascriptVariant(entry_point="bench.js", subdir="javascript"),
+    "default-ruby": JRubyVariant(entry_point="bench.rb", subdir="ruby"),
+    "default-javascript": V8Variant(entry_point="bench.js", subdir="javascript"),
 }
 
 VMS = {
