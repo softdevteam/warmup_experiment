@@ -79,7 +79,7 @@ build_luajit() {
 	tar xfz LuaJIT-${LUAJITV}.tar.gz
 	mv LuaJIT-${LUAJITV} luajit
 	cd luajit
-	$MYMAKE || exit $?
+	CFLAGS=-DLUAJIT_ENABLE_LUA52COMPAT $MYMAKE || exit $?
 }
 
 PYPYV=2.6.0
