@@ -1,6 +1,6 @@
 import os
-from krun.variants import (PythonVariant, LuaVariant, JavaVariant, PHPVariant,
-		           JRubyVariant, V8Variant)
+from krun.vm_defs import (PythonVMDef, LuaVMDef, JavaVMDef, PHPVMDef,
+		           JRubyVMDef, V8VMDef)
 
 DIR = os.getcwd()
 JKRUNTIME_DIR = os.path.join(DIR, "krun", "libkruntime", "")
@@ -9,12 +9,12 @@ JDK8_HOME = os.path.join(DIR, "work/openjdk/build/linux-x86_64-normal-server-rel
 HEAP_LIMIT = 2097152  # K == 2Gb
 
 VARIANTS = {
-    "default-java": JavaVariant(entry_point="KrunEntry", subdir="java"),
-    "default-lua": LuaVariant(entry_point="bench.lua", subdir="lua"),
-    "default-python": PythonVariant(entry_point="bench.py", subdir="python"),
-    "default-php": PHPVariant(entry_point="bench.php", subdir="php"),
-    "default-ruby": JRubyVariant(entry_point="bench.rb", subdir="ruby"),
-    "default-javascript": V8Variant(entry_point="bench.js", subdir="javascript"),
+    "default-java": JavaVMDef(entry_point="KrunEntry", subdir="java"),
+    "default-lua": LuaVMDef(entry_point="bench.lua", subdir="lua"),
+    "default-python": PythonVMDef(entry_point="bench.py", subdir="python"),
+    "default-php": PHPVMDef(entry_point="bench.php", subdir="php"),
+    "default-ruby": JRubyVMDef(entry_point="bench.rb", subdir="ruby"),
+    "default-javascript": V8VMDef(entry_point="bench.js", subdir="javascript"),
 }
 
 VMS = {
