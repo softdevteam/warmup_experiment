@@ -11,5 +11,5 @@ all:
 	for i in ${BENCHMARKS}; do \
 		echo "Building java benchmark $${i}..."; \
 		cd ${HERE}/$${i}/java && \
-		CLASSPATH=../../../krun/krun/iteration_runners/ ${JAVAC} *.java; \
+		CLASSPATH=../../../krun/iterations_runners/ ${JAVAC} *.java; \
 		done
