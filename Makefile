@@ -23,6 +23,6 @@ bench: build-krun build-benchs
 	if ! [ -d libkalibera ]; then \
 		git clone https://github.com/softdevteam/libkalibera.git; \
 	fi
-	env LD_LIBRARY_PATH=${HERE}/krun/libkruntime ${PYTHON} krun/krun.py warmup.krun
+	${PYTHON} krun/krun.py warmup.krun
 
 # XXX target to format results.
