@@ -1,6 +1,7 @@
 import os
 from krun.vm_defs import (PythonVMDef, LuaVMDef, JavaVMDef, PHPVMDef,
 		           JRubyVMDef, V8VMDef)
+from krun import EntryPoint
 
 DIR = os.getcwd()
 JKRUNTIME_DIR = os.path.join(DIR, "krun", "libkruntime", "")
@@ -8,24 +9,25 @@ JDK8_HOME = os.path.join(DIR, "work/openjdk/build/linux-x86_64-normal-server-rel
 
 HEAP_LIMIT = 2097152  # K == 2Gb
 
+# Variant name -> EntryPoint
 VARIANTS = {
-    "default-java": JavaVMDef(entry_point="KrunEntry", subdir="java"),
-    "default-lua": LuaVMDef(entry_point="bench.lua", subdir="lua"),
-    "default-python": PythonVMDef(entry_point="bench.py", subdir="python"),
-    "default-php": PHPVMDef(entry_point="bench.php", subdir="php"),
-    "default-ruby": JRubyVMDef(entry_point="bench.rb", subdir="ruby"),
-    "default-javascript": V8VMDef(entry_point="bench.js", subdir="javascript"),
+    "default-java": EntryPoint("KrunEntry", subdir="java"),
+    "default-lua": EntryPoint("bench.lua", subdir="lua"),
+    "default-python": EntryPoint("bench.py", subdir="python"),
+    "default-php": EntryPoint("bench.php", subdir="php"),
+    "default-ruby": EntryPoint("bench.rb", subdir="ruby"),
+    "default-javascript": EntryPoint("bench.js", subdir="javascript"),
 }
 
 VMS = {
 	'PyPy': {
-		'path': 'work/pypy/pypy/goal/pypy-c',
+		'vm_def': PythonVMDef('work/pypy/pypy/goal/pypy-c'),
 		'variants': ['default-python'],
 		'n_iterations': 1,
 		'warm_upon_iter': 0,
 	},
 	'Hotspot': {
-		'path': 'work/openjdk/build/linux-x86_64-normal-server-release/images/j2sdk-image/bin/java',
+		'vm_def': JavaVMDef('work/openjdk/build/linux-x86_64-normal-server-release/images/j2sdk-image/bin/java'),
 		'vm_args': ["-Djava.library.path=%s" % JKRUNTIME_DIR],
 		'variants': ['default-java'],
 		'n_iterations': 1,
@@ -33,9 +35,9 @@ VMS = {
 	},
     # Seems like graal listens to LD_LIRARY_PATH, thus doesn't require -Djava.library.path
 	'Graal': {
-		'path': 'work/graal/mxtool/mx',
+		'vm_def': JavaVMDef('work/graal/mxtool/mx'),
 		'vm_env': {
-            'JAVA_HOME': JDK8_HOME,
+	    'JAVA_HOME': JDK8_HOME,
             'DEFAULT_VM': 'server',
             },
 		'vm_args': ["vm"],
@@ -44,19 +46,19 @@ VMS = {
 		'warm_upon_iter': 0,
 	},
 	'LuaJIT': {
-		'path': 'work/luajit/src/luajit',
+		'vm_def': LuaVMDef('work/luajit/src/luajit'),
 		'variants': ['default-lua'],
 		'n_iterations': 1,
 		'warm_upon_iter': 0,
 	},
 	'HHVM': {
-		'path': 'work/hhvm/hphp/hhvm/php',
+		'vm_def': PHPVMDef('work/hhvm/hphp/hhvm/php'),
 		'variants': ['default-php'],
 		'n_iterations': 1,
 		'warm_upon_iter': 0,
 	},
 	'TruffleRuby' : {
-		'path': 'work/jruby/bin/jruby',
+		'vm_def': JRubyVMDef('work/jruby/bin/jruby'),
 		'vm_args': ['-X+T', '-J-server'],  # enable graal/truffle
 		'vm_env': {'JAVACMD': 'work/graal/jdk1.8.0-internal/product/bin/java'},
 		'variants': ['default-ruby'],
@@ -64,7 +66,7 @@ VMS = {
 		'warm_upon_iter': 0,
 	},
 	'V8': {
-		'path': 'work/v8/out/native/d8',
+		'vm_def': V8VMDef('work/v8/out/native/d8'),
 		'variants': ['default-javascript'],
 		'n_iterations': 1,
 		'warm_upon_iter': 0,
