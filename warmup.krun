@@ -32,7 +32,6 @@ VMS = {
 		'n_iterations': 1,
 		'warm_upon_iter': 0,
 	},
-    # Seems like graal listens to LD_LIRARY_PATH, thus doesn't require -Djava.library.path
 	'Graal': {
 		'vm_def': GraalVMDef('work/graal/mxtool/mx', JDK8_HOME),
 		'variants': ['default-java'],
