@@ -1,6 +1,6 @@
 import os
-from krun.vm_defs import (PythonVMDef, LuaVMDef, JavaVMDef, PHPVMDef,
-		           JRubyVMDef, V8VMDef)
+from krun.vm_defs import (PythonVMDef, LuaVMDef, JavaVMDef, GraalVMDef, PHPVMDef,
+		           JRubyTruffleVMDef, V8VMDef)
 from krun import EntryPoint
 
 DIR = os.getcwd()
@@ -28,19 +28,13 @@ VMS = {
 	},
 	'Hotspot': {
 		'vm_def': JavaVMDef('work/openjdk/build/linux-x86_64-normal-server-release/images/j2sdk-image/bin/java'),
-		'vm_args': ["-Djava.library.path=%s" % JKRUNTIME_DIR],
 		'variants': ['default-java'],
 		'n_iterations': 1,
 		'warm_upon_iter': 0,
 	},
     # Seems like graal listens to LD_LIRARY_PATH, thus doesn't require -Djava.library.path
 	'Graal': {
-		'vm_def': JavaVMDef('work/graal/mxtool/mx'),
-		'vm_env': {
-	    'JAVA_HOME': JDK8_HOME,
-            'DEFAULT_VM': 'server',
-            },
-		'vm_args': ["vm"],
+		'vm_def': GraalVMDef('work/graal/mxtool/mx', JDK8_HOME),
 		'variants': ['default-java'],
 		'n_iterations': 1,
 		'warm_upon_iter': 0,
@@ -57,10 +51,8 @@ VMS = {
 		'n_iterations': 1,
 		'warm_upon_iter': 0,
 	},
-	'TruffleRuby' : {
-		'vm_def': JRubyVMDef('work/jruby/bin/jruby'),
-		'vm_args': ['-X+T', '-J-server'],  # enable graal/truffle
-		'vm_env': {'JAVACMD': 'work/graal/jdk1.8.0-internal/product/bin/java'},
+	'JRubyTruffle' : {
+		'vm_def': JRubyTruffleVMDef('work/jruby/bin/jruby', java_path='work/graal/jdk1.8.0-internal/product/bin/java'),
 		'variants': ['default-ruby'],
 		'n_iterations': 1,
 		'warm_upon_iter': 0,
@@ -90,7 +82,7 @@ SKIP=[
     #"*:Graal:*",
     #"*:LuaJIT:*",
     #"*:HHVM:*",
-    #"*:TruffleRuby:*",
+    #"*:JRubyTruffle:*",
     #"*:V8:*",
 ]
 
