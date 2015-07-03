@@ -9,6 +9,8 @@ JDK8_HOME = os.path.join(DIR, "work/openjdk/build/linux-x86_64-normal-server-rel
 
 HEAP_LIMIT = 2097152  # K == 2Gb
 
+AUDIT_CMD = "python2.7 portautils/sdaudit /dev/stdout"
+
 # Variant name -> EntryPoint
 VARIANTS = {
     "default-java": EntryPoint("KrunEntry", subdir="java"),
