@@ -117,7 +117,7 @@ build_v8() {
 	fetch v8 || exit $?
 	cd v8 || exit $?
 	git checkout ${V8_V} || exit $?
-	patch -Ep1 < ${PATCH_DIR}/v8_clock_gettime_monotonic.diff || exit $?
+	patch -Ep1 < ${PATCH_DIR}/v8_various.diff || exit $?
 	make native || exit $?
 	PATH=${OLDPATH}
 }
