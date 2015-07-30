@@ -3,6 +3,12 @@ from krun.vm_defs import (PythonVMDef, LuaVMDef, JavaVMDef, GraalVMDef, PHPVMDef
 		           JRubyTruffleVMDef, V8VMDef)
 from krun import EntryPoint
 
+# Who to mail
+MAIL_TO = []
+
+# Maximum number of error emails to send per-run
+#MAX_MAILS = 2
+
 DIR = os.getcwd()
 JKRUNTIME_DIR = os.path.join(DIR, "krun", "libkruntime", "")
 JDK8_HOME = os.path.join(DIR, "work/openjdk/build/linux-x86_64-normal-server-release/images/j2sdk-image/")
