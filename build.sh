@@ -152,18 +152,51 @@ build_jdk() {
 	PATH=${JDK_BUILD_PATH} make all || exit $?
 }
 
-# XXX read more into the SERVER versions. Are we using the right one?
-MX="PATH=${wrkdir}/graal/mxtool:${PATH} EXTRA_JAVA_HOMES=/usr/lib/jvm/java-7-openjdk-amd64 JAVA_HOME=${wrkdir}/openjdk/build/linux-x86_64-normal-server-release/images/j2sdk-image/ DEFAULT_VM=server mx"
+MX_REPO=https://bitbucket.org/allr/mx
+GRAAL_REPO=http://hg.openjdk.java.net/graal/graal-compiler
+GRAAL_VERSION=9dafd1dc5ff9
+
+MX="env DEFAULT_VM=jvmci JAVA_HOME=${wrkdir}/openjdk/build/linux-x86_64-normal-server-release/images/j2sdk-image/ python2.7 ${wrkdir}/mx/mx.py"
 build_graal() {
 	echo "\n===> Download and build graal\n"
+
+	if [ ! -d ${wrkdir}/mx ]; then
+		cd ${wrkdir} && hg clone ${MX_REPO} || exit $?
+	fi
+
 	if [ -f ${wrkdir}/graal/jdk1.8.0-internal/product/bin/javac ]; then return; fi
+
 	cd ${wrkdir}
 	if ! [ -d ${wrkdir}/graal ]; then
-		hg clone http://hg.openjdk.java.net/graal/graal || exit $?
+		# Officially you are supposed to use mx to get the latest graal, but since
+		# we need a fixed version, we deviate.
+		# i.e. We do NOT do this:
+		#${MX} sclone http://hg.openjdk.java.net/graal/graal-compiler graal || exit $?
+
+		# But instead, clone a fixed revision of graal
+		hg clone -r ${GRAAL_VERSION} ${GRAAL_REPO} graal || exit $?
+		cd graal || exit $?
+
+		if ! [ -d ${wrkdir}/jvmci ]; then
+			# Then graal has in mx.graal/suite.py specifies a fixed version
+			# of jvmci8 that is known to work with this version of graal.
+			# To fetch it we use the sforceimports feature of mx.
+			${MX} sforceimports || exit $?
+		fi
 	fi
-	cd graal
-	env ${MX} build
-	# '${MX} vm' runs the vm
+
+	# There is a bug in the build system which assumes you have the
+	# the closed-source jrockit JVM component. This forces that
+	# feature off.
+	${MX} makefile -o ../jvmci/make/jvmci.make
+
+	# Then we can build as usual.
+	${MX} build || exit $?
+
+	# Build both server backends.
+	# We need jvmci for Java and server for JRuby.
+	${MX} --vm jvmci --vmbuild product build
+	${MX} --vm server --vmbuild product build
 }
 
 
