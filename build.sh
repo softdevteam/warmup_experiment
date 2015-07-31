@@ -281,14 +281,6 @@ EOF
 	#rm -fr $t
 }
 
-fetch_portautils() {
-	echo "\n===> Fetch sdaudit\n"
-	cd ${HERE}
-	if ! [ -d ${HERE}}/portautils ]; then
-		git clone https://github.com/softdevteam/portautils.git || exit $?
-	fi
-}
-
 # main
 
 build_cpython
@@ -300,5 +292,4 @@ build_jdk
 build_graal
 build_jruby_truffle
 build_hhvm
-fetch_portautils
 fetch_external_benchmarks
