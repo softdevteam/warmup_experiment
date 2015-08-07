@@ -200,7 +200,8 @@ build_graal() {
 }
 
 
-JRUBY_V=b0b724952eaf283ea03fd39517243ac509e5932a
+# needs to be from the truffle-head branch
+JRUBY_V=7b4cee81891e7b7db996f6dbc0d7f9d5266910bf
 build_jruby_truffle() {
 	echo "\n===> Download and build truffle+jruby\n"
 	cd ${wrkdir}
@@ -211,15 +212,6 @@ build_jruby_truffle() {
 	cd ${wrkdir}/jruby || exit $?
 	git checkout ${JRUBY_V} || exit $?
 	./mvnw || exit $?
-	GRAAL_BIN=${wrkdir}/graal/jdk1.8.0-internal/product/bin/java ${wrkdir}/jruby/bin/jruby ${wrkdir}/jruby/tool/jt.rb build || exit $?
-
-	# http://lafo.ssw.uni-linz.ac.at/graalvm/jruby/doc/
-	# to run the vm:
-	#JAVACMD=${wrkdir}/graal/jdk1.8.0-internal/product/bin/java ${wrkdir}/jruby/bin/jruby -X+T -J-server ...
-
-	echo "--> Check graal is enabled in JRuby+Truffle"
-	graal_en=`JAVACMD=${wrkdir}/graal/jdk1.8.0-internal/product/bin/java ${wrkdir}/jruby/bin/jruby -X+T -J-server -e "puts Truffle.graal?"`
-	if ! [ "${graal_en}" = "true" ]; then echo "graal was not enabled!!!" && exit 1; fi
 }
 
 
