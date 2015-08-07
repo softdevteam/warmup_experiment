@@ -41,7 +41,7 @@ VMS = {
 		'warm_upon_iter': 0,
 	},
 	'Graal': {
-		'vm_def': GraalVMDef('work/mx/mx', JDK8_HOME, 'work/jvmci'),
+		'vm_def': GraalVMDef('work/jvmci/jdk1.8.0-internal/product/bin/java', JDK8_HOME),
 		'variants': ['default-java'],
 		'n_iterations': ITERATIONS_ALL_VMS,
 		'warm_upon_iter': 0,
