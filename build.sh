@@ -54,6 +54,15 @@ echo "===> Working in $wrkdir"
 
 PATCH_DIR=`pwd`/patches/
 
+# XXX when we stabilise, fix the krun revision.
+KRUN_REPO=https://github.com/softdevteam/krun.git
+fetch_krun() {
+	echo "\n===> Download and build krun\n"
+	if ! [ -d "${HERE}/krun" ]; then
+		cd ${HERE} && git clone ${KRUN_REPO} || exit $?
+	fi
+}
+
 CPYTHONV=2.7.10
 build_cpython() {
 	cd ${wrkdir} || exit $?
@@ -275,6 +284,7 @@ EOF
 
 # main
 
+fetch_krun
 build_cpython
 build_luajit
 build_pypy
