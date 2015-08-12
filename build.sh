@@ -54,7 +54,19 @@ echo "===> Working in $wrkdir"
 
 PATCH_DIR=`pwd`/patches/
 
+# XXX when we stabilise, fix the krun revision.
+KRUN_REPO=https://github.com/softdevteam/krun.git
+fetch_krun() {
+	echo "\n===> Download and build krun\n"
+	if ! [ -d "${HERE}/krun" ]; then
+		cd ${HERE} && git clone ${KRUN_REPO} || exit $?
+	fi
+}
+
 CPYTHONV=2.7.10
+CFFI_V=1.1.2
+SETUPTOOLS_V=18.1
+CPYTHON=${wrkdir}/cpython-inst/bin/python
 build_cpython() {
 	cd ${wrkdir} || exit $?
 	echo "\n===> Download and build CPython\n"
@@ -64,9 +76,22 @@ build_cpython() {
 	tar xfz Python-${CPYTHONV}.tgz || exit $?
 	mv Python-${CPYTHONV} cpython
 	cd cpython
-	./configure || exit $?
+	./configure --prefix=${wrkdir}/cpython-inst || exit $?
 	$MYMAKE || exit $?
+	$MYMAKE install || exit $?
 	#cp $wrkdir/cpython/Lib/test/pystone.py $wrkdir/benchmarks/dhrystone.py
+
+	# Install packages.
+	# I would liked to have used virtualenv, but cffi fails to install using our manually
+	# built CPython. I suspect a bug in setuptools/virtualenv in debian8.
+	# Instead, install stuff manually.
+	cd ${wrkdir} && wget https://pypi.python.org/packages/source/s/setuptools/setuptools-${SETUPTOOLS_V}.tar.gz || exit $?
+	tar zxvf setuptools-${SETUPTOOLS_V}.tar.gz || exit $?
+	cd setuptools-${SETUPTOOLS_V} && ${CPYTHON} setup.py install || exit $?
+
+	cd ${wrkdir} && wget https://pypi.python.org/packages/source/c/cffi/cffi-${CFFI_V}.tar.gz || exit $?
+	tar zxvf cffi-${CFFI_V}.tar.gz || exit $?
+	cd cffi-${CFFI_V} && ${CPYTHON} setup.py install
 }
 
 
@@ -275,6 +300,7 @@ EOF
 
 # main
 
+fetch_krun
 build_cpython
 build_luajit
 build_pypy
