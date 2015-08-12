@@ -71,6 +71,12 @@ VMS = {
 		'n_iterations': ITERATIONS_ALL_VMS,
 		'warm_upon_iter': 0,
 	},
+	'CPython': {
+		'vm_def': PythonVMDef('work/cpython-inst/bin/python'),
+		'variants': ['default-python'],
+		'n_iterations': ITERATIONS_ALL_VMS,
+		'warm_upon_iter': 0,
+	}
 }
 
 
@@ -86,6 +92,7 @@ BENCHMARKS = {
 # list of "bench:vm:variant"
 SKIP=[
     #"*:PyPy:*",
+    #"*:CPython:*",
     #"*:Hotspot:*",
     #"*:Graal:*",
     #"*:LuaJIT:*",
