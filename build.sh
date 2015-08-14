@@ -261,6 +261,8 @@ build_hhvm() {
 fetch_external_benchmarks() {
 	echo "\n===> Download and build misc benchmarks\n"
 
+	if [ -f "${HERE}/benchmarks/richards/java/richards.java" ]; then return; fi
+
 cat << EOF
 In order to build these benchmarks, you need to agree to the licensing terms
 of the Java Richards benchmark at:
