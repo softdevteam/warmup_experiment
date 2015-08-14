@@ -240,7 +240,7 @@ build_jruby_truffle() {
 }
 
 
-kHVM_VERSION=HHVM-3.7.1
+HHVM_VERSION=HHVM-3.7.1
 build_hhvm() {
 	echo "\n===> Download and build HHVM\n"
 	if [ -f ${wrkdir}/hhvm/hphp/hhvm/php ]; then return; fi
