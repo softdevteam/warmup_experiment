@@ -189,7 +189,7 @@ build_graal() {
 		cd ${wrkdir} && hg clone ${MX_REPO} || exit $?
 	fi
 
-	if [ -f ${wrkdir}/graal/jdk1.8.0-internal/product/bin/javac ]; then return; fi
+	if [ -f ${wrkdir}/jvmci/jdk1.8.0-internal/product/bin/javac ]; then return; fi
 
 	cd ${wrkdir}
 	if ! [ -d ${wrkdir}/graal ]; then
@@ -261,6 +261,8 @@ build_hhvm() {
 fetch_external_benchmarks() {
 	echo "\n===> Download and build misc benchmarks\n"
 
+	if [ -f "${HERE}/benchmarks/richards/java/richards.java" ]; then return; fi
+
 cat << EOF
 In order to build these benchmarks, you need to agree to the licensing terms
 of the Java Richards benchmark at:
@@ -276,7 +278,7 @@ EOF
 
 	t=`mktemp -d` || exit $?
 	cd $t || exit $?
-    wget http://www.wolczko.com/richdbsrc.zip || exit $?
+	wget http://www.wolczko.com/richdbsrc.zip || exit $?
 	unzip richdbsrc.zip || exit $?
 	mv Benchmark.java Program.java COM/sun/labs/kanban/richards_deutsch_acc_virtual/ || exit $?
 	cd COM/sun/labs/kanban/richards_deutsch_acc_virtual || exit $?
