@@ -82,7 +82,7 @@ VMS = {
 
 BENCHMARKS = {
     'binarytrees': 18,
-    'richards': 100,
+    'richards': 1000,
     'spectralnorm': 3000,
     'nbody': 1000000,
     'fasta': 1000000,
