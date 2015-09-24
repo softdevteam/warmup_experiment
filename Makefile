@@ -25,14 +25,7 @@ bench: build-krun build-benchs
 	fi
 	${PYTHON} krun/krun.py warmup.krun
 
-# Manual step:
-# Copy data (results and config_file) from you hosts into folders
-# into a directory called "current_results"
-# Then edit this:
-MACHINE_ARGS = current_results/bencher3/warmup.krun bencher3
-MACHINE_ARGS += current_results/bencher5/warmup.krun bencher5
-two-by-two:
-	PYTHONPATH=${HERE}/krun \
-		   ${PYTHON} mk_graphs2x2.py interactive ${MACHINE_ARGS}
+export-graphs:
+	${PYTHON} export_all_graphs.py
 
 # XXX target to format results.
