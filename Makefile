@@ -33,6 +33,6 @@ MACHINE_ARGS = current_results/bencher3/warmup.krun bencher3
 MACHINE_ARGS += current_results/bencher5/warmup.krun bencher5
 two-by-two:
 	PYTHONPATH=${HERE}/krun \
-		   ${PYTHON} mk_graphs2x2.py ${MACHINE_ARGS}
+		   ${PYTHON} mk_graphs2x2.py interactive ${MACHINE_ARGS}
 
 # XXX target to format results.
