@@ -1,6 +1,7 @@
 import os
-from krun.vm_defs import (PythonVMDef, LuaVMDef, JavaVMDef, GraalVMDef, PHPVMDef,
-		           JRubyTruffleVMDef, V8VMDef)
+from krun.vm_defs import (PythonVMDef, LuaVMDef, JavaVMDef, GraalVMDef,
+		          PHPVMDef, JRubyTruffleVMDef, V8VMDef,
+			  find_internal_jvmci_java_bin)
 from krun import EntryPoint
 
 # Who to mail
@@ -41,7 +42,7 @@ VMS = {
 		'warm_upon_iter': 0,
 	},
 	'Graal': {
-		'vm_def': GraalVMDef('work/jvmci/jdk1.8.0-internal/product/bin/java', JDK8_HOME),
+		'vm_def': GraalVMDef(find_internal_jvmci_java_bin('work/jvmci/'), JDK8_HOME),
 		'variants': ['default-java'],
 		'n_iterations': ITERATIONS_ALL_VMS,
 		'warm_upon_iter': 0,
@@ -60,7 +61,7 @@ VMS = {
 	},
 	'JRubyTruffle' : {
 		'vm_def': JRubyTruffleVMDef('work/jruby/bin/jruby',
-		                            java_path='work/jvmci/jdk1.8.0-internal/product/bin/java'),
+		                            java_path=find_internal_jvmci_java_bin('work/jvmci/')),
 		'variants': ['default-ruby'],
 		'n_iterations': ITERATIONS_ALL_VMS,
 		'warm_upon_iter': 0,
