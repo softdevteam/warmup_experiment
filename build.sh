@@ -180,8 +180,11 @@ build_jdk() {
 MX_REPO=https://bitbucket.org/allr/mx
 GRAAL_REPO=http://hg.openjdk.java.net/graal/graal-compiler
 GRAAL_VERSION=9dafd1dc5ff9
+# Building with the JDK we built earlier is troublesome (SSL+maven issues).
+# Instead we use the system JDK8.
+SYSTEM_JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-amd64
 
-MX="env DEFAULT_VM=jvmci JAVA_HOME=${wrkdir}/openjdk/build/linux-x86_64-normal-server-release/images/j2sdk-image/ python2.7 ${wrkdir}/mx/mx.py"
+MX="env DEFAULT_VM=jvmci JAVA_HOME=${SYSTEM_JAVA_HOME} python2.7 ${wrkdir}/mx/mx.py"
 build_graal() {
 	echo "\n===> Download and build graal\n"
 
