@@ -228,8 +228,15 @@ build_graal() {
 }
 
 
-# needs to be from the truffle-head branch
-JRUBY_V=7b4cee81891e7b7db996f6dbc0d7f9d5266910bf
+# This is a recent revision on the truffle-head branch which I know to
+# work, however, it has a bug which crashes our fasta benchmark.
+#JRUBY_V=7b4cee81891e7b7db996f6dbc0d7f9d5266910bf
+
+# This is a branch diverging from the above revision, but with a
+# fix for the crash applied. In the long term we need to get the latest
+# truffle-head working, however this is proving difficult XXX
+JRUBY_V=f4cd59cdd1c89c111fb7d09db7250cc667ae3ec5
+
 build_jruby_truffle() {
 	echo "\n===> Download and build truffle+jruby\n"
 	cd ${wrkdir}
