@@ -2,7 +2,8 @@
 -- http://shootout.alioth.debian.org/
 -- contributed by Mike Pall
 
-local Last = 42
+local INITIAL_STATE = 42
+local Last = INITIAL_STATE
 local function random(max)
   local y = (Last * 3877 + 29573) % 139968
   Last = y
@@ -100,6 +101,7 @@ local homosapiens = make_bisect{
 }
 
 function run_iter(N)
+    Last = INITIAL_STATE
     --local N = tonumber(arg and arg[1]) or 1000
     make_repeat_fasta('ONE', 'Homo sapiens alu', alu, N*2)
     make_random_fasta('TWO', 'IUB ambiguity codes', iub, N*3)

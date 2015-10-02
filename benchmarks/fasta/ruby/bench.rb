@@ -4,7 +4,8 @@
 # Modified by Rick Branson
 # Modified by YAGUCHI Yuya
 
-$last = 42.0
+INITIAL_STATE = 42.0
+$last = INITIAL_STATE
 
 GR_IM = 139968.0
 GR_IA = 3877.0
@@ -62,6 +63,7 @@ def make_random_fasta(table, n)
     prob = 0.0
     rwidth = (1..width)
     table.each{|v| v[1]= (prob += v[1])}
+    table = table.collect{|v| prob += v[1]; [v[0], prob] }
 
     collector = "rand = ($last = ($last * GR_IA + GR_IC) % GR_IM) / GR_IM\n"
     table.each do |va, vb|
@@ -89,6 +91,7 @@ end
 
 # work around ruby scoping using lambda
 def run_iter(n)
+    $last = INITIAL_STATE
     #n = (ARGV[0] or 27).to_i
 
     #puts ">ONE Homo sapiens alu"

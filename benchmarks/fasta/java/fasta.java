@@ -154,6 +154,7 @@ class fasta {
         // n = Integer.parseInt(args[0]);
       //}
 
+        FloatProbFreq.reset_random();
         OutputStream out = null;// System.out;
         makeRepeatFasta("ONE", "Homo sapiens alu", ALU, n * 2, out);
         makeRandomFasta("TWO", "IUB ambiguity codes", IUB, n * 3, out);
@@ -162,7 +163,8 @@ class fasta {
     }
 
     public static final class FloatProbFreq {
-       static int last = 42;
+       static final int INITIAL_STATE = 42;
+       static int last = INITIAL_STATE;
        final byte[] chars;
        final float[] probs;
 
@@ -173,6 +175,10 @@ class fasta {
              this.probs[i] = (float)probs[i];
           }
           makeCumulative();
+       }
+
+       public static void reset_random() {
+           last = INITIAL_STATE;
        }
 
        private final void makeCumulative() {

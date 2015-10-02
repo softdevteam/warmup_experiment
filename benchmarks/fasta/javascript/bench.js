@@ -3,7 +3,8 @@
 //
 //  Contributed by Ian Osgood
 
-var last = 42, A = 3877, C = 29573, M = 139968;
+var INITIAL_STATE = 42;
+var last = INITIAL_STATE, A = 3877, C = 29573, M = 139968;
 
 function rand(max) {
   last = (last * A + C) % M;
@@ -19,18 +20,22 @@ var ALU =
   "AGGCGGAGGTTGCAGTGAGCCGAGATCGCGCCACTGCACTCC" +
   "AGCCTGGGCGACAGAGCGAGACTCCGTCTCAAAAA";
 
-var IUB = {
-  a:0.27, c:0.12, g:0.12, t:0.27,
-  B:0.02, D:0.02, H:0.02, K:0.02,
-  M:0.02, N:0.02, R:0.02, S:0.02,
-  V:0.02, W:0.02, Y:0.02
+function IUB() {
+  return {
+    a:0.27, c:0.12, g:0.12, t:0.27,
+    B:0.02, D:0.02, H:0.02, K:0.02,
+    M:0.02, N:0.02, R:0.02, S:0.02,
+    V:0.02, W:0.02, Y:0.02
+  }
 }
 
-var HomoSap = {
-  a: 0.3029549426680,
-  c: 0.1979883004921,
-  g: 0.1975473066391,
-  t: 0.3015094502008
+function HomoSap() {
+  return {
+    a: 0.3029549426680,
+    c: 0.1979883004921,
+    g: 0.1975473066391,
+    t: 0.3015094502008
+  }
 }
 
 function makeCumulative(table) {
@@ -80,14 +85,15 @@ function fastaRandom(n, table) {
 }
 
 function run_iter(n) {
+    last = INITIAL_STATE;
     //var n = arguments[0]
 
     //print(">ONE Homo sapiens alu")
     fastaRepeat(2*n, ALU)
 
     //print(">TWO IUB ambiguity codes")
-    fastaRandom(3*n, IUB)
+    fastaRandom(3*n, IUB())
 
     //print(">THREE Homo sapiens frequency")
-    fastaRandom(5*n, HomoSap)
+    fastaRandom(5*n, HomoSap())
 }
