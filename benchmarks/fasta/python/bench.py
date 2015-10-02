@@ -92,6 +92,8 @@ def randomFasta(table, n):
     randomGenState = rgs
 
 def run_iter(n):
+    global randomGenState
+    randomGenState = INITIAL_STATE
     #n = int(sys.argv[1])
 
     makeRandomLUT()

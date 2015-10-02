@@ -10,7 +10,8 @@
 ob_implicit_flush(1);
 ob_start(NULL, 4096);
 
-$last = 42.0;
+$INITIAL_STATE = 42.0;
+$last = $INITIAL_STATE;
 function gen_random(&$last, &$randoms, $max = 1.0, $ia = 3877.0, $ic = 29573.0, $im = 139968.0) {
    foreach($randoms as &$r) {
       $r = $max * ($last = ($last * $ia + $ic) % $im) / $im;
@@ -128,14 +129,15 @@ $alu =
    'AGGCGGAGGTTGCAGTGAGCCGAGATCGCGCCACTGCACTCC' .
    'AGCCTGGGCGACAGAGCGAGACTCCGTCTCAAAAA';
 
+makeCumulative($iub);
+makeCumulative($homosapiens);
+
 function run_iter($n) {
     //$n = 1000;
-    global $iub, $homosapiens, $alu;
+    global $iub, $homosapiens, $alu, $last, $INITIAL_STATE;
+    $last = $INITIAL_STATE;
 
     //if ($_SERVER['argc'] > 1) $n = $_SERVER['argv'][1];
-
-    makeCumulative($iub);
-    makeCumulative($homosapiens);
 
     //echo ">ONE Homo sapiens alu\n";
     makeRepeatFasta($alu, $n*2);
