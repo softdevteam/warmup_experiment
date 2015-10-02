@@ -62,7 +62,6 @@ def make_random_fasta(table, n)
     chunk = 1 * width
     prob = 0.0
     rwidth = (1..width)
-    table.each{|v| v[1]= (prob += v[1])}
     table = table.collect{|v| prob += v[1]; [v[0], prob] }
 
     collector = "rand = ($last = ($last * GR_IA + GR_IC) % GR_IM) / GR_IM\n"
