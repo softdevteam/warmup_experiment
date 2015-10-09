@@ -12,6 +12,7 @@ import java.text.NumberFormat;
 
 public class spectralnorm
 {
+	static void init() {};
 	
 	private static final NumberFormat formatter = new DecimalFormat("#.000000000");
 	

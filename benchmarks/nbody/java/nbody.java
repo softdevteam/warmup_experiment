@@ -11,6 +11,8 @@
 */
 
 public final class nbody {
+    static void init() {};
+
     public static void runIter(int n) {
         //int n = Integer.parseInt(args[0]);
 
