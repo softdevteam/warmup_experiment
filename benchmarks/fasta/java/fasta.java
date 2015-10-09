@@ -10,6 +10,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 class fasta {
+    static void init() {};
+
    static final int IM = 139968;
    static final int IA = 3877;
    static final int IC = 29573;

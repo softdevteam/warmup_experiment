@@ -5,6 +5,7 @@
 */
 
 public class binarytrees {
+    static void init() {};
 
 	private final static int minDepth = 4;
 	

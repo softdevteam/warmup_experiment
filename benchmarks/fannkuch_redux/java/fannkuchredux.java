@@ -7,6 +7,8 @@
 
 public class fannkuchredux
 {
+    static void init() {};
+
    public static int runIter(int n) {
       int[] perm = new int[n];
       int[] perm1 = new int[n];
