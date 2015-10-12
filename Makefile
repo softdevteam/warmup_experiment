@@ -14,10 +14,10 @@ build-benchs:
 
 JAVA_HOME =	${HERE}/work/openjdk/build/linux-x86_64-normal-server-release/images/j2sdk-image
 build-krun:
-	if ! [ -d krun ]; then \
-		git clone https://github.com/softdevteam/krun.git; \
-	fi
-	cd krun && make JAVA_CPPFLAGS='"-I${JAVA_HOME}/include -I${JAVA_HOME}/include/linux"' JAVA_LDFLAGS=-L${JAVA_HOME}/lib JAVA_CFLAGS=-DWITH_JAVA=1
+	cd krun && ${MAKE} JAVA_CPPFLAGS='"-I${JAVA_HOME}/include \
+		-I${JAVA_HOME}/include/linux"' \
+		JAVA_LDFLAGS=-L${JAVA_HOME}/lib \
+		ENABLE_JAVA=1
 
 bench: build-krun build-benchs
 	if ! [ -d libkalibera ]; then \
