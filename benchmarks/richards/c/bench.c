@@ -20,6 +20,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <err.h>
 
 #define                Count           10000
 #define                Qpktcountval    23246
@@ -55,6 +56,13 @@
 #define                K_DEV           1000
 #define                K_WORK          1001
 
+#define                EXPECT_QPKTCOUNT     23246
+#define                EXPECT_HOLDCOUNT     9297
+
+#define TASKTAB_SZ     11
+#define NUM_TASKS      6
+#define NUM_PKTS       8
+
 struct packet
 {
     struct packet  *p_link;
@@ -76,13 +84,14 @@ struct task
     long            t_v2;
 };
 
-char  alphabet[28] = "0ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-struct task *tasktab[11]  =  {(struct task *)10,0,0,0,0,0,0,0,0,0,0};
+const char  alphabet[28] = "0ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+struct task *tasktab[TASKTAB_SZ]  =  {(struct task *)10,0,0,0,0,0,0,0,0,0,0};
 struct task *tasklist    =  0;
 struct task *tcb;
-long    taskid;
-long    v1;
-long    v2;
+long    taskid = 0;
+long    v1 = 0;
+long    v2 = 0;
 int     qpktcount    =  0;
 int     holdcount    =  0;
 int     tracing      =  0;
@@ -90,7 +99,35 @@ int     layout       =  0;
 
 void append(struct packet *pkt, struct packet *ptr);
 
-void createtask(int id,
+/* reset all non-constant global state and free allocations */
+void reset_state(struct packet *pkts[], struct task *tasks[]) {
+	int i = 0;
+
+	for (i = 0; i < NUM_PKTS; i++) {
+		free(pkts[i]);
+	}
+
+	for (i = 0; i < NUM_TASKS; i++) {
+		free(tasks[i]);
+	}
+
+	tasktab[0] = (struct task *) 10;
+	for (i = 0; i < 10; i++) {
+		tasktab[i+1] = 0;
+	}
+
+	tasklist = 0;
+	tcb = 0;
+	taskid = 0;
+	v1 = 0;
+	v2 = 0;
+	qpktcount = 0;
+	holdcount = 0;
+	tracing = 0;
+	layout = 0;
+}
+
+struct task *createtask(int id,
                 int pri,
                 struct packet *wkq,
                 int state,
@@ -110,6 +147,8 @@ void createtask(int id,
     t->t_v1     = v1;
     t->t_v2     = v2;
     tasklist    = t;
+
+    return (t);
 }
 
 struct packet *pkt(struct packet *link, int id, int kind)
@@ -183,7 +222,7 @@ void schedule()
     }
 }
 
-struct task *wait(void)
+struct task *r_wait(void)
 {
     tcb->t_state |= WAITBIT;
     return (tcb);
@@ -264,7 +303,7 @@ struct task *idlefn(struct packet *pkt)
 
 struct task *workfn(struct packet *pkt)
 {
-    if ( pkt==0 ) return ( wait() );
+    if ( pkt==0 ) return ( r_wait() );
     else
     {
         int i;
@@ -309,14 +348,14 @@ struct task *handlerfn(struct packet *pkt)
       return( qpkt(devpkt) );
     }
   }
-  return wait();
+  return r_wait();
 }
 
 struct task *devfn(struct packet *pkt)
 {
     if ( pkt==0 )
     {
-        if ( v1==0 ) return ( wait() );
+        if ( v1==0 ) return ( r_wait() );
         pkt = (struct packet *)v1;
         v1 = 0;
         return ( qpkt(pkt) );
@@ -338,58 +377,57 @@ void append(struct packet *pkt, struct packet *ptr)
     ptr->p_link = pkt;
 }
 
-int main(int argc, char *argv[])
+int run_iter(int reps)
 {
     struct packet *wkq = 0;
-    int reps = (argc == 2 ? atoi(argv[1]) : 10);
-    if (!(reps == 10 || reps == 100))
-        errx(1, "Unknown reps %d\n", reps);
+    struct task *tasks[NUM_TASKS];
+    struct packet *pkts[NUM_PKTS];
+    int cur_pkt = 0, cur_task = 0;
 
-    printf("Bench mark starting\n");
+    int rep = 0;
 
-    createtask(I_IDLE, 0, wkq, S_RUN, idlefn, 1, Count * reps);
+    for (rep = 0; rep < reps; rep ++) {
+	cur_task = 0;
+	cur_pkt = 0;
 
-    wkq = pkt(0, 0, K_WORK);
-    wkq = pkt(wkq, 0, K_WORK);
+        tasks[cur_task++] = createtask(I_IDLE, 0, wkq, S_RUN, idlefn, 1, Count);
 
-    createtask(I_WORK, 1000, wkq, S_WAITPKT, workfn, I_HANDLERA, 0);
+        pkts[cur_pkt++] = wkq = pkt(0, 0, K_WORK);
+        pkts[cur_pkt++] = wkq = pkt(wkq, 0, K_WORK);
 
-    wkq = pkt(0, I_DEVA, K_DEV);
-    wkq = pkt(wkq, I_DEVA, K_DEV);
-    wkq = pkt(wkq, I_DEVA, K_DEV);
+        tasks[cur_task++] = createtask(I_WORK, 1000, wkq, S_WAITPKT, workfn, I_HANDLERA, 0);
 
-    createtask(I_HANDLERA, 2000, wkq, S_WAITPKT, handlerfn, 0, 0);
+        pkts[cur_pkt++] = wkq = pkt(0, I_DEVA, K_DEV);
+        pkts[cur_pkt++] = wkq = pkt(wkq, I_DEVA, K_DEV);
+        pkts[cur_pkt++] = wkq = pkt(wkq, I_DEVA, K_DEV);
 
-    wkq = pkt(0, I_DEVB, K_DEV);
-    wkq = pkt(wkq, I_DEVB, K_DEV);
-    wkq = pkt(wkq, I_DEVB, K_DEV);
+        tasks[cur_task++] = createtask(I_HANDLERA, 2000, wkq, S_WAITPKT, handlerfn, 0, 0);
 
-    createtask(I_HANDLERB, 3000, wkq, S_WAITPKT, handlerfn, 0, 0);
+        pkts[cur_pkt++] = wkq = pkt(0, I_DEVB, K_DEV);
+        pkts[cur_pkt++] = wkq = pkt(wkq, I_DEVB, K_DEV);
+        pkts[cur_pkt++] = wkq = pkt(wkq, I_DEVB, K_DEV);
 
-    wkq = 0;
-    createtask(I_DEVA, 4000, wkq, S_WAIT, devfn, 0, 0);
-    createtask(I_DEVB, 5000, wkq, S_WAIT, devfn, 0, 0);
+        tasks[cur_task++] = createtask(I_HANDLERB, 3000, wkq, S_WAITPKT, handlerfn, 0, 0);
 
-    tcb = tasklist;
+        wkq = 0;
+        tasks[cur_task++] = createtask(I_DEVA, 4000, wkq, S_WAIT, devfn, 0, 0);
+        tasks[cur_task++] = createtask(I_DEVB, 5000, wkq, S_WAIT, devfn, 0, 0);
 
-    qpktcount = holdcount = 0;
+        tcb = tasklist;
 
-    tracing = FALSE;
-    layout = 0;
+        qpktcount = holdcount = 0;
 
-    schedule();
+        tracing = FALSE;
+        layout = 0;
 
-    printf("qpkt count = %d  holdcount = %d\n",
-           qpktcount, holdcount);
+        schedule();
 
-    printf("These results are ");
-    if (reps == 10 && qpktcount == 232625 && holdcount == 93050)
-        printf("correct");
-    else if (reps == 100 && qpktcount == 2326410 && holdcount == 930563)
-        printf("correct");
-    else printf("incorrect");
+        if (qpktcount != EXPECT_QPKTCOUNT || holdcount != EXPECT_HOLDCOUNT) {
+            errx(1, "sanity check failed! %d, %d vs %d, %d",
+                EXPECT_QPKTCOUNT, EXPECT_HOLDCOUNT, qpktcount, holdcount);
+        }
 
-    printf("\nend of run\n");
+	reset_state(pkts, tasks);
+    }
     return 0;
 }
-
