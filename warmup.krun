@@ -1,6 +1,6 @@
 import os
 from krun.vm_defs import (PythonVMDef, LuaVMDef, JavaVMDef, GraalVMDef,
-		          PHPVMDef, JRubyTruffleVMDef, V8VMDef,
+		          PHPVMDef, JRubyTruffleVMDef, V8VMDef, NativeCodeVMDef,
 			  find_internal_jvmci_java_bin)
 from krun import EntryPoint
 
@@ -18,6 +18,7 @@ HEAP_LIMIT = 2097152  # K == 2Gb
 
 # Variant name -> EntryPoint
 VARIANTS = {
+    "default-c": EntryPoint("bench.so", subdir="c"),
     "default-java": EntryPoint("KrunEntry", subdir="java"),
     "default-lua": EntryPoint("bench.lua", subdir="lua"),
     "default-python": EntryPoint("bench.py", subdir="python"),
@@ -29,6 +30,13 @@ VARIANTS = {
 ITERATIONS_ALL_VMS = 2000
 
 VMS = {
+        'C': {
+		'vm_def': NativeCodeVMDef(),
+		'variants': ['default-c'],
+		'n_iterations': ITERATIONS_ALL_VMS,
+		'warm_upon_iter': 0,
+
+        },
 	'PyPy': {
 		'vm_def': PythonVMDef('work/pypy/pypy/goal/pypy-c'),
 		'variants': ['default-python'],
@@ -100,6 +108,13 @@ SKIP=[
     #"*:HHVM:*",
     #"*:JRubyTruffle:*",
     #"*:V8:*",
+
+    # XXX these will go eventually.
+    "binarytrees:C:*",
+    "spectralnorm:C:*",
+    "nbody:C:*",
+    "fasta:C:*",
+    "fannkuch_redux:C:*",
 ]
 
 N_EXECUTIONS = 2  # Number of fresh processes.
