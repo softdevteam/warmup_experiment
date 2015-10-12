@@ -310,8 +310,22 @@ EOF
 	#rm -fr $t
 }
 
-# main
 
+# XXX fix when benchmarking for real.
+LIBKALIBERA_VERSION=master
+fetch_libkalibera() {
+	echo "\n===> Fetch libkalibera\n"
+	cd ${wrkdir}
+	if ! [ -d libkalibera ]; then \
+		git clone https://github.com/softdevteam/libkalibera.git || exit $?
+		cd ${wrkdir}/libkalibera || exit $?
+		git checkout ${LIBKALIBERA_VERSION} || exit $?
+	fi
+}
+
+ main
+
+fetch_libkalibera
 fetch_krun
 build_cpython
 build_luajit
