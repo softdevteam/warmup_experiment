@@ -59,7 +59,6 @@ void wrap_write(int fd, char *buf, size_t len) {
    int i;
 
    for (i = 0; i < len; i++) {
-      /* In languages like Python, we would modulo 2^{32} */
       checksum += buf[i];
    }
 
