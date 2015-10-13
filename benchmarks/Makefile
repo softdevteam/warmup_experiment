@@ -1,3 +1,5 @@
+# GNU Make!
+
 PWD !=		pwd
 
 # We build the C benchmarks as a shared object, which we will then dlopen()
@@ -12,7 +14,11 @@ BENCHMARKS = 		binarytrees \
 
 # XXX Once all complete, will disappear
 C_BENCHMARKS =	richards \
-		fasta
+		fasta \
+		binarytrees
+
+# Extra linker flags for C benchmarks
+C_EXTRA_LDFLAGS_binarytrees = -lm
 
 all: java-benchmarks c-benchmarks
 
@@ -24,8 +30,9 @@ java-benchmarks:
 		done
 
 c-benchmarks:
-	for i in ${C_BENCHMARKS}; do \
-		echo "Building C benchmark $${i}..."; \
-		cd ${PWD}/$${i}/c && \
-		${CC} ${CFLAGS} ${CPPFLAGS} ${BENCH_CFLAGS} -o bench.so bench.c || exit $?; \
-		done
+	$(foreach i, ${C_BENCHMARKS}, \
+		echo "Building C benchmark ${i}..."; \
+		cd ${PWD}/${i}/c && \
+		${CC} ${CFLAGS} ${CPPFLAGS} ${C_EXTRA_LDFLAGS_${i}} \
+		${BENCH_CFLAGS} -o bench.so bench.c || exit $?; \
+		done)
