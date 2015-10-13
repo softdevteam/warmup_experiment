@@ -36,4 +36,4 @@ c-benchmarks:
 		cd ${PWD}/${i}/c && \
 		${CC} ${CFLAGS} ${CPPFLAGS} ${C_EXTRA_LDFLAGS_${i}} \
 		${BENCH_CFLAGS} -o bench.so bench.c || exit $?; \
-		done)
+		)
