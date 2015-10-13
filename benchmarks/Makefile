@@ -15,7 +15,8 @@ BENCHMARKS = 		binarytrees \
 # XXX Once all complete, will disappear
 C_BENCHMARKS =	richards \
 		fasta \
-		binarytrees
+		binarytrees \
+		fannkuch_redux
 
 # Extra linker flags for C benchmarks
 C_EXTRA_LDFLAGS_binarytrees = -lm
