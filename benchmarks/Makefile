@@ -11,7 +11,8 @@ BENCHMARKS = 		binarytrees \
 			fannkuch_redux
 
 # XXX Once all complete, will disappear
-C_BENCHMARKS = richards
+C_BENCHMARKS =	richards \
+		fasta
 
 all: java-benchmarks c-benchmarks
 
