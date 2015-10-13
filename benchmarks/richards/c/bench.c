@@ -100,31 +100,35 @@ int     layout       =  0;
 void append(struct packet *pkt, struct packet *ptr);
 
 /* reset all non-constant global state and free allocations */
-void reset_state(struct packet *pkts[], struct task *tasks[]) {
-	int i = 0;
+void reset_state(struct packet *pkts[], struct task *tasks[])
+{
+    int i = 0;
 
-	for (i = 0; i < NUM_PKTS; i++) {
-		free(pkts[i]);
-	}
+    for (i = 0; i < NUM_PKTS; i++)
+    {
+        free(pkts[i]);
+    }
 
-	for (i = 0; i < NUM_TASKS; i++) {
-		free(tasks[i]);
-	}
+    for (i = 0; i < NUM_TASKS; i++)
+    {
+        free(tasks[i]);
+    }
 
-	tasktab[0] = (struct task *) 10;
-	for (i = 0; i < 10; i++) {
-		tasktab[i+1] = 0;
-	}
+    tasktab[0] = (struct task *) 10;
+    for (i = 0; i < 10; i++)
+    {
+        tasktab[i+1] = 0;
+    }
 
-	tasklist = 0;
-	tcb = 0;
-	taskid = 0;
-	v1 = 0;
-	v2 = 0;
-	qpktcount = 0;
-	holdcount = 0;
-	tracing = 0;
-	layout = 0;
+    tasklist = 0;
+    tcb = 0;
+    taskid = 0;
+    v1 = 0;
+    v2 = 0;
+    qpktcount = 0;
+    holdcount = 0;
+    tracing = 0;
+    layout = 0;
 }
 
 struct task *createtask(int id,
@@ -200,8 +204,8 @@ void schedule()
                 v1 = tcb->t_v1;
                 v2 = tcb->t_v2;
                 if (tracing) {
-		  trace(taskid+'0');
-		}
+                    trace(taskid+'0');
+                }
                 newtcb = (*(tcb->t_fn))(pkt);
                 tcb->t_v1 = v1;
                 tcb->t_v2 = v2;
@@ -387,8 +391,8 @@ int run_iter(int reps)
     int rep = 0;
 
     for (rep = 0; rep < reps; rep ++) {
-	cur_task = 0;
-	cur_pkt = 0;
+        cur_task = 0;
+        cur_pkt = 0;
 
         tasks[cur_task++] = createtask(I_IDLE, 0, wkq, S_RUN, idlefn, 1, Count);
 
@@ -427,7 +431,7 @@ int run_iter(int reps)
                 EXPECT_QPKTCOUNT, EXPECT_HOLDCOUNT, qpktcount, holdcount);
         }
 
-	reset_state(pkts, tasks);
+        reset_state(pkts, tasks);
     }
     return 0;
 }
