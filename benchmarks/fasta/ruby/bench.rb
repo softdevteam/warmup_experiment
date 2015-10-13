@@ -5,7 +5,7 @@
 # Modified by YAGUCHI Yuya
 
 INITIAL_STATE = 42.0
-$last = INITIAL_STATE
+@last = INITIAL_STATE
 
 GR_IM = 139968.0
 GR_IA = 3877.0
@@ -46,14 +46,34 @@ GR_IC = 29573.0
     ["t", 0.3015094502008],
 ]
 
+@SCALE = 10000
+@CHECKSUM = 0
+@EXPECT_CKSUM = 9611973
+@MOD = 2 ** 32
+
+@DEBUG = false
+
+def wrap_puts(s)
+    s.each_byte do |i|
+        @CHECKSUM = (@CHECKSUM + i) % @MOD
+    end
+    @CHECKSUM = @CHECKSUM + 10  # newline
+
+    if @DEBUG
+        puts s
+    end
+end
+
 def make_repeat_fasta(src, n)
     v = nil
     width = 60
     l = src.length
     s = src * ((n / l) + 1)
     s.slice!(n, l)
-    #puts (s.scan(/.{1,#{width}}/).join("\n"))
-    s.scan(/.{1,#{width}}/).join("\n")
+    lines = s.scan(/.{1,#{width}}/)
+    lines.each do |l|
+        wrap_puts l
+    end
 end
 
 def make_random_fasta(table, n)
@@ -64,41 +84,34 @@ def make_random_fasta(table, n)
     rwidth = (1..width)
     table = table.collect{|v| prob += v[1]; [v[0], prob] }
 
-    collector = "rand = ($last = ($last * GR_IA + GR_IC) % GR_IM) / GR_IM\n"
+    collector = "rand = (@last = (@last * GR_IA + GR_IC) % GR_IM) / GR_IM\n"
     table.each do |va, vb|
       collector += "next #{va.inspect} if #{vb.inspect} > rand\n"
     end
 
-    # Looks like eval can't deal with comments inside
-    #eval <<-EOF
-    #  (1..(n/width)).each do |i|
-    #    puts rwidth.collect{#{collector}}.join
-    #  end
-    #  if n%width != 0
-    #    puts (1..(n%width)).collect{#{collector}}.join
-    #  end
-    #EOF
     eval <<-EOF
       (1..(n/width)).each do |i|
-        rwidth.collect{#{collector}}.join
+        wrap_puts rwidth.collect{#{collector}}.join
       end
       if n%width != 0
-        (1..(n%width)).collect{#{collector}}.join
+        wrap_puts (1..(n%width)).collect{#{collector}}.join
       end
     EOF
 end
 
+
 # work around ruby scoping using lambda
 def run_iter(n)
-    $last = INITIAL_STATE
-    #n = (ARGV[0] or 27).to_i
+    for i in 0..n-1  # inclusive upper bound
+        make_repeat_fasta(@alu, @SCALE*2)
+        make_random_fasta(@iub, @SCALE*3)
+        make_random_fasta(@homosapiens, @SCALE*5)
 
-    #puts ">ONE Homo sapiens alu"
-    make_repeat_fasta(@alu, n*2)
+        if @CHECKSUM != @EXPECT_CKSUM then
+            abort "bad checksum: %d vs %s" % [@CHECKSUM, @EXPECT_CKSUM]
+        end
 
-    #puts ">TWO IUB ambiguity codes"
-    make_random_fasta(@iub, n*3)
-
-    #puts ">THREE Homo sapiens frequency"
-    make_random_fasta(@homosapiens, n*5)
+        @last = INITIAL_STATE
+        @CHECKSUM = 0
+    end
 end
