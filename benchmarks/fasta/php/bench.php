@@ -12,10 +12,31 @@ ob_start(NULL, 4096);
 
 $INITIAL_STATE = 42.0;
 $last = $INITIAL_STATE;
+
+$CHECKSUM = 0;
+define("SCALE", 10000);
+define("EXPECT_CKSUM", 9611973);
+define("MOD", pow(2, 32));
+
+define("DEBUG", False);
+
 function gen_random(&$last, &$randoms, $max = 1.0, $ia = 3877.0, $ic = 29573.0, $im = 139968.0) {
    foreach($randoms as &$r) {
       $r = $max * ($last = ($last * $ia + $ic) % $im) / $im;
    }
+}
+
+function wrap_print($s) {
+    global $CHECKSUM;
+
+    $len = strlen($s);
+    for ($i = 0; $i < $len; $i++) {
+        $CHECKSUM = ($CHECKSUM + ord($s[$i])) % MOD;
+    }
+
+    if (DEBUG) {
+        print($s);
+    }
 }
 
 /* Weighted selection from alphabet */
@@ -49,7 +70,7 @@ function makeRandomFasta(&$genelist, $n) {
          }
          $pick[$j++] = $k;
       }
-      //echo $pick;
+      wrap_print($pick);
    }
 
    // last, partial line
@@ -67,6 +88,7 @@ function makeRandomFasta(&$genelist, $n) {
          $pick[$j++] = $k;
       }
       $pick[$w] = "\n";
+      wrap_print(substr($pick, 0, $w+1));
    }
 
 }
@@ -77,15 +99,12 @@ function makeRepeatFasta($s, $n) {
    while ($n > 0) {
       if ($n < $lineLength) $lineLength = $n;
       if ($i + $lineLength < $sLength){
-         //print(substr($s,$i,$lineLength)); print("\n");
-         $no_use = substr($s,$i,$lineLength);
+         wrap_print(substr($s,$i,$lineLength) . "\n");
          $i += $lineLength;
       } else {
-         //print(substr($s,$i));
-         $no_use = substr($s,$i);
+         wrap_print(substr($s,$i));
          $i = $lineLength - ($sLength - $i);
-         //print(substr($s,0,$i)); print("\n");
-         $no_use = substr($s,0,$i);
+         wrap_print(substr($s,0,$i) . "\n");
       }
       $n -= $lineLength;
    }
@@ -132,21 +151,23 @@ $alu =
 makeCumulative($iub);
 makeCumulative($homosapiens);
 
+
 function run_iter($n) {
-    //$n = 1000;
-    global $iub, $homosapiens, $alu, $last, $INITIAL_STATE;
-    $last = $INITIAL_STATE;
+    global $iub, $homosapiens, $alu, $CHECKSUM, $last, $INITIAL_STATE;
 
-    //if ($_SERVER['argc'] > 1) $n = $_SERVER['argv'][1];
+    for ($i = 0; $i < $n; $i++) {
+        makeRepeatFasta($alu, 2 * SCALE);
+        makeRandomFasta($iub, 3 * SCALE);
+        makeRandomFasta($homosapiens, 5 * SCALE);
 
-    //echo ">ONE Homo sapiens alu\n";
-    makeRepeatFasta($alu, $n*2);
+        if ($CHECKSUM != EXPECT_CKSUM) {
+            echo "Bad checksum: " . EXPECT_CKSUM . " vs " . $CHECKSUM . "\n";
+            exit(1);
+        }
 
-    //echo ">TWO IUB ambiguity codes\n";
-    makeRandomFasta($iub, $n*3);
-
-    //echo ">THREE Homo sapiens frequency\n";
-    makeRandomFasta($homosapiens, $n*5);
+        $last = $INITIAL_STATE;
+        $CHECKSUM = 0;
+    }
 }
 
 ?>
