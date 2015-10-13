@@ -9,25 +9,29 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <err.h>
+
+#define MAX_N 8
+#define EXPECT_CKSUM 1616
 
 /* this depends highly on the platform.  It might be faster to use
    char type on 32-bit systems; it might be faster to use unsigned. */
 
 typedef int elem;
 
-elem s[16], t[16];
+elem s[MAX_N], t[MAX_N];
 
 int maxflips = 0;
-int max_n;
 int odd = 0;
-int checksum = 0;
+u_int32_t checksum = 0;
+
 
 int flip()
 {
    register int i;
    register elem *x, *y, c;
 
-   for (x = t, y = s, i = max_n; i--; )
+   for (x = t, y = s, i = MAX_N; i--; )
       *x++ = *y++;
    i = 1;
    do {
@@ -48,10 +52,10 @@ inline void rotate(int n)
 }
 
 /* Tompkin-Paige iterative perm generation */
-void tk(int n)
+void tk()
 {
-   int i = 0, f;
-   elem c[16] = {0};
+   int i = 0, f, n = MAX_N;
+   elem c[MAX_N] = {0};
 
    while (i < n) {
       rotate(i);
@@ -69,27 +73,29 @@ void tk(int n)
          checksum += odd ? -f : f;
       }
    }
+
+   if (checksum != EXPECT_CKSUM) {
+        errx(EXIT_FAILURE, "bad checksum: %d vs %d", checksum, EXPECT_CKSUM);
+   }
 }
 
-int main(int argc, char **v)
+void setup_state(void) {
+   int i;
+
+   for (i = 0; i < MAX_N; i++) {
+      s[i] = i;
+   }
+   checksum = 0;
+   maxflips = 0;
+   odd = 0;
+}
+
+void run_iter(int n)
 {
    int i;
 
-   if (argc < 2) {
-      fprintf(stderr, "usage: %s number\n", v[0]);
-      exit(1);
+   for (i = 0; i < n; i++) {
+      setup_state();
+      tk();
    }
-
-   max_n = atoi(v[1]);
-   if (max_n < 3 || max_n > 15) {
-      fprintf(stderr, "range: must be 3 <= n <= 12\n");
-      exit(1);
-   }
-
-   for (i = 0; i < max_n; i++) s[i] = i;
-   tk(max_n);
-
-   printf("%d\nPfannkuchen(%d) = %d\n", checksum, max_n, maxflips);
-
-   return 0;
 }
