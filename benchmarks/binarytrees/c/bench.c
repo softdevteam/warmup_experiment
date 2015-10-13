@@ -11,7 +11,13 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <err.h>
 
+#define MIN_DEPTH 4
+#define MAX_DEPTH 12
+#define EXPECT_CKSUM 4294956382
+
+static u_int32_t checksum = 0;
 
 typedef struct tn {
     struct tn*    left;
@@ -69,29 +75,16 @@ void DeleteTree(treeNode* tree)
 } /* DeleteTree() */
 
 
-int main(int argc, char* argv[])
+
+int inner_rep(int minDepth, int maxDepth)
 {
-    unsigned   N, depth, minDepth, maxDepth, stretchDepth;
+    unsigned   depth, stretchDepth;
     treeNode   *stretchTree, *longLivedTree, *tempTree;
-
-    N = atol(argv[1]);
-
-    minDepth = 4;
-
-    if ((minDepth + 2) > N)
-        maxDepth = minDepth + 2;
-    else
-        maxDepth = N;
 
     stretchDepth = maxDepth + 1;
 
     stretchTree = BottomUpTree(0, stretchDepth);
-    printf
-    (
-        "stretch tree of depth %u\t check: %li\n",
-        stretchDepth,
-        ItemCheck(stretchTree)
-    );
+    checksum += ItemCheck(stretchTree);
 
     DeleteTree(stretchTree);
 
@@ -116,21 +109,25 @@ int main(int argc, char* argv[])
             DeleteTree(tempTree);
         } /* for(i = 1...) */
 
-        printf
-        (
-            "%li\t trees of depth %u\t check: %li\n",
-            iterations * 2,
-            depth,
-            check
-        );
+        checksum += check;
+
     } /* for(depth = minDepth...) */
 
-    printf
-    (
-        "long lived tree of depth %u\t check: %li\n",
-        maxDepth,
-        ItemCheck(longLivedTree)
-    );
+    checksum += ItemCheck(longLivedTree);
+    DeleteTree(longLivedTree);
+
+    if (checksum != EXPECT_CKSUM) {
+        errx(EXIT_FAILURE, "checksum failed: %u vs %lu", checksum, EXPECT_CKSUM);
+    }
 
     return 0;
-} /* main() */
+} /* inner_rep() */
+
+void run_iter(int n) {
+    int i;
+
+    for (i = 0; i < n; i++) {
+        inner_rep(MIN_DEPTH, MAX_DEPTH);
+        checksum = 0;
+    }
+}
