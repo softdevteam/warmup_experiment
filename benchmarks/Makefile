@@ -16,10 +16,12 @@ BENCHMARKS = 		binarytrees \
 C_BENCHMARKS =	richards \
 		fasta \
 		binarytrees \
-		fannkuch_redux
+		fannkuch_redux \
+		nbody
 
 # Extra linker flags for C benchmarks
 C_EXTRA_LDFLAGS_binarytrees = -lm
+C_EXTRA_LDFLAGS_nbody = -lm
 
 all: java-benchmarks c-benchmarks
 
