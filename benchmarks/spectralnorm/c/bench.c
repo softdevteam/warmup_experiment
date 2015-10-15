@@ -10,6 +10,9 @@
 #include <stdlib.h>
 #include <math.h>
 
+#define SPECTRAL_N 1000
+#define EXPECT_CKSUM 1.2742241481294835914184204739285632967948913574218750
+
 double *A_global=NULL;
 int N_global;
 
@@ -102,19 +105,17 @@ void eval_At_times_u(int N, const double u[], double Au[])
     }
 }
 
-void eval_AtA_times_u(int N, const double u[], double AtAu[])
-{ double v[N]; eval_A_times_u(N,u,v); eval_At_times_u(N,v,AtAu); }
+void eval_AtA_times_u(int N, const double u[], double AtAu[]) {
+  double v[N];
+  eval_A_times_u(N,u,v);
+  eval_At_times_u(N,v,AtAu);
+}
 
-int main(int argc, char *argv[])
+void inner_iter(N)
 {
   int i;
-  int N = ((argc == 2) ? atoi(argv[1]) : 2000);
   double u[N],v[N],vBv,vv;
-
-  if(prepare_A(N)){
-    printf("Insufficient memory\n");
-    return 1;
-  }
+  double checksum = 0;
 
   for(i=0;i<N;i++) u[i]=1;
   for(i=0;i<10;i++)
@@ -124,7 +125,25 @@ int main(int argc, char *argv[])
     }
   vBv=vv=0;
   for(i=0;i<N;i++) { vBv+=u[i]*v[i]; vv+=v[i]*v[i]; }
-  printf("%0.9f\n",sqrt(vBv/vv));
+  checksum = sqrt(vBv/vv);
+
+  if (checksum != EXPECT_CKSUM) {
+    printf("bad checksum: %.52f vs %.52f\n", EXPECT_CKSUM, checksum);
+    exit (EXIT_FAILURE);
+  }
+}
+
+void run_iter(int n) {
+  int i;
+
+  if(prepare_A(SPECTRAL_N)){
+    printf("Insufficient memory\n");
+    exit(EXIT_FAILURE);
+  }
+
+  for (i = 0; i < n; i++) {
+    inner_iter(SPECTRAL_N);
+  }
+
   free(A_global);
-  return 0;
 }
