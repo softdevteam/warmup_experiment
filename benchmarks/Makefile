@@ -12,16 +12,10 @@ BENCHMARKS = 		binarytrees \
 			fasta \
 			fannkuch_redux
 
-# XXX Once all complete, will disappear
-C_BENCHMARKS =	richards \
-		fasta \
-		binarytrees \
-		fannkuch_redux \
-		nbody
-
 # Extra linker flags for C benchmarks
 C_EXTRA_LDFLAGS_binarytrees = -lm
 C_EXTRA_LDFLAGS_nbody = -lm
+C_EXTRA_LDFLAGS_spectralnorm = -lm
 
 all: java-benchmarks c-benchmarks
 
@@ -33,7 +27,7 @@ java-benchmarks:
 		done
 
 c-benchmarks:
-	$(foreach i, ${C_BENCHMARKS}, \
+	$(foreach i, ${BENCHMARKS}, \
 		echo "Building C benchmark ${i}..."; \
 		cd ${PWD}/${i}/c && \
 		${CC} ${CFLAGS} ${CPPFLAGS} ${C_EXTRA_LDFLAGS_${i}} \
