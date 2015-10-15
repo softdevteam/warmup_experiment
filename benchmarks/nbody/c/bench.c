@@ -3,16 +3,21 @@
  * http://shootout.alioth.debian.org/
  *
  * contributed by Christoph Bauer
- *  
+ *
  */
 
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <err.h>
+#include <string.h>
 
 #define pi 3.141592653589793
 #define solar_mass (4 * pi * pi)
 #define days_per_year 365.24
+
+static double checksum = 0;
+#define EXPECT_CHECKSUM -0.33814926871151740339627167486469261348247528076171875
 
 struct planet {
   double x, y, z;
@@ -20,7 +25,7 @@ struct planet {
   double mass;
 };
 
-void advance(int nbodies, struct planet * bodies, double dt)
+void n_advance(int nbodies, struct planet * bodies, double dt)
 {
   int i, j;
 
@@ -85,7 +90,12 @@ void offset_momentum(int nbodies, struct planet * bodies)
 }
 
 #define NBODIES 5
-struct planet bodies[NBODIES] = {
+struct planet *bodies = NULL;
+/*
+ * Benchmark mutates the bodies!
+ * This is the initial state, which is restored after each run.
+ */
+const struct planet initial_bodies[NBODIES] = {
   {                               /* sun */
     0, 0, 0, 0, 0, 0, solar_mass
   },
@@ -127,15 +137,36 @@ struct planet bodies[NBODIES] = {
   }
 };
 
-int main(int argc, char ** argv)
+void inner_iter(int n)
 {
-  int n = atoi(argv[1]);
   int i;
 
   offset_momentum(NBODIES, bodies);
-  printf ("%.9f\n", energy(NBODIES, bodies));
+  checksum += energy(NBODIES, bodies);
   for (i = 1; i <= n; i++)
-    advance(NBODIES, bodies, 0.01);
-  printf ("%.9f\n", energy(NBODIES, bodies));
-  return 0;
+    n_advance(NBODIES, bodies, 0.01);
+  checksum += energy(NBODIES, bodies);
+
+  if (checksum != EXPECT_CHECKSUM) {
+    errx(EXIT_FAILURE, "bad checksum: %.52f vs %52f",
+        checksum, EXPECT_CHECKSUM);
+  }
+}
+
+void run_iter(int n) {
+   int i;
+
+   if ((bodies = malloc(sizeof(initial_bodies))) == NULL) {
+     errx(EXIT_FAILURE, "malloc failed");
+   }
+
+   for (i = 0; i < n; i++) {
+      /* reset global state */
+      checksum = 0;
+      memcpy(bodies, initial_bodies, sizeof(initial_bodies));
+
+      inner_iter(NBODIES);
+   }
+
+   free(bodies);
 }
