@@ -38,6 +38,20 @@ function HomoSap() {
   }
 }
 
+var DEBUG = false;
+
+function wrap_print(s) {
+  var i;
+  for (i=0; i<s.length; i++) {
+    checksum += s.charCodeAt(i);
+  }
+  checksum += 10; // newline ascii code
+
+  if (DEBUG) {
+    print(s);
+  }
+}
+
 function makeCumulative(table) {
   var last = null;
   for (var c in table) {
@@ -51,14 +65,12 @@ function fastaRepeat(n, seq) {
   while (n>0) {
     if (n<lenOut) lenOut = n;
     if (seqi + lenOut < seq.length) {
-      //print( seq.substring(seqi, seqi+lenOut) );
-      seq.substring(seqi, seqi+lenOut);
+      wrap_print( seq.substring(seqi, seqi+lenOut) );
       seqi += lenOut;
     } else {
       var s = seq.substring(seqi);
       seqi = lenOut - s.length;
-      //print( s + seq.substring(0, seqi) );
-      s + seq.substring(0, seqi);
+      wrap_print( s + seq.substring(0, seqi) );
     }
     n -= lenOut;
   }
@@ -78,22 +90,29 @@ function fastaRandom(n, table) {
         }
       }
     }
-    //print( line.join('') );
-    line.join('');
+    wrap_print( line.join('') );
     n -= line.length;
   }
 }
 
+var SCALE = 10000;
+var EXPECT_CKSUM = 9611973;
+var checksum = 0;
+
 function run_iter(n) {
+  var i;
+  for (i=0; i<n; i++) {
+
+    fastaRepeat(2*SCALE, ALU)
+    fastaRandom(3*SCALE, IUB())
+    fastaRandom(5*SCALE, HomoSap())
+
+    if (checksum != EXPECT_CKSUM) {
+      print("bad checksum: " + checksum + " vs " + EXPECT_CKSUM);
+      quit(1);
+    }
+
+    checksum = 0;
     last = INITIAL_STATE;
-    //var n = arguments[0]
-
-    //print(">ONE Homo sapiens alu")
-    fastaRepeat(2*n, ALU)
-
-    //print(">TWO IUB ambiguity codes")
-    fastaRandom(3*n, IUB())
-
-    //print(">THREE Homo sapiens frequency")
-    fastaRandom(5*n, HomoSap())
+  }
 }
