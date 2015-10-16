@@ -30,6 +30,24 @@ homosapiens = [
 IM = 139968
 INITIAL_STATE = 42
 
+CHECKSUM = 0;
+SCALE = 10000
+EXPECT_CKSUM = 9611973
+MOD = 2 ** 32
+
+
+def wrap_print(s):
+    """Wrap stdout writes to generare checksum"""
+
+    global CHECKSUM
+
+    # newline would have been implicit in a print.
+    for ch in s:
+        CHECKSUM = (CHECKSUM + ord(ch))
+    CHECKSUM += 10  # newline ascii code
+    CHECKSUM = CHECKSUM % MOD
+
+
 def makeCumulative(table):
     P = []
     C = []
@@ -59,52 +77,48 @@ def repeatFasta(src, n):
     s = src + src + src[:n % r]
     for j in xrange(n // width):
         i = j*width % r
-        #print s[i:i+width]
-        s[i:i+width]
+        wrap_print(s[i:i+width])
     if n % width:
-        #print s[-(n % width):]
-        s[-(n % width):]
+        wrap_print(s[-(n % width):])
 
 def randomFasta(table, n):
     global randomLUT, randomGenState
     width = 60
     rgs = randomGenState
     rlut = randomLUT
-    
+
     lut = makeLookupTable(table)
     line_buffer = []
     la = line_buffer.append
-    
+
     for i in xrange(n // width):
         for i in xrange(width):
             rgs = rlut[rgs]
             la(lut[rgs])
-        #print ''.join(line_buffer)
-        ''.join(line_buffer)
+        wrap_print(''.join(line_buffer))
         line_buffer[:] = []
     if n % width:
         for i in xrange(n % width):
             rgs = rlut[rgs]
             la(lut[rgs])
-        #print ''.join(line_buffer)
-        ''.join(line_buffer)
-    
+        wrap_print(''.join(line_buffer))
+
     randomGenState = rgs
 
+
 def run_iter(n):
-    global randomGenState
-    randomGenState = INITIAL_STATE
-    #n = int(sys.argv[1])
+    global randomGenState, CHECKSUM
 
-    makeRandomLUT()
+    for i in xrange(n):
+        makeRandomLUT()
 
-    #print '>ONE Homo sapiens alu'
-    repeatFasta(alu, n*2)
+        repeatFasta(alu, SCALE * 2)
+        randomFasta(iub, SCALE * 3)
+        randomFasta(homosapiens, SCALE * 5)
 
-    #print '>TWO IUB ambiguity codes'
-    randomFasta(iub, n*3)
+        if CHECKSUM != EXPECT_CKSUM:
+            print("Incorrect checksum: %s vs %s" % (CHECKSUM, EXPECT_CKSUM))
+            sys.exit(1)
 
-    #print '>THREE Homo sapiens frequency'
-    randomFasta(homosapiens, n*5)
-    
-#main()
+        randomGenState = INITIAL_STATE
+        CHECKSUM = 0

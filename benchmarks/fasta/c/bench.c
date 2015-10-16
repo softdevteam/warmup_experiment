@@ -47,11 +47,6 @@ static u_int32_t checksum = 0;
 
 static unsigned rseed = START_RAND_SEED;
 
-void reset_state(void) {
-   checksum = 0;
-   rseed = START_RAND_SEED;
-}
-
 /*
  * Used to generate a checksum to verify benchmark correctness
  */
@@ -61,11 +56,6 @@ void wrap_write(int fd, char *buf, size_t len) {
    for (i = 0; i < len; i++) {
       checksum += buf[i];
    }
-
-#ifdef DEBUG
-   /* In real benchmarking we can't emit to stdout */
-   write(fd, buf, len);
-#endif
 }
 
 inline void str_write(char *s) {
@@ -151,13 +141,8 @@ void run_iter(int n) {
    int i = 0;
 
    for (i = 0; i < n; i++) {
-      /* str_write(">ONE Homo sapiens alu\n"); */
       str_repeat(alu, SCALE * 2);
-
-      /* str_write(">TWO IUB ambiguity codes\n"); */
       rand_fasta(iub, SCALE * 3);
-
-      /* str_write(">THREE Homo sapiens frequency\n"); */
       rand_fasta(homosapiens, SCALE * 5);
 
       if (checksum != EXPECT_CKSUM) {
@@ -165,6 +150,8 @@ void run_iter(int n) {
 	     checksum, EXPECT_CKSUM);
       }
 
-      reset_state();
+      /* reset state */
+      checksum = 0;
+      rseed = START_RAND_SEED;
    }
 }

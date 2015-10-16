@@ -9,6 +9,46 @@
 import java.io.IOException;
 import java.io.OutputStream;
 
+class ChecksumOutputStream extends OutputStream {
+    /*
+     * Dummy output stream that intercepts writes and updates a checksum
+     */
+
+    private long checksum = 0;
+    private static long MOD;
+
+    public ChecksumOutputStream() {
+        MOD = (long) Math.pow(2, 32);
+    }
+
+    public void reset() {
+        checksum = 0;
+    }
+
+    public void write(byte[] b, int off, int len) {
+        for (int i = 0; i < len; i++) {
+            checksum += b[off + i];
+        }
+        checksum  = checksum % MOD;
+    }
+
+    public long getChecksum() {
+        return checksum;
+    }
+
+    /* OutputStreams supports (and requires us to implement)  writing one
+     * byte at a time, however, our benchmark should never use this, as it
+     * would cause the modulo computation to be performed too frequently, thus
+     * giving Java an unfair disadvantage.
+     */
+    public void write(int b) {
+        System.out.println("bad call");
+        System.exit(1);
+    }
+
+
+}
+
 class fasta {
     static void init() {};
 
@@ -18,6 +58,9 @@ class fasta {
 
    static final int LINE_LENGTH = 60;
    static final int BUFFER_SIZE = (LINE_LENGTH + 1)*1024; // add 1 for '\n'
+
+   static final int SCALE = 10000;
+   static final int EXPECT_CKSUM = 9611973;
 
     // Weighted selection from alphabet
     public static String ALU =
@@ -56,7 +99,7 @@ class fasta {
                 0.3015094502008d}
           );
 
-   static final void makeRandomFasta(String id, String desc,
+   static final void makeRandomFasta(
          FloatProbFreq fpf, int nChars, OutputStream writer)
          throws IOException
    {
@@ -70,10 +113,6 @@ class fasta {
             "line length (including line break)");
       }
 
-      String descStr = ">" + id + " " + desc + '\n';
-      //writer.write(descStr.getBytes());
-      descStr.getBytes();
-
       int bufferIndex = 0;
       while (nChars > 0) {
          int chunkSize;
@@ -84,7 +123,7 @@ class fasta {
          }
 
          if (bufferIndex == BUFFER_SIZE) {
-            //writer.write(buffer, 0, bufferIndex);
+            writer.write(buffer, 0, bufferIndex);
             bufferIndex = 0;
          }
 
@@ -95,11 +134,11 @@ class fasta {
          nChars -= chunkSize;
       }
 
-      //writer.write(buffer, 0, bufferIndex);
+      writer.write(buffer, 0, bufferIndex);
    }
 
     static final void makeRepeatFasta(
-          String id, String desc, String alu,
+          String alu,
           int nChars, OutputStream writer) throws IOException
     {
        final byte[] aluBytes = alu.getBytes();
@@ -115,10 +154,6 @@ class fasta {
                 "of line length (including line break)");
        }
 
-        String descStr = ">" + id + " " + desc + '\n';
-        //writer.write(descStr.getBytes());
-        descStr.getBytes();
-
         int bufferIndex = 0;
         while (nChars > 0) {
            final int chunkSize;
@@ -129,7 +164,7 @@ class fasta {
          }
 
            if (bufferIndex == BUFFER_SIZE) {
-                //writer.write(buffer, 0, bufferIndex);
+                writer.write(buffer, 0, bufferIndex);
                 bufferIndex = 0;
            }
 
@@ -145,23 +180,28 @@ class fasta {
            nChars -= chunkSize;
         }
 
-       //writer.write(buffer, 0, bufferIndex);
+       writer.write(buffer, 0, bufferIndex);
     }
 
     public static void runIter(int n) throws IOException
     {
-        //int n = 1000;
-//        int n = 25000000;
-        //if (args.length > 0) {
-        // n = Integer.parseInt(args[0]);
-      //}
+        ChecksumOutputStream out = new ChecksumOutputStream();
 
-        FloatProbFreq.reset_random();
-        OutputStream out = null;// System.out;
-        makeRepeatFasta("ONE", "Homo sapiens alu", ALU, n * 2, out);
-        makeRandomFasta("TWO", "IUB ambiguity codes", IUB, n * 3, out);
-        makeRandomFasta("THREE", "Homo sapiens frequency", HOMO_SAPIENS, n * 5, out);
-        //out.close();
+        for (int i = 0; i < n; i++) {
+            makeRepeatFasta(ALU, SCALE * 2, out);
+            makeRandomFasta(IUB, SCALE * 3, out);
+            makeRandomFasta(HOMO_SAPIENS, SCALE * 5, out);
+
+            long ck = out.getChecksum();
+            if (ck != EXPECT_CKSUM) {
+                System.out.println("Bad checksum: " + ck + " vs " + EXPECT_CKSUM);
+                System.exit(1);
+            }
+
+            FloatProbFreq.reset_random();
+            out.reset();
+        }
+        out.close();
     }
 
     public static final class FloatProbFreq {

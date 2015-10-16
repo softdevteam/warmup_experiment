@@ -2,6 +2,12 @@
 -- http://shootout.alioth.debian.org/
 -- contributed by Mike Pall
 
+
+local SCALE = 10000
+local EXPECT_CKSUM = 9611973
+local checksum = 0
+local MOD = math.pow(2, 32)
+
 local INITIAL_STATE = 42
 local Last = INITIAL_STATE
 local function random(max)
@@ -10,31 +16,36 @@ local function random(max)
   return (max * y) / 139968
 end
 
-local function make_repeat_fasta(id, desc, s, n)
-  local write, sub = io.write, string.sub
-  --write(">", id, " ", desc, "\n")
+function wrap_write(...)
+  local str = table.concat({...})
+  local i
+  for i = 1, #str do
+    checksum = checksum + string.byte(str, i)
+  end
+  checksum = checksum % MOD
+end
+
+local function make_repeat_fasta(s, n)
+  local sub = string.sub
   local p, sn, s2 = 1, #s, s..s
   for i=60,n,60 do
-    --write(sub(s2, p, p + 59), "\n")
+    wrap_write(sub(s2, p, p + 59), "\n")
     sub(s2, p, p + 59)
     p = p + 60; if p > sn then p = p - sn end
   end
   local tail = n % 60
-  --if tail > 0 then write(sub(s2, p, p + tail-1), "\n") end
-  if tail > 0 then sub(s2, p, p + tail-1) end
+  if tail > 0 then wrap_write(sub(s2, p, p + tail-1), "\n") end
 end
 
-local function make_random_fasta(id, desc, bs, n)
-  --io.write(">", id, " ", desc, "\n")
+local function make_random_fasta(bs, n)
   load([=[
-    local write, char, unpack, n, random = io.write, string.char, table.unpack, ...
+    local char, unpack, n, random = string.char, table.unpack, ...
     local buf, p = {}, 1
     for i=60,n,60 do
       for j=p,p+59 do ]=]..bs..[=[ end
       buf[p+60] = 10; p = p + 61
       if p >= 2048 then
-          --write(char(unpack(buf, 1, p-1)));
-          char(unpack(buf, 1, p-1));
+          wrap_write(char(unpack(buf, 1, p-1)));
           p = 1
       end
     end
@@ -43,7 +54,7 @@ local function make_random_fasta(id, desc, bs, n)
       for j=p,p+tail-1 do ]=]..bs..[=[ end
       p = p + tail; buf[p] = 10; p = p + 1
     end
-    --write(char(unpack(buf, 1, p-1)))
+    wrap_write(char(unpack(buf, 1, p-1)))
     char(unpack(buf, 1, p-1))
   ]=], desc)(n, random)
 end
@@ -101,9 +112,18 @@ local homosapiens = make_bisect{
 }
 
 function run_iter(N)
-    Last = INITIAL_STATE
-    --local N = tonumber(arg and arg[1]) or 1000
-    make_repeat_fasta('ONE', 'Homo sapiens alu', alu, N*2)
-    make_random_fasta('TWO', 'IUB ambiguity codes', iub, N*3)
-    make_random_fasta('THREE', 'Homo sapiens frequency', homosapiens, N*5)
+  for i=0,N-1 do  -- inclusive upper bound
+      make_repeat_fasta(alu, SCALE*2)
+      make_random_fasta(iub, SCALE*3)
+      make_random_fasta(homosapiens, SCALE*5)
+
+      if checksum  ~= EXPECT_CKSUM then
+        print("bad checksum:", EXPECT_CKSUM, "vs", checksum)
+        os.exit(1)
+      end
+
+      Last = INITIAL_STATE
+      checksum = 0;
+  end
+
 end
