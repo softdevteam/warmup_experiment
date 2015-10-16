@@ -35,7 +35,6 @@ SCALE = 10000
 EXPECT_CKSUM = 9611973
 MOD = 2 ** 32
 
-DEBUG = False
 
 def wrap_print(s):
     """Wrap stdout writes to generare checksum"""
@@ -48,8 +47,6 @@ def wrap_print(s):
     CHECKSUM += 10  # newline ascii code
     CHECKSUM = CHECKSUM % MOD
 
-    if DEBUG:
-        print(s)
 
 def makeCumulative(table):
     P = []

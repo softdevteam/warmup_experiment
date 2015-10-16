@@ -3,7 +3,6 @@
 -- contributed by Mike Pall
 
 
-local DEBUG = false
 local SCALE = 10000
 local EXPECT_CKSUM = 9611973
 local checksum = 0
@@ -24,10 +23,6 @@ function wrap_write(...)
     checksum = checksum + string.byte(str, i)
   end
   checksum = checksum % MOD
-
-  if DEBUG then
-    io.write(str)
-  end
 end
 
 local function make_repeat_fasta(s, n)

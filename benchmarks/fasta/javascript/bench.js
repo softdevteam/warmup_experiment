@@ -39,8 +39,6 @@ function HomoSap() {
   }
 }
 
-var DEBUG = false;
-
 function wrap_print(s) {
   var i;
   for (i=0; i<s.length; i++) {
@@ -48,10 +46,6 @@ function wrap_print(s) {
   }
   checksum += 10; // newline ascii code
   checksum = checksum % MOD;
-
-  if (DEBUG) {
-    print(s);
-  }
 }
 
 function makeCumulative(table) {

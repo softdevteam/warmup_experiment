@@ -16,7 +16,6 @@ class ChecksumOutputStream extends OutputStream {
 
     private long checksum = 0;
     private static long MOD;
-    private static final boolean DEBUG = false;
 
     public ChecksumOutputStream() {
         MOD = (long) Math.pow(2, 32);
@@ -31,10 +30,6 @@ class ChecksumOutputStream extends OutputStream {
             checksum += b[off + i];
         }
         checksum  = checksum % MOD;
-
-        if (DEBUG) {
-            System.out.println(b.toString());
-        }
     }
 
     public long getChecksum() {

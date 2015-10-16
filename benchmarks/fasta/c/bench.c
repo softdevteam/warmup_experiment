@@ -56,11 +56,6 @@ void wrap_write(int fd, char *buf, size_t len) {
    for (i = 0; i < len; i++) {
       checksum += buf[i];
    }
-
-#ifdef DEBUG
-   /* In real benchmarking we can't emit to stdout */
-   write(fd, buf, len);
-#endif
 }
 
 inline void str_write(char *s) {
