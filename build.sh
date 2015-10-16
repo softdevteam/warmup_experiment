@@ -323,8 +323,6 @@ fetch_libkalibera() {
 	fi
 }
 
- main
-
 fetch_libkalibera
 fetch_krun
 build_cpython
