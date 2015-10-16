@@ -15,9 +15,7 @@
 
 #define MIN_DEPTH 4
 #define MAX_DEPTH 12
-#define EXPECT_CKSUM 4294956382
-
-static u_int32_t checksum = 0;
+#define EXPECT_CKSUM -10914
 
 typedef struct tn {
     struct tn*    left;
@@ -80,11 +78,12 @@ int inner_rep(int minDepth, int maxDepth)
 {
     unsigned   depth, stretchDepth;
     treeNode   *stretchTree, *longLivedTree, *tempTree;
+    int32_t	check = 0;
 
     stretchDepth = maxDepth + 1;
 
     stretchTree = BottomUpTree(0, stretchDepth);
-    checksum += ItemCheck(stretchTree);
+    check += ItemCheck(stretchTree);
 
     DeleteTree(stretchTree);
 
@@ -92,11 +91,9 @@ int inner_rep(int minDepth, int maxDepth)
 
     for (depth = minDepth; depth <= maxDepth; depth += 2)
     {
-        long    i, iterations, check;
+        long    i, iterations;
 
         iterations = pow(2, maxDepth - depth + minDepth);
-
-        check = 0;
 
         for (i = 1; i <= iterations; i++)
         {
@@ -109,15 +106,13 @@ int inner_rep(int minDepth, int maxDepth)
             DeleteTree(tempTree);
         } /* for(i = 1...) */
 
-        checksum += check;
-
     } /* for(depth = minDepth...) */
 
-    checksum += ItemCheck(longLivedTree);
+    check += ItemCheck(longLivedTree);
     DeleteTree(longLivedTree);
 
-    if (checksum != EXPECT_CKSUM) {
-        errx(EXIT_FAILURE, "checksum failed: %u vs %lu", checksum, EXPECT_CKSUM);
+    if (check != EXPECT_CKSUM) {
+        errx(EXIT_FAILURE, "checksum failed: %u vs %lu", check, EXPECT_CKSUM);
     }
 
     return 0;
@@ -128,6 +123,5 @@ void run_iter(int n) {
 
     for (i = 0; i < n; i++) {
         inner_rep(MIN_DEPTH, MAX_DEPTH);
-        checksum = 0;
     }
 }
