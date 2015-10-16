@@ -55,9 +55,10 @@ GR_IC = 29573.0
 
 def wrap_puts(s)
     s.each_byte do |i|
-        @CHECKSUM = (@CHECKSUM + i) % @MOD
+        @CHECKSUM = (@CHECKSUM + i)
     end
     @CHECKSUM = @CHECKSUM + 10  # newline
+    @CHECKSUM = @CHECKSUM % @MOD
 
     if @DEBUG
         puts s

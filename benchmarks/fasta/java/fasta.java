@@ -14,20 +14,43 @@ class ChecksumOutputStream extends OutputStream {
      * Dummy output stream that intercepts writes and updates a checksum
      */
 
-    private int checksum;
+    private long checksum = 0;
+    private static long MOD;
+    private static final boolean DEBUG = false;
+
+    public ChecksumOutputStream() {
+        MOD = (long) Math.pow(2, 32);
+    }
 
     public void reset() {
         checksum = 0;
     }
 
-    @Override
-    public void write(int b) {
-        checksum += b;
+    public void write(byte[] b, int off, int len) {
+        for (int i = 0; i < len; i++) {
+            checksum += b[off + i];
+        }
+        checksum  = checksum % MOD;
+
+        if (DEBUG) {
+            System.out.println(b.toString());
+        }
     }
 
-    public int getChecksum() {
+    public long getChecksum() {
         return checksum;
     }
+
+    /* OutputStreams supports (and requires us to implement)  writing one
+     * byte at a time, however, our benchmark should never use this, as it
+     * would cause the modulo computation to be performed too frequently, thus
+     * giving Java an unfair disadvantage.
+     */
+    public void write(int b) {
+        System.out.println("bad call");
+        System.exit(1);
+    }
+
 
 }
 
@@ -174,7 +197,7 @@ class fasta {
             makeRandomFasta(IUB, SCALE * 3, out);
             makeRandomFasta(HOMO_SAPIENS, SCALE * 5, out);
 
-            int ck = out.getChecksum();
+            long ck = out.getChecksum();
             if (ck != EXPECT_CKSUM) {
                 System.out.println("Bad checksum: " + ck + " vs " + EXPECT_CKSUM);
                 System.exit(1);

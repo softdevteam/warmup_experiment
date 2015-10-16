@@ -31,8 +31,9 @@ function wrap_print($s) {
 
     $len = strlen($s);
     for ($i = 0; $i < $len; $i++) {
-        $CHECKSUM = ($CHECKSUM + ord($s[$i])) % MOD;
+        $CHECKSUM = ($CHECKSUM + ord($s[$i]));
     }
+    $CHECKSUM = $CHECKSUM % MOD;
 
     if (DEBUG) {
         print($s);

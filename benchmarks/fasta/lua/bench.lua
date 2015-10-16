@@ -7,6 +7,7 @@ local DEBUG = false
 local SCALE = 10000
 local EXPECT_CKSUM = 9611973
 local checksum = 0
+local MOD = math.pow(2, 32)
 
 local INITIAL_STATE = 42
 local Last = INITIAL_STATE
@@ -22,6 +23,7 @@ function wrap_write(...)
   for i = 1, #str do
     checksum = checksum + string.byte(str, i)
   end
+  checksum = checksum % MOD
 
   if DEBUG then
     io.write(str)

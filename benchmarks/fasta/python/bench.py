@@ -43,13 +43,13 @@ def wrap_print(s):
     global CHECKSUM
 
     # newline would have been implicit in a print.
-    s += "\n"
-
     for ch in s:
-        CHECKSUM = (CHECKSUM + ord(ch)) % MOD
+        CHECKSUM = (CHECKSUM + ord(ch))
+    CHECKSUM += 10  # newline ascii code
+    CHECKSUM = CHECKSUM % MOD
 
     if DEBUG:
-        sys.stdout.write(s)
+        print(s)
 
 def makeCumulative(table):
     P = []
