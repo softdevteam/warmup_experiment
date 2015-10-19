@@ -6,8 +6,17 @@
    further optimization by Oleksii Prudkyi
 */
 
+define("MAX_N", 8);
+define("EXPECT_CKSUM", 1616);
+
 function run_iter($n) {
-    //$n = (int)$argv[1];
+  for ($i = 0; $i < $n; $i++) {
+    inner_iter();
+  }
+}
+
+function inner_iter() {
+    $n = MAX_N;
     $s = range(0, $n - 1);
     $i = $maxflips = $checksum = 0; 
     $sign = 1; 
@@ -54,7 +63,10 @@ function run_iter($n) {
                 break; 
              }
              if ($i == $m){
-                //printf("%d\nPfannkuchen(%d) = %d\n", $checksum, $n, $maxflips);// Out of permutations.
+                if ($checksum != EXPECT_CKSUM) {
+                   echo "Bad checksum: " . $checksum . " vs " . EXPECT_CKSUM . "\n";
+                   exit(1);
+                }
                 return;
              }
              $s[$i] = $i;
