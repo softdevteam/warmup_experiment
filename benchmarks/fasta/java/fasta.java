@@ -15,11 +15,6 @@ class ChecksumOutputStream extends OutputStream {
      */
 
     private long checksum = 0;
-    private static long MOD;
-
-    public ChecksumOutputStream() {
-        MOD = (long) Math.pow(2, 32);
-    }
 
     public void reset() {
         checksum = 0;
@@ -29,7 +24,6 @@ class ChecksumOutputStream extends OutputStream {
         for (int i = 0; i < len; i++) {
             checksum += b[off + i];
         }
-        checksum  = checksum % MOD;
     }
 
     public long getChecksum() {

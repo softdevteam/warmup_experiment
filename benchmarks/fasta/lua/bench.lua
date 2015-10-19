@@ -6,7 +6,6 @@
 local SCALE = 10000
 local EXPECT_CKSUM = 9611973
 local checksum = 0
-local MOD = math.pow(2, 32)
 
 local INITIAL_STATE = 42
 local Last = INITIAL_STATE
@@ -22,7 +21,6 @@ function wrap_write(...)
   for i = 1, #str do
     checksum = checksum + string.byte(str, i)
   end
-  checksum = checksum % MOD
 end
 
 local function make_repeat_fasta(s, n)
@@ -117,7 +115,7 @@ function run_iter(N)
       make_random_fasta(iub, SCALE*3)
       make_random_fasta(homosapiens, SCALE*5)
 
-      if checksum  ~= EXPECT_CKSUM then
+      if checksum ~= EXPECT_CKSUM then
         print("bad checksum:", EXPECT_CKSUM, "vs", checksum)
         os.exit(1)
       end

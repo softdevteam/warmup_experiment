@@ -43,7 +43,7 @@ const amino homosapiens[] = {
 /* Expected checksum tied to this specific scale factor */
 #define SCALE 10000
 #define EXPECT_CKSUM 9611973
-static u_int32_t checksum = 0;
+static u_int64_t checksum = 0;
 
 static unsigned rseed = START_RAND_SEED;
 
@@ -146,7 +146,7 @@ void run_iter(int n) {
       rand_fasta(homosapiens, SCALE * 5);
 
       if (checksum != EXPECT_CKSUM) {
-         errx(EXIT_FAILURE, "checksum fail: %u vs %u",
+         errx(EXIT_FAILURE, "checksum fail: %lu vs %u",
 	     checksum, EXPECT_CKSUM);
       }
 

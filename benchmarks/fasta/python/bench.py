@@ -33,7 +33,6 @@ INITIAL_STATE = 42
 CHECKSUM = 0;
 SCALE = 10000
 EXPECT_CKSUM = 9611973
-MOD = 2 ** 32
 
 
 def wrap_print(s):
@@ -45,7 +44,6 @@ def wrap_print(s):
     for ch in s:
         CHECKSUM = (CHECKSUM + ord(ch))
     CHECKSUM += 10  # newline ascii code
-    CHECKSUM = CHECKSUM % MOD
 
 
 def makeCumulative(table):
