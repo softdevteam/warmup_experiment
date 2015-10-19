@@ -8,8 +8,12 @@
 public class fannkuchredux
 {
     static void init() {};
+    private static int EXPECT_CKSUM = 1616;
+    private static int MAX_N = 8;
 
-   public static int runIter(int n) {
+
+   public static int inner_iter() {
+      int n = MAX_N;
       int[] perm = new int[n];
       int[] perm1 = new int[n];
       int[] count = new int[n];
@@ -42,9 +46,12 @@ public class fannkuchredux
          // Use incremental change to generate another permutation
          while (true) {
             if (r == n) {
-            //System.out.println( checksum );
-	       return maxFlipsCount;
-	    }
+                if (checksum != EXPECT_CKSUM) {
+                    System.out.println("bad checksum: " + checksum + " vs " + EXPECT_CKSUM);
+                    System.exit(1);
+                }
+                return maxFlipsCount;
+            }
             int perm0 = perm1[0];
             int i = 0;
             while (i < r) {
@@ -63,11 +70,10 @@ public class fannkuchredux
       }
    }
 
-   /*
-   public static void main(String[] args){
-      int n = 7;
-      if (args.length > 0) n = Integer.parseInt(args[0]);
-      System.out.println("Pfannkuchen("+n+") = "+fannkuch(n));
+   public static void runIter(int n) {
+     for (int i = 0; i < n; i++) {
+       /* inner_iter() deals with state setup */
+       inner_iter();
+     }
    }
-   */
 }
