@@ -2,6 +2,9 @@
 # http://shootout.alioth.debian.org/
 # Contributed by Sokolov Yura
 
+@SPECTRAL_N = 1000
+@EXPECT_CKSUM = 1.2742241481294835914184204739285632967948913574218750
+
 def eval_A(i,j)
 	return 1.0/((i+j)*(i+j+1)/2+i+1)
 end
@@ -33,7 +36,16 @@ def eval_AtA_times_u(u)
 end
 
 def run_iter(n)
-    #n = ARGV[0].to_i
+    for i in 1..n
+        checksum = inner_iter(@SPECTRAL_N)
+        if checksum != @EXPECT_CKSUM
+            puts("bad checksum: %f vs %f" % [checksum, @EXPECT_CKSUM])
+            exit(1)
+        end
+    end
+end
+
+def inner_iter(n)
     u=[1]*n
     for i in 1..10
             v=eval_AtA_times_u(u)
@@ -45,6 +57,5 @@ def run_iter(n)
             vBv += u[i]*v[i]
             vv += v[i]*v[i]
     end
-    #print "%0.9f" % (Math.sqrt(vBv/vv)), "\n"
-    Math.sqrt(vBv/vv) # other benchmarks don't do string formatting
+    Math.sqrt(vBv/vv)
 end
