@@ -1,16 +1,25 @@
 <?php
 /* The Computer Language Benchmarks Game
    http://benchmarksgame.alioth.debian.org/
-   
-   contributed by Isaac Gouy, transliterated from Mike Pall's Lua program 
+
+   contributed by Isaac Gouy, transliterated from Mike Pall's Lua program
    further optimization by Oleksii Prudkyi
 */
 
+define("MAX_N", 8);
+define("EXPECT_CKSUM", 1616);
+
 function run_iter($n) {
-    //$n = (int)$argv[1];
+  for ($i = 0; $i < $n; $i++) {
+    inner_iter();
+  }
+}
+
+function inner_iter() {
+    $n = MAX_N;
     $s = range(0, $n - 1);
-    $i = $maxflips = $checksum = 0; 
-    $sign = 1; 
+    $i = $maxflips = $checksum = 0;
+    $sign = 1;
     $m = $n - 1;
     $p = $q = $s;
     do {
@@ -19,48 +28,51 @@ function run_iter($n) {
        if ($q0 != 0){
           $q = $p;
           $flips = 1;
-          do { 
-             $qq = $q[$q0]; 
+          do {
+             $qq = $q[$q0];
              if ($qq == 0){
                 $checksum += $sign*$flips;
                 if ($flips > $maxflips) $maxflips = $flips;
-                break; 
-             } 
-             $q[$q0] = $q0; 
+                break;
+             }
+             $q[$q0] = $q0;
              if ($q0 >= 3){
                 $i = 1; $j = $q0 - 1;
-                do { 
-                   $t = $q[$i]; 
-                   $q[$i] = $q[$j]; 
-                   $q[$j] = $t; 
+                do {
+                   $t = $q[$i];
+                   $q[$i] = $q[$j];
+                   $q[$j] = $t;
                    ++$i;
                    --$j;
-                } while ($i < $j); 
+                } while ($i < $j);
              }
-             $q0 = $qq; 
+             $q0 = $qq;
              ++$flips;
-          } while (true); 
+          } while (true);
        }
        // Permute.
        if ($sign == 1){
           $t = $p[1]; $p[1] = $p[0]; $p[0] = $t; $sign = -1; // Rotate 0<-1.
-       } else { 
+       } else {
           $t = $p[1]; $p[1] = $p[2]; $p[2] = $t; $sign = 1;  // Rotate 1<-2.
-          for($i=2; $i<$n; ){ 
+          for($i=2; $i<$n; ){
              $sx = &$s[$i];
              if ($sx != 0)
              {
-                --$sx; 
-                break; 
+                --$sx;
+                break;
              }
              if ($i == $m){
-                //printf("%d\nPfannkuchen(%d) = %d\n", $checksum, $n, $maxflips);// Out of permutations.
+                if ($checksum != EXPECT_CKSUM) {
+                   echo "Bad checksum: " . $checksum . " vs " . EXPECT_CKSUM . "\n";
+                   exit(1);
+                }
                 return;
              }
              $s[$i] = $i;
              // Rotate 0<-...<-i+1.
-             $t = $p[0]; 
-             for($j=0; $j<=$i; ){ $p[$j++] = $p[$j]; } 
+             $t = $p[0];
+             for($j=0; $j<=$i; ){ $p[$j++] = $p[$j]; }
              ++$i;
              $p[$i] = $t;
           }

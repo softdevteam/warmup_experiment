@@ -2,7 +2,17 @@
 -- http://shootout.alioth.debian.org/
 -- contributed by Mike Pall
 
+local EXPECT_CKSUM = 1616
+local MAX_N = 8
+
 function run_iter(n)
+  for i=1,n do
+    inner_iter()
+  end
+end
+
+function inner_iter()
+  n = MAX_N
   local p, q, s, sign, maxflips, sum = {}, {}, {}, 1, 0, 0
   for i=1,n do p[i] = i; q[i] = i; s[i] = i end
   repeat
@@ -34,7 +44,13 @@ function run_iter(n)
       for i=3,n do
 	local sx = s[i]
 	if sx ~= 1 then s[i] = sx-1; break end
-	if i == n then return sum, maxflips end	-- Out of permutations.
+	if i == n then
+          if sum ~= EXPECT_CKSUM then
+            io.write("bad checksum: " .. sum .. " vs " .. EXPECT_CKSUM)
+            os.exit(1)
+          end
+          return sum, maxflips
+        end	-- Out of permutations.
 	s[i] = i
 	-- Rotate 1<-...<-i+1.
 	local t = p[1]; for j=1,i do p[j] = p[j+1] end; p[i+1] = t

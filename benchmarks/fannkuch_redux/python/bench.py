@@ -6,7 +6,17 @@
 #    converted to Python by Buck Golemon
 #    modified by Justin Peel
 
+import sys
+
+EXPECT_CKSUM = 1616
+MAX_N = 8
+
 def run_iter(n):
+    for i in xrange(n):
+        inner_iter()
+
+def inner_iter():
+    n = MAX_N
     maxFlipsCount = 0
     permSign = True
     checksum = 0
@@ -47,10 +57,8 @@ def run_iter(n):
             else:
                 r = nm
                 if not count[r]:
-                    #print( checksum )
+                    if checksum != EXPECT_CKSUM:
+                        print("bad checksum: " + checksum + " vs " + EXPECT_CKSUM)
+                        sys.exit(1)
                     return maxFlipsCount
             count[r] -= 1
-#from sys import argv
-#n = int(argv[1])
-
-#print(( "Pfannkuchen(%i) = %i" % (n, fannkuch(n)) ))
