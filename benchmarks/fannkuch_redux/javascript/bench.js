@@ -5,7 +5,17 @@
    Modified by Roy Williams.
 */
 
+var EXPECT_CKSUM = 1616;
+var MAX_N = 8;
+
 function run_iter(n) {
+  for (i = 0; i < n; i++) {
+    inner_iter();
+  }
+}
+
+function inner_iter() {
+  var n = MAX_N;
   var storage = new ArrayBuffer(12 * n);
   var p = new Int32Array(storage, 0, n),
       q = new Int32Array(storage, n * 4, n),
@@ -69,6 +79,10 @@ function run_iter(n) {
           break;
         }
         if (i == m) {
+          if (sum != EXPECT_CKSUM) {
+            print("bad checksum: " + sum + " vs " + EXPECT_CKSUM);
+            quit(1)
+          }
           return Array(sum,maxflips);      // Out of permutations.
         }
         s[i] = i;
@@ -82,7 +96,3 @@ function run_iter(n) {
     }
   } while (true);
 }
-
-//var n = +arguments[0];
-//var pf = fannkuch(n);
-//print(pf[0] + "\n" + "Pfannkuchen(" + n + ") = " + pf[1]);
