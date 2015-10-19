@@ -6,6 +6,9 @@ contributed by Isaac Gouy
 modified by anon
 */
 
+define("SPECTRAL_N", 1000);
+define("EXPECT_CKSUM", 1.2742241481294835914184204739285632967948913574218750);
+
 
 function A(&$i, &$j){
    return 1.0 / ( ( ( ($i+$j) * ($i+$j+1) ) >> 1 ) + $i + 1 );
@@ -43,7 +46,16 @@ function AtAv(&$n,&$v){
 }
 
 function run_iter($n) {
-  //$n = intval(($argc == 2) ? $argv[1] : 1);
+    for ($i = 0; $i < $n; $i++) {
+        $checksum = inner_iter(SPECTRAL_N);
+        if ($checksum != EXPECT_CKSUM) {
+            echo "bad checksum: " . $checksum . " vs " . EXPECT_CKSUM . "\n";
+            exit (1);
+        }
+    }
+}
+
+function inner_iter($n) {
   $u = array_fill(0, $n, 1.0);
   $_tpl = array_fill(0, $n, 0.0);
 
@@ -60,7 +72,6 @@ function run_iter($n) {
     $vv += $val*$val;
     ++$i;
   }
-  //printf("%0.9f\n", sqrt($vBv/$vv));
-  sqrt($vBv/$vv); // other benchmarks don't do string formatting either
+  return sqrt($vBv/$vv);
 }
 ?>

@@ -2,6 +2,10 @@
 -- http://shootout.alioth.debian.org/
 -- contributed by Mike Pall
 
+
+local SPECTRAL_N = 1000
+local EXPECT_CKSUM = 1.2742241481294835914184204739285632967948913574218750
+
 local function A(i, j)
   local ij = i+j-1
   return 1.0 / (ij * (ij-1) * 0.5 + i)
@@ -28,8 +32,7 @@ local function AtAv(x, y, t, N)
   Atv(t, y, N)
 end
 
-function run_iter(N)
-  --local N = tonumber(arg and arg[1]) or 100
+local function inner_iter(N)
   local u, v, t = {}, {}, {}
   for i=1,N do u[i] = 1 end
 
@@ -44,4 +47,13 @@ function run_iter(N)
   return math.sqrt(vBv / vv)
 end
 
---io.write(string.format("%0.9f\n", math.sqrt(vBv / vv)))
+function run_iter(n)
+  local i
+  for i=1,n  do
+    local checksum = inner_iter(SPECTRAL_N);
+    if checksum ~= EXPECT_CKSUM then
+      io.write("bad checksum: " .. checksum .. " vs " .. EXPECT_CKSUM)
+      os.exit(1)
+    end
+  end
+end
