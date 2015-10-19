@@ -5,7 +5,6 @@
 
 var INITIAL_STATE = 42;
 var last = INITIAL_STATE, A = 3877, C = 29573, M = 139968;
-var MOD = Math.pow(2, 32);
 
 function rand(max) {
   last = (last * A + C) % M;
@@ -45,7 +44,6 @@ function wrap_print(s) {
     checksum += s.charCodeAt(i);
   }
   checksum += 10; // newline ascii code
-  checksum = checksum % MOD;
 }
 
 function makeCumulative(table) {

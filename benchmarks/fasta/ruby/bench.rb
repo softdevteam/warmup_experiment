@@ -49,14 +49,12 @@ GR_IC = 29573.0
 @SCALE = 10000
 @CHECKSUM = 0
 @EXPECT_CKSUM = 9611973
-@MOD = 2 ** 32
 
 def wrap_puts(s)
     s.each_byte do |i|
         @CHECKSUM = (@CHECKSUM + i)
     end
     @CHECKSUM = @CHECKSUM + 10  # newline
-    @CHECKSUM = @CHECKSUM % @MOD
 end
 
 def make_repeat_fasta(src, n)

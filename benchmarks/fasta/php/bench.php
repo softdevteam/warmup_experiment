@@ -16,7 +16,6 @@ $last = $INITIAL_STATE;
 $CHECKSUM = 0;
 define("SCALE", 10000);
 define("EXPECT_CKSUM", 9611973);
-define("MOD", pow(2, 32));
 
 function gen_random(&$last, &$randoms, $max = 1.0, $ia = 3877.0, $ic = 29573.0, $im = 139968.0) {
    foreach($randoms as &$r) {
@@ -31,7 +30,6 @@ function wrap_print($s) {
     for ($i = 0; $i < $len; $i++) {
         $CHECKSUM = ($CHECKSUM + ord($s[$i]));
     }
-    $CHECKSUM = $CHECKSUM % MOD;
 }
 
 /* Weighted selection from alphabet */
