@@ -17,7 +17,10 @@
 #define days_per_year 365.24
 
 static double checksum = 0;
-#define EXPECT_CHECKSUM -0.33814926871151740339627167486469261348247528076171875
+#define EXPECT_CHECKSUM -0.3381550232201908645635057837353087961673736572265625
+#define N_ADVANCES 100000
+#define EPSILON 0.0000000000001
+
 
 struct planet {
   double x, y, z;
@@ -147,8 +150,8 @@ void inner_iter(int n)
     n_advance(NBODIES, bodies, 0.01);
   checksum += energy(NBODIES, bodies);
 
-  if (checksum != EXPECT_CHECKSUM) {
-    errx(EXIT_FAILURE, "bad checksum: %.52f vs %52f",
+  if (abs(checksum - EXPECT_CHECKSUM) >= EPSILON) {
+    errx(EXIT_FAILURE, "bad checksum: %.52f vs %.52f",
         checksum, EXPECT_CHECKSUM);
   }
 }
@@ -164,8 +167,7 @@ void run_iter(int n) {
       /* reset global state */
       checksum = 0;
       memcpy(bodies, initial_bodies, sizeof(initial_bodies));
-
-      inner_iter(NBODIES);
+      inner_iter(N_ADVANCES);
    }
 
    free(bodies);
