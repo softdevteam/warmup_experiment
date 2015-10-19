@@ -15,13 +15,21 @@ public class spectralnorm
 	static void init() {};
 
 	private static final NumberFormat formatter = new DecimalFormat("#.000000000");
+	private static final int SPECTRAL_N = 1000;
+	private static final double EXPECT_CKSUM = 1.2742241481294835914184204739285632967948913574218750;
 
 	public static void runIter(int n) {
-		//int n = 100;
-		//if (args.length > 0) n = Integer.parseInt(args[0]);
+		for (int i = 0; i < n; i++) {
+			inner_iter(SPECTRAL_N);
+		}
+	}
 
-		//System.out.println(formatter.format(new spectralnorm().Approximate(n)));
-		new spectralnorm().Approximate(n);
+	public static void inner_iter(int n) {
+		double checksum = new spectralnorm().Approximate(n);
+		if (checksum != EXPECT_CKSUM) {
+			System.out.println("bad checksum: " + checksum + " vs " + EXPECT_CKSUM);
+			System.exit(1);
+		}
 	}
 
 	private final double Approximate(int n) {
