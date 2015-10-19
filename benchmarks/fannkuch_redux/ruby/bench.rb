@@ -2,7 +2,17 @@
 # http://shootout.alioth.debian.org/
 # Contributed by Wesley Moxam
 
+@EXPECT_CKSUM = 1616
+@MAX_N = 8
+
 def run_iter(n)
+  for i in 1..n do
+    inner_iter()
+  end
+end
+
+def inner_iter()
+  n = @MAX_N
   sign, maxflips, sum = 1, 0, 0
 
   p = [nil].concat((1..n).to_a)
@@ -46,7 +56,13 @@ def run_iter(n)
       sign = 1
       3.upto(n) do |i|
         (s[i] =  s[i] - 1) && break unless s[i] == 1
-	      return [sum, maxflips] if i == n 	# Out of permutations.
+              if i == n then
+	        if sum != @EXPECT_CKSUM then
+                  puts("bad checksum: %d vs %d" % [sum, @EXPECT_CKSUM])
+                  exit 1
+                end
+	        return [sum, maxflips] # Out of permutations.
+              end
 	      s[i] = i
         # Rotate 1<-...<-i+1.
 	      t = p[1]
@@ -58,7 +74,3 @@ def run_iter(n)
     end
   end
 end
-
-#n = (ARGV[0] || 1).to_i
-#sum, flips = fannkuch(n)
-#printf "%d\nPfannkuchen(%d) = %d\n", sum, n, flips
