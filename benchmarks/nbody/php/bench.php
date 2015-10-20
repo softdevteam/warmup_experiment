@@ -6,6 +6,10 @@ contributed by anon
 modified by Sergey Khripunov
 */
 
+define("EXPECT_CHECKSUM", -0.3381550232201908645635057837353087961673736572265625);
+define("N_ADVANCES", 100000);
+define("EPSILON", 0.0000000000001);
+
 function energy(&$b) {
    $e = 0.0;
    for ($i=0,$m=sizeof($b);$i<$m;$i++) {
@@ -24,61 +28,69 @@ $pi=3.141592653589793;
 $solar_mass=4*$pi*$pi;
 $days_per_year=365.24;
 
-$bodies = array(array(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, $solar_mass), //Sun
-		array(4.84143144246472090E+00, // Jupiter
-		      -1.16032004402742839E+00,
-		      -1.03622044471123109E-01,
-		      1.66007664274403694E-03 * $days_per_year,
-		      7.69901118419740425E-03 * $days_per_year,
-		      -6.90460016972063023E-05 * $days_per_year,
-		      9.54791938424326609E-04 * $solar_mass),
-		array(8.34336671824457987E+00, // Saturn
-		      4.12479856412430479E+00,
-		      -4.03523417114321381E-01,
-		      -2.76742510726862411E-03 * $days_per_year,
-		      4.99852801234917238E-03 * $days_per_year,
-		      2.30417297573763929E-05 * $days_per_year,
-		      2.85885980666130812E-04 * $solar_mass),
-		array(1.28943695621391310E+01, // Uranus
-		      -1.51111514016986312E+01,
-		      -2.23307578892655734E-01,
-		      2.96460137564761618E-03 * $days_per_year,
-		      2.37847173959480950E-03 * $days_per_year,
-		      -2.96589568540237556E-05 * $days_per_year,
-		      4.36624404335156298E-05 * $solar_mass),
-		array(1.53796971148509165E+01, // Neptune
-		      -2.59193146099879641E+01,
-		      1.79258772950371181E-01,
-		      2.68067772490389322E-03 * $days_per_year,
-		      1.62824170038242295E-03 * $days_per_year,
-		      -9.51592254519715870E-05 * $days_per_year,
-		      5.15138902046611451E-05 * $solar_mass));
+function setup_state() {
+    // setup fresh state. Gets mutated.
+    global $solar_mass, $days_per_year;
 
-// offset_momentum
-$px=$py=$pz=0.0;
-foreach ($bodies as &$e) {
-    $px+=$e[3]*$e[6]; 
-    $py+=$e[4]*$e[6]; 
-    $pz+=$e[5]*$e[6];
-} 
-$bodies[0][3]=-$px/$solar_mass;
-$bodies[0][4]=-$py/$solar_mass;
-$bodies[0][5]=-$pz/$solar_mass;
+    $bodies = array(array(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, $solar_mass), //Sun
+            array(4.84143144246472090E+00, // Jupiter
+                  -1.16032004402742839E+00,
+                  -1.03622044471123109E-01,
+                  1.66007664274403694E-03 * $days_per_year,
+                  7.69901118419740425E-03 * $days_per_year,
+                  -6.90460016972063023E-05 * $days_per_year,
+                  9.54791938424326609E-04 * $solar_mass),
+            array(8.34336671824457987E+00, // Saturn
+                  4.12479856412430479E+00,
+                  -4.03523417114321381E-01,
+                  -2.76742510726862411E-03 * $days_per_year,
+                  4.99852801234917238E-03 * $days_per_year,
+                  2.30417297573763929E-05 * $days_per_year,
+                  2.85885980666130812E-04 * $solar_mass),
+            array(1.28943695621391310E+01, // Uranus
+                  -1.51111514016986312E+01,
+                  -2.23307578892655734E-01,
+                  2.96460137564761618E-03 * $days_per_year,
+                  2.37847173959480950E-03 * $days_per_year,
+                  -2.96589568540237556E-05 * $days_per_year,
+                  4.36624404335156298E-05 * $solar_mass),
+            array(1.53796971148509165E+01, // Neptune
+                  -2.59193146099879641E+01,
+                  1.79258772950371181E-01,
+                  2.68067772490389322E-03 * $days_per_year,
+                  1.62824170038242295E-03 * $days_per_year,
+                  -9.51592254519715870E-05 * $days_per_year,
+                  5.15138902046611451E-05 * $solar_mass));
 
-$pairs = array();
-for ($i=0,$m=count($bodies); $i<$m; $i++) 
-   for ($j=$i+1; $j<$m; $j++) 
-      $pairs[] = array(&$bodies[$i], &$bodies[$j]);
+    // offset_momentum
+    $px=$py=$pz=0.0;
+    foreach ($bodies as &$e) {
+        $px+=$e[3]*$e[6];
+        $py+=$e[4]*$e[6];
+        $pz+=$e[5]*$e[6];
+    }
+    $bodies[0][3]=-$px/$solar_mass;
+    $bodies[0][4]=-$py/$solar_mass;
+    $bodies[0][5]=-$pz/$solar_mass;
 
-function run_iter($n) {
-    //$n = $argv[1];
+    $pairs = array();
+    for ($i=0,$m=count($bodies); $i<$m; $i++)
+       for ($j=$i+1; $j<$m; $j++)
+          $pairs[] = array(&$bodies[$i], &$bodies[$j]);
 
-    //printf("%0.9f\n", energy($bodies));
-    sprintf("%0.9f\n", energy($bodies));
+    return [$bodies, $pairs];
+}
 
-    $i=0; 
+function inner_iter($n) {
+    $init_state = setup_state();
+    $bodies = $init_state[0];
+    $pairs = $init_state[1];
+    $checksum = 0;
+
+    $checksum += energy($bodies);
+
+    $i=0;
     do {
-
         foreach ($pairs as &$p) {
         $a=&$p[0]; $b=&$p[1];
         $dx=$a[0]-$b[0]; $dy=$a[1]-$b[1]; $dz=$a[2]-$b[2];
@@ -97,8 +109,18 @@ function run_iter($n) {
 
     } while(++$i<$n);
 
-    //printf("%0.9f\n", energy($bodies));
-    sprintf("%0.9f\n", energy($bodies));
+    $checksum += energy($bodies);
+
+    if (abs($checksum - EXPECT_CHECKSUM) >= EPSILON) {
+        echo("bad checksum: " . $checksum . " vs " . EXPECT_CHECKSUM . "\n");
+        exit(1);
+    }
+}
+
+function run_iter($n) {
+    for ($i = 0; $i < $n; $i++) {
+        inner_iter(N_ADVANCES);
+    }
 }
 
 ?>
