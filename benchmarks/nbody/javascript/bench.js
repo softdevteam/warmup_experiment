@@ -18,6 +18,10 @@ var SOLAR_MASS = 4 * PI * PI;
  */
 var DAYS_PER_YEAR = 365.24;
 
+var EXPECT_CHECKSUM = -0.3381550232201908645635057837353087961673736572265625;
+var N_ADVANCES = 100000;
+var EPSILON = 0.0000000000001;
+
 /**
  * @param {number} x
  * @param {number} y
@@ -272,17 +276,26 @@ NBodySystem.prototype.energy = function(){
 /**
  * @param {number} n
  */
-run_iter = function(n) {
+inner_iter = function(n) {
   var bodyBuffer = new ArrayBuffer(Body.BYTES_SIZE * 5);
   var bodies = new NBodySystem( Array( 
      Sun(bodyBuffer, 0),Jupiter(bodyBuffer, 1),
      Saturn(bodyBuffer, 2),Uranus(bodyBuffer, 3),Neptune(bodyBuffer, 4) 
   ));
-  //print(bodies.energy().toFixed(9));
-  bodies.energy().toFixed(9);
+  var checksum = 0;
+
+  checksum += bodies.energy();
   for (var i=0; i<n; i++){ bodies.advance(0.01); }
-  //print(bodies.energy().toFixed(9));
-  bodies.energy().toFixed(9);
+  checksum += bodies.energy();
+
+  if (Math.abs(checksum - EXPECT_CHECKSUM) >= EPSILON) {
+    print("bad checksum: " + checksum + " vs " + EXPECT_CHECKSUM);
+    quit(1);
+  }
 }
 
-//runTest(n);
+function run_iter(n) {
+  for (i=0; i<n; i++) {
+    inner_iter(N_ADVANCES);
+  }
+}
