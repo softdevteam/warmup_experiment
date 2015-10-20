@@ -6,7 +6,7 @@ JAVAC = ${PWD}/work/openjdk/build/linux-x86_64-normal-server-release/jdk/bin/jav
 # XXX build our on GCC and plug in
 CC = cc
 
-all: build-vms build-benchmarks build-benchs bench
+all: build-vms build-benchs bench
 
 .PHONY: build-vms build-benchs bench
 
