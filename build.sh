@@ -379,6 +379,7 @@ fetch_libkalibera() {
 	fi
 }
 
+fetch_external_benchmarks
 case `uname` in
     Linux)
 	fetch_libkalibera
@@ -404,4 +405,3 @@ case `uname` in
 	build_jdk
 	;;
 esac
-fetch_external_benchmarks
