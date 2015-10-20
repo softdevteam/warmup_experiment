@@ -12,17 +12,29 @@
 
 public final class nbody {
     static void init() {};
+    private static double checksum = 0;
+    private static final int N_ADVANCES = 100000;
+    private static final double EXPECT_CHECKSUM = -0.3381550232201908645635057837353087961673736572265625;
+    private static final double EPSILON = 0.0000000000001;
 
     public static void runIter(int n) {
-        //int n = Integer.parseInt(args[0]);
+        for (int i = 0; i < n; i++) {
+            inner_iter(N_ADVANCES);
+        }
+    }
 
+    private static void inner_iter(int n) {
+        checksum = 0;
         NBodySystem bodies = new NBodySystem();
-        //System.out.printf("%.9f\n", bodies.energy());
-        bodies.energy();
+        checksum += bodies.energy();
         for (int i=0; i<n; ++i)
            bodies.advance(0.01);
-        //System.out.printf("%.9f\n", bodies.energy());
-        bodies.energy();
+        checksum += bodies.energy();
+
+        if (Math.abs(checksum - EXPECT_CHECKSUM) >= EPSILON) {
+           System.out.println("bad checksum: " + checksum + " vs " + EXPECT_CHECKSUM);
+           System.exit(1);
+        }
     }
 }
 
