@@ -24,6 +24,7 @@ check_for bash
 check_for java
 check_for javac
 check_for xzdec
+check_for wget
 
 case `uname` in
     OpenBSD)
