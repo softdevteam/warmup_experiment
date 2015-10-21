@@ -5,6 +5,10 @@
 
 --collectgarbage("setstepmul", 0) -- sometimes it helps much. For this benchmark ~ 10%
 
+MIN_DEPTH = 4
+MAX_DEPTH = 12
+EXPECT_CKSUM = -10914
+
 local function BottomUpTree(item, depth)
   if depth > 0 then
     local i = item + item
@@ -24,32 +28,36 @@ local function ItemCheck(tree)
   end
 end
 
-function run_iter(N)
-	--local N = tonumber(arg and arg[1]) or 0
-	local mindepth = 4
-	local maxdepth = mindepth + 2
-	if maxdepth < N then maxdepth = N end
+local function inner_iter(mindepth, maxdepth)
+    local check = 0
 
 	do
 	  local stretchdepth = maxdepth + 1
 	  local stretchtree = BottomUpTree(0, stretchdepth)
-	  --io.write(string.format("stretch tree of depth %d\t check: %d\n",
-	  --  stretchdepth, ItemCheck(stretchtree)))
+	  check = check +ItemCheck(stretchtree)
 	end
 
 	local longlivedtree = BottomUpTree(0, maxdepth)
 
 	for depth=mindepth,maxdepth,2 do
 	  local iterations = 2 ^ (maxdepth - depth + mindepth)
-	  local check = 0
 	  for i=1,iterations do
 	    check = check + ItemCheck(BottomUpTree(1, depth)) +
 		    ItemCheck(BottomUpTree(-1, depth))
 	  end
-	  --io.write(string.format("%d\t trees of depth %d\t check: %d\n",
-	  --  iterations*2, depth, check))
 	end
 
-	--io.write(string.format("long lived tree of depth %d\t check: %d\n",
-	--  maxdepth, ItemCheck(longlivedtree)))
+	check = check + ItemCheck(longlivedtree)
+
+    if check ~= EXPECT_CKSUM then
+        puts("bad checksum: " .. checksum .. " vs " .. EXPECT_CKSUM)
+        os.exit(1)
+    end
+end
+
+function run_iter(n)
+    local i
+    for i=1,n do
+        inner_iter(MIN_DEPTH, MAX_DEPTH)
+    end
 end
