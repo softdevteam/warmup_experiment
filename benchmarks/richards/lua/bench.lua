@@ -280,7 +280,6 @@ end
 
 local function main(loops)
   if tracing then print("Benchmark starting") end
-  --local t1 = os.clock()
   for i = 1,loops do
     qpktcount = 0
     holdcount = 0
@@ -303,32 +302,17 @@ local function main(loops)
     while devb do
       devb = devb:tick()
     end
-    --local results
-    --if qpktcount == QPKTCOUNT and holdcount == HOLDCOUNT then
-    --  results = "correct"
-    --else
-    --  results = "incorrect"
-    --end
-    --if tracing or results == "incorrect" then
-    --  print("these results are " .. results)
-    --end
     if tracing then print("\nend of run") end
 
     if qpktcount ~= QPKTCOUNT or holdcount ~= HOLDCOUNT then
-      return false
+        print("bad checksum: " .. qpktcount .. ":" .. QPKTCOUNT ..
+              " " .. holdcount .. ":" .. HOLDCOUNT)
+        os.exit(1)
     end
   end
-  --local t2 = os.clock()
-  --local delta = t2 - t1
-  --return delta
-
-  return true
 end
 
 function run_iter(loops)
-    --loops = tonumber(arg and arg[1]) or 10
-    local res = main(loops)
-    assert(res)
+    main(loops)
     if tracing then io.write("Time (in seconds): ") end
-    --print(delta)
 end
