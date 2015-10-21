@@ -1,6 +1,9 @@
 <?php
 // Ported by Maciej Fijalkowski to PHP (BSD license)
 
+define('EXPECT_QPKT', 23246);
+define('EXPECT_HOLD', 9297);
+
 // Task IDs
 define('I_IDLE', 1);
 define('I_WORK', 2);
@@ -422,39 +425,21 @@ class Richards {
 
 			schedule();
 
-			if (!($taskWorkArea->holdCount == 9297 && $taskWorkArea->qpktCount == 23246))
-				return false;
-		}
-		return true;
+            $hold_count = $taskWorkArea->holdCount;
+            $qpkt_count = $taskWorkArea->qpktCount;
+            if (!($hold_count == EXPECT_HOLD && $qpkt_count == EXPECT_QPKT) {
+                echo "bad checksum: $qpkt_count:" . EXPECT_QPKTCOUNT .
+                    " $hold_count:" . EXPECT_HOLDCOUNT . "\n";
+                exit(1);
+            }
 	}
 }
 
 $taskWorkArea = new TaskWorkArea();
 
-/*
-$number_of_runs = 100;
-if ($argc > 1) {
-	$number_of_runs = $argv[1] + 0;
-}
-$r = new Richards();
-$t0 = microtime(true);
-$res = $r->run($number_of_runs);
-$t1 = microtime(true);
-if (!$res) {
-	printf("Incorrect result!\n");
-} else {
-	printf("finished\n");
-	$total = $t1 - $t0;
-	printf("Total time for $number_of_runs iterations: $total\n");
-	$ms = $total * 1000 / $number_of_runs;
-	printf("Average time per iteration: $ms\n");
-}
-*/
-
 function run_iter($n) {
     $r = new Richards();
-    $res = $r->run($n);
-    assert($res);
+    $r->run($n);
 }
 
 

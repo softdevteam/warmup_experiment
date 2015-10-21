@@ -7,6 +7,11 @@
 #  Translation from C++, Mario Wolczko
 #  Outer loop added by Alex Jacoby
 
+import sys
+
+EXPECT_QPKT = 23246
+EXPECT_HOLD = 9297
+
 # Task IDs
 I_IDLE = 1
 I_WORK = 2
@@ -388,41 +393,16 @@ class Richards(object):
             
             schedule()
 
-            if taskWorkArea.holdCount == 9297 and taskWorkArea.qpktCount == 23246:
-                pass
-            else:
-                return False
+            if taskWorkArea.holdCount != EXPECT_HOLD or \
+                    taskWorkArea.qpktCount != EXPECT_QPKT:
+                print("bad checksum: %d:%d %d:%d" %
+                      taskWorkArea.qpktCount, EXPECT_QPKT,
+                      taskWorkArea.holdCount, EXPECT_HOLD)
+                sys.exit(1)
 
         return True
-
-#def entry_point(iterations):
-#    r = Richards()
-#    startTime = time.time()
-#    result = r.run(iterations)
-#    endTime = time.time()
-#    return result, startTime, endTime
-#
-#def main(entry_point = entry_point, iterations = 10):
-#    print "Richards benchmark (Python) starting... [%r]" % entry_point
-#    result, startTime, endTime = entry_point(iterations)
-#    if not result:
-#        print "Incorrect results!"
-#        return -1
-#    print "finished."
-#    total_s = endTime - startTime
-#    print "Total time for %d iterations: %.2f secs" %(iterations,total_s)
-#    print "Average time per iteration: %.2f ms" %(total_s*1000/iterations)
-#    return 42
-#
-#if __name__ == '__main__':
-#    import sys
-#    if len(sys.argv) >= 2:
-#        main(iterations = int(sys.argv[1]))
-#    else:
-#        main()
 
 def run_iter(n):
     global taskWorkArea;
     r = Richards()
-    res = r.run(n)
-    assert(res)
+    r.run(n)
