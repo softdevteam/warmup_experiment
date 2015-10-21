@@ -7,6 +7,10 @@
    modified by Craig Russell
  */
 
+define("MIN_DEPTH", 4);
+define("MAX_DEPTH", 12);
+define("EXPECT_CKSUM", -10914);
+
 class Tree {
    public $i;
    public $l;
@@ -28,16 +32,12 @@ class Tree {
 }
 
 
-function run_iter($n) {
-    $minDepth = 4;
-
-    //$n = $argc == 2 ? $argv[1] : 1;
-    $maxDepth = $minDepth + 2 > $n ? $minDepth + 2 : $n;
+function inner_iter($minDepth, $maxDepth) {
+    $check = 0;
     $stretchDepth = $maxDepth + 1;
 
     $stretch = new Tree(0, $stretchDepth);
-    //printf("stretch tree of depth %d\t check: %d\n",
-    //   $stretchDepth, $stretch->check());
+    $check += $stretch->check();
     unset($stretch);
 
     $longLivedTree = new Tree(0, $maxDepth);
@@ -45,22 +45,28 @@ function run_iter($n) {
     $iterations = 1 << $maxDepth;
     do
     {
-       $check = 0;
        for($i = 1; $i <= $iterations; ++$i)
        {
           $check += (new Tree($i, $minDepth))->check()
              + (new Tree(-$i, $minDepth))->check();
        }
 
-       //printf("%d\t trees of depth %d\t check: %d\n",
-       //   $iterations<<1, $minDepth, $check);
-
        $minDepth += 2;
        $iterations >>= 2;
     }
     while($minDepth <= $maxDepth);
 
-    //printf("long lived tree of depth %d\t check: %d\n",
-    //   $maxDepth, $longLivedTree->check());
+    $check += $longLivedTree->check();
+
+    if ($check != EXPECT_CKSUM) {
+        echo "bad checksum: " . $check . " vs " . EXPECT_CKSUM . "\n";
+        exit(1);
+    }
+}
+
+function run_iter($n) {
+    for ($i = 0; $i < $n; $i++) {
+        inner_iter(MIN_DEPTH, MAX_DEPTH);
+    }
 }
 ?>
