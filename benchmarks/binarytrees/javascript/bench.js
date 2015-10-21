@@ -2,6 +2,10 @@
    http://benchmarksgame.alioth.debian.org/
    contributed by Isaac Gouy */
 
+var MIN_DEPTH = 4;
+var MAX_DEPTH = 12;
+var EXPECT_CKSUM = -10914
+
 function TreeNode(left,right,item){
    this.left = left;
    this.right = right;
@@ -27,27 +31,33 @@ function bottomUpTree(item,depth){
 }
 
 
-function run_iter(n) {
-    var minDepth = 4;
-    //var n = arguments[0];
-    var maxDepth = Math.max(minDepth + 2, n);
+function inner_iter(minDepth, maxDepth) {
+    var check = 0;
     var stretchDepth = maxDepth + 1;
 
-    var check = bottomUpTree(0,stretchDepth).itemCheck();
-    //print("stretch tree of depth " + stretchDepth + "\t check: " + check);
+    check = bottomUpTree(0,stretchDepth).itemCheck();
 
     var longLivedTree = bottomUpTree(0,maxDepth);
     for (var depth=minDepth; depth<=maxDepth; depth+=2){
        var iterations = 1 << (maxDepth - depth + minDepth);
 
-       check = 0;
        for (var i=1; i<=iterations; i++){
           check += bottomUpTree(i,depth).itemCheck();
           check += bottomUpTree(-i,depth).itemCheck();
        }
-       //print(iterations*2 + "\t trees of depth " + depth + "\t check: " + check);
     }
 
-    //print("long lived tree of depth " + maxDepth + "\t check: " 
-    //   + longLivedTree.itemCheck());
+    check += longLivedTree.itemCheck();
+
+    if (check != EXPECT_CKSUM) {
+        print("bad checksum: " + checksum + " vs " + EXPECT_CKSUM);
+        quit(1);
+    }
+}
+
+function run_iter(n) {
+    var i;
+    for (i = 0; i < n; i++) {
+        inner_iter(MIN_DEPTH, MAX_DEPTH);
+    }
 }
