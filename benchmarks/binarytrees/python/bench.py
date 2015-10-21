@@ -5,6 +5,10 @@
 # modified by Dominique Wahli
 # modified by Heinrich Acker
 
+MIN_DEPTH = 4
+MAX_DEPTH = 12
+EXPECT_CKSUM = -10914
+
 import sys
 
 class Tree(object):
@@ -24,23 +28,30 @@ def check_tree(tree):
     if not isinstance(tree, Tree): return tree
     return tree.item + check_tree(tree.left) - check_tree(tree.right)
 
-def run_iter(n):
-    min_depth = 4
-    max_depth = max(min_depth + 2, n)
+
+def inner_iter(min_depth, max_depth):
+    checksum = 0
     stretch_depth = max_depth + 1
 
-    #print "stretch tree of depth %d\t check:" % stretch_depth, check_tree(make_tree(0, stretch_depth))
+    checksum += check_tree(make_tree(0, stretch_depth))
 
     long_lived_tree = make_tree(0, max_depth)
 
     iterations = 2**max_depth
     for depth in xrange(min_depth, stretch_depth, 2):
 
-        check = 0
         for i in xrange(1, iterations + 1):
-            check += check_tree(make_tree(i, depth)) + check_tree(make_tree(-i, depth))
+            checksum += check_tree(make_tree(i, depth)) + check_tree(make_tree(-i, depth))
 
-        #print "%d\t trees of depth %d\t check:" % (iterations * 2, depth), check
         iterations /= 4
 
-    #print "long lived tree of depth %d\t check:" % max_depth, check_tree(long_lived_tree)
+    checksum += check_tree(long_lived_tree)
+
+    if checksum != EXPECT_CKSUM:
+        print("bad checksum: %d vs %d" % (checksum, EXPECT_CKSUM))
+        sys.exit(1)
+
+
+def run_iter(n):
+    for i in xrange(n):
+        inner_iter(MIN_DEPTH, MAX_DEPTH)
