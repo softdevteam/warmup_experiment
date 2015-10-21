@@ -33,6 +33,11 @@ case `uname` in
 	;;
 esac
 
+
+case `uname` in
+    Linux*) PATCH_ARGS=--backup
+esac
+
 which pypy > /dev/null 2> /dev/null
 if [ $? -eq 0 ]; then
     PYTHON=`which pypy`
@@ -350,8 +355,9 @@ EOF
 	mv Benchmark.java Program.java COM/sun/labs/kanban/richards_deutsch_acc_virtual/ || exit $?
 	cd COM/sun/labs/kanban/richards_deutsch_acc_virtual || exit $?
 	mv Richards.java richards.java || exit $?
-	patch < ${PATCH_DIR}/java_richards.patch || exit $?
 	cp *.java ${HERE}/benchmarks/richards/java || exit $?
+	cd ${HERE}/benchmarks/richards/java || exit $?
+	patch ${PATCH_ARGS} < ${PATCH_DIR}/java_richards.patch || exit $?
 	rm -fr $t
 
 	# XXX hook these in later.
