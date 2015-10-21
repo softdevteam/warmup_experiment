@@ -20,6 +20,19 @@ check_for python
 check_for svn
 check_for unzip
 check_for xml2-config
+check_for bash
+check_for java
+check_for javac
+check_for xzdec
+check_for wget
+
+case `uname` in
+    OpenBSD)
+        check_for egcc
+        check_for eg++
+	;;
+esac
+
 which pypy > /dev/null 2> /dev/null
 if [ $? -eq 0 ]; then
     PYTHON=`which pypy`
@@ -27,19 +40,12 @@ else
     PYTHON=`which python2.7`
 fi
 
-# java versions need to be jdk7
-# we will build a jdk 8 later.
-# graal build needs both of these!
-check_for java
-check_for javac
-
 which gmake > /dev/null 2> /dev/null
 if [ $? -eq 0 ]; then
     MYMAKE=gmake
 else
     MYMAKE=make
 fi
-check_for bash
 
 if [ $missing -eq 1 ]; then
     exit 1
@@ -94,7 +100,6 @@ build_cpython() {
 	cd cffi-${CFFI_V} && ${CPYTHON} setup.py install
 }
 
-
 LUAJITV=2.0.4
 build_luajit() {
 	cd ${wrkdir} || exit $?
@@ -121,8 +126,7 @@ build_pypy() {
 	rm -rf $usession
 }
 
-
-V8_V=4.5.38
+V8_V=4.8.90
 DEPOT_V=015cdc34ba4be808c47267123b0a97b93f5a0407
 DEPOT_REPO="https://chromium.googlesource.com/chromium/tools/depot_tools.git"
 build_v8() {
@@ -138,12 +142,19 @@ build_v8() {
 	# The build actually requires that you clone using this git wrapper tool
 	cd ${wrkdir}
 	OLDPATH=${PATH}
-	PATH=${wrkdir}/depot_tools:${PATH}
-	fetch v8 || exit $?
+	# v8's build needs python 2.7.10; as we've already built that, we might
+	# as well use it rather than forcing the user to install their own.
+	PATH=${wrkdir}/cpython-inst/bin:${wrkdir}/depot_tools:${PATH}
+	# XXX we should check for errors when fetching, but currently that
+	# causes problems because fetch runs a script which aborts on OpenBSD
+	fetch v8
 	cd v8 || exit $?
 	git checkout ${V8_V} || exit $?
 	patch -Ep1 < ${PATCH_DIR}/v8_various.diff || exit $?
-	make native || exit $?
+	case `uname` in
+  	    Linux*) make native || exit $? ;;
+  	    OpenBSD*) CC=egcc CXX=eg++ gmake native || exit $? ;;
+	esac
 	PATH=${OLDPATH}
 }
 
@@ -160,21 +171,65 @@ build_gmake() {
 	cd make-${GMAKE_V} || exit $?
 	./configure || exit $?
 	make || exit $?
+	cp make gmake
 }
 
-JDK_DIST=openjdk-8-src-b132-03_mar_2014.zip
+JDK_DIST=openjdk-8u45b14-bsd-port-20150618.tar.xz
+JDK_INNER_DIR=openjdk-8u45b14-bsd-port-20150618
+JDK_JAVAC=${wrkdir}/openjdk/build/`uname | tr '[:upper:]' '[:lower:]'`-x86_64-normal-server-release/jdk/bin/javac
 build_jdk() {
 	echo "\n===> Download and build JDK8\n"
-	if [ -f ${wrkdir}/openjdk/build/linux-x86_64-normal-server-release/jdk/bin/javac ]; then return; fi
+	if [ -f ${JDK_JAVAC} ]; then return; fi
 	cd ${wrkdir} || exit $?
-	if ! [ -f "${wrkdir}/openjdk-8-src-b132-03_mar_2014.zip" ]; then
-		wget http://www.java.net/download/openjdk/jdk8/promoted/b132/${JDK_DIST} || exit $?
+	if ! [ -f "${wrkdir}/${JDK_DIST}" ]; then
+		wget http://www.intricatesoftware.com/distfiles/${JDK_DIST} || exit $?
 	fi
-	unzip ${JDK_DIST} || exit $?
+	xzdec ${JDK_DIST} | tar xf - || exit $?
+	mv ${JDK_INNER_DIR} openjdk
 	cd openjdk || exit $?
 	JDK_BUILD_PATH=${wrkdir}/make-${GMAKE_V}:${PATH}
-	PATH=${JDK_BUILD_PATH} bash configure || exit $?
-	PATH=${JDK_BUILD_PATH} make all || exit $?
+	case `uname` in
+	    Linux)
+		PATH=${JDK_BUILD_PATH} bash configure \
+		  --disable-option-checking \
+		  --with-cups-include=/usr/local/include \
+		  --with-jobs=8 \
+                  --with-debug-level=release \
+		  --with-debug-level=release \
+		  --disable-ccache \
+		  --disable-freetype-bundling \
+		  --disable-zip-debug-info \
+		  --disable-debug-symbols \
+		  --enable-static-libjli \
+		  --with-zlib=system \
+		  --with-milestone=fcs \
+		  || exit $?
+	        PATH=${JDK_BUILD_PATH} ../make-${GMAKE_V}/make all || exit $?
+		;;
+	    OpenBSD)
+	        CPPFLAGS=-I/usr/local/include \
+	          LDFLAGS=-L/usr/local/lib \
+	          PATH=${JDK_BUILD_PATH} CC=egcc CXX=eg++ ac_cv_path_NAWK=awk bash configure \
+		  --disable-option-checking \
+		  --with-cups-include=/usr/local/include \
+		  --with-jobs=8 \
+                  --with-debug-level=release \
+		  --with-debug-level=release \
+		  --disable-ccache \
+		  --disable-freetype-bundling \
+		  --disable-zip-debug-info \
+		  --disable-debug-symbols \
+		  --enable-static-libjli \
+		  --with-zlib=system \
+		  --with-giflib=system \
+		  --with-milestone=fcs \
+		  || exit $?
+	        PATH=${JDK_BUILD_PATH} \
+		  COMPILER_WARNINGS_FATAL=false \
+		  DEFAULT_LIBPATH="/usr/lib:/usr/X11R6/lib:/usr/local/lib"\
+		  ../make-${GMAKE_V}/make all || exit $?
+		;;
+	esac
 }
 
 MX_REPO=https://bitbucket.org/allr/mx
@@ -182,8 +237,10 @@ GRAAL_REPO=http://hg.openjdk.java.net/graal/graal-compiler
 GRAAL_VERSION=9dafd1dc5ff9
 # Building with the JDK we built earlier is troublesome (SSL+maven issues).
 # Instead we use the system JDK8.
-SYSTEM_JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-amd64
-
+case `uname` in
+    Linux)   SYSTEM_JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-amd64;;
+    OpenBSD) SYSTEM_JAVA_HOME=/usr/local/jdk-1.8.0;;
+esac
 MX="env DEFAULT_VM=jvmci JAVA_HOME=${SYSTEM_JAVA_HOME} python2.7 ${wrkdir}/mx/mx.py"
 build_graal() {
 	echo "\n===> Download and build graal\n"
@@ -323,15 +380,29 @@ fetch_libkalibera() {
 	fi
 }
 
-fetch_libkalibera
-fetch_krun
-build_cpython
-build_luajit
-build_pypy
-build_v8
-build_gmake
-build_jdk
-build_graal
-build_jruby_truffle
-build_hhvm
 fetch_external_benchmarks
+case `uname` in
+    Linux)
+	fetch_libkalibera
+	fetch_krun
+	build_cpython
+	build_luajit
+	build_pypy
+	build_v8
+	build_gmake
+	build_jdk
+	build_graal
+	build_jruby_truffle
+	build_hhvm
+	;;
+    OpenBSD)
+	fetch_libkalibera
+	fetch_krun
+	build_cpython
+	build_luajit
+	#build_pypy XXX waiting for new version to reenable
+	build_v8
+	build_gmake
+	build_jdk
+	;;
+esac
