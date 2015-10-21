@@ -20,7 +20,7 @@ def combinations(l):
             result.append((l[x],y))
     return result
 
-PI = 3.14159265358979323
+PI = 3.141592653589793
 SOLAR_MASS = 4 * PI * PI
 DAYS_PER_YEAR = 365.24
 

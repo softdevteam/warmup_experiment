@@ -5,7 +5,8 @@
 # From version ported by Michael Neumann from the C gcc version, 
 # which was written by Christoph Bauer. 
 
-SOLAR_MASS = 4 * Math::PI**2
+PI = 3.141592653589793
+SOLAR_MASS = 4 * PI**2
 DAYS_PER_YEAR = 365.24
 
 @EXPECT_CHECKSUM = -0.3381550232201908645635057837353087961673736572265625
