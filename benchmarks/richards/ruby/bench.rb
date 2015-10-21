@@ -1,6 +1,9 @@
 # Derived from http://pws.prserv.net/dlissett/ben/bench1.htm
 # Licensed CC BY-NC-SA 1.0
 
+@EXPECT_QPKT = 23246
+@EXPECT_HOLD = 9297
+
 IDLE = 0  
 WORKER = 1  
 HANDLERA = 2  
@@ -13,10 +16,6 @@ $layout = 0
 
 
 def main(reps)
-   #reps = Integer(ARGV.shift || 10)
-   
-   #startTicks = Process.times.utime
-   
    s = Scheduler.new 
    for i in 0..reps 
      s.reset
@@ -40,16 +39,14 @@ def main(reps)
      s.addDeviceTask(DEVICEB, 5000, nil)           
      s.schedule
 
-     if s.getCounts != [9297, 23246]
-        return false
+     counts = s.getCounts
+     if counts != [EXPECT_HOLD, EXPECT_QPKT]
+       puts("bad checksum: %d:%d %d:%d" % [
+         counts[1], EXPECT_QPKT,
+         counts[0], EXPECT_HOLD])
+       exit(1)
      end
    end
-   
-   #stopTicks = Process.times.utime  
-   #frequency = 1000
-   #print "Total time for #{reps} iterations: #{stopTicks-startTicks}s\n"
-   #print "Average time per iteration: #{Integer(((stopTicks-startTicks)/reps)*1000)}ms\n"
-   return true
 end
 
 
@@ -393,10 +390,8 @@ class Packet
        queue
      end
    end
-
 end
 
 def run_iter(n)
-    res = main(n)
-    assert(n)
+    main(n)
 end
