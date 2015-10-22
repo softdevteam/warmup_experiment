@@ -40,10 +40,10 @@ def main(reps)
      s.schedule
 
      counts = s.getCounts
-     if counts != [EXPECT_HOLD, EXPECT_QPKT]
+     if counts != [@EXPECT_QPKT, @EXPECT_HOLD]
        puts("bad checksum: %d:%d %d:%d" % [
-         counts[1], EXPECT_QPKT,
-         counts[0], EXPECT_HOLD])
+         counts[0], @EXPECT_QPKT,
+         counts[1], @EXPECT_HOLD])
        exit(1)
      end
    end
