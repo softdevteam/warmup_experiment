@@ -133,7 +133,7 @@ class TaskState(object):
 
 
 
-tracing = False
+#tracing = False
 layout = 0
 
 def trace(a):
@@ -262,7 +262,7 @@ class DeviceTask(Task):
                 return self.qpkt(pkt)
         else:
             d.pending = pkt
-            if tracing: trace(pkt.datum)
+            #if tracing: trace(pkt.datum)
             return self.hold()
 
 
@@ -356,13 +356,13 @@ def schedule():
     while t is not None:
         pkt = None
 
-        if tracing:
-            print "tcb =",t.ident
+        #if tracing:
+        #    print "tcb =",t.ident
 
         if t.isTaskHoldingOrWaiting():
             t = t.link
         else:
-            if tracing: trace(chr(ord("0")+t.ident))
+            #if tracing: trace(chr(ord("0")+t.ident))
             t = t.runTask()
 
 class Richards(object):

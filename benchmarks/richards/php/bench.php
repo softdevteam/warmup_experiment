@@ -276,9 +276,11 @@ class DeviceTask extends Task {
 			return $this->qpkt($pkt);
 		}
 		$d->pending = $pkt;
+        /*
 		if (TRACING) {
 			trace($pkt->datum);
 		}
+        */
 		return $this->hold();
 	}
 }
@@ -372,8 +374,8 @@ function schedule() {
 		if ($t->isTaskHoldingOrWaiting())
 			$t = $t->link;
 		else {
-			if (TRACING)
-				trace(chr(ord("0") + $t->ident));
+			//if (TRACING)
+			//	trace(chr(ord("0") + $t->ident));
 			$t = $t->runTasks();
 		}
 	}
@@ -427,8 +429,8 @@ class Richards {
             $hold_count = $taskWorkArea->holdCount;
             $qpkt_count = $taskWorkArea->qpktCount;
             if (($hold_count != EXPECT_HOLD) || ($qpkt_count != EXPECT_QPKT)) {
-                echo "bad checksum: $qpkt_count:" . EXPECT_QPKTCOUNT .
-                    " $hold_count:" . EXPECT_HOLDCOUNT . "\n";
+                echo "bad checksum: $qpkt_count:" . EXPECT_QPKT .
+                    " $hold_count:" . EXPECT_HOLD . "\n";
                 exit(1);
             }
         }
