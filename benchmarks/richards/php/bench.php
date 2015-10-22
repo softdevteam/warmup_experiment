@@ -386,8 +386,7 @@ class Richards {
 
 		for ($i = 0; $i < $iterations; $i++) {
             $taskWorkArea->reset();
-			//$taskWorkArea->holdCount = 0;
-			//$taskWorkArea->qpktCount = 0;
+
 			$task_state = new TaskState();
 			new IdleTask(I_IDLE, 1, 10000, $task_state->running(),
 						 new IdleTaskRec());
@@ -427,11 +426,12 @@ class Richards {
 
             $hold_count = $taskWorkArea->holdCount;
             $qpkt_count = $taskWorkArea->qpktCount;
-            if (!($hold_count == EXPECT_HOLD && $qpkt_count == EXPECT_QPKT) {
+            if (($hold_count != EXPECT_HOLD) || ($qpkt_count != EXPECT_QPKT)) {
                 echo "bad checksum: $qpkt_count:" . EXPECT_QPKTCOUNT .
                     " $hold_count:" . EXPECT_HOLDCOUNT . "\n";
                 exit(1);
             }
+        }
 	}
 }
 
