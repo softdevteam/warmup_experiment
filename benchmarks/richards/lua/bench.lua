@@ -14,7 +14,6 @@ local I_DEVB = 6
 
 local BUFSIZE = 4
 local layout = 0
---local tracing
 local tasktab = {}
 local ascii_0 = 48
 
@@ -86,9 +85,6 @@ function task_proto:waitpkt()
 end
 
 function task_proto:run(pkt)
-  --if tracing then
-  --  trace(self.id)
-  --end
   local task = self:fn(pkt)
   return task
 end
@@ -273,13 +269,11 @@ local function fn_dev(self, pkt)
     return self:qpkt(pkt)
   else
     self.v1 = pkt
-    --if tracing then trace(pkt.a1) end
     return self:hold_self()
   end
 end
 
 local function main(loops)
-  --if tracing then print("Benchmark starting") end
   for i = 1,loops do
     qpktcount = 0
     holdcount = 0
@@ -302,7 +296,6 @@ local function main(loops)
     while devb do
       devb = devb:tick()
     end
-    --if tracing then print("\nend of run") end
 
     if qpktcount ~= QPKTCOUNT or holdcount ~= HOLDCOUNT then
         print("bad checksum: " .. qpktcount .. ":" .. QPKTCOUNT ..
@@ -314,5 +307,4 @@ end
 
 function run_iter(loops)
     main(loops)
-    --if tracing then io.write("Time (in seconds): ") end
 end
