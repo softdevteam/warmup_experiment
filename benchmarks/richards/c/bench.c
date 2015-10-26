@@ -94,6 +94,7 @@ long    v1 = 0;
 long    v2 = 0;
 int     qpktcount    =  0;
 int     holdcount    =  0;
+/* int     tracing      =  0; */
 int     layout       =  0;
 
 void append(struct packet *pkt, struct packet *ptr);
@@ -126,6 +127,7 @@ void reset_state(struct packet *pkts[], struct task *tasks[])
     v2 = 0;
     qpktcount = 0;
     holdcount = 0;
+    /* tracing = 0; */
     layout = 0;
 }
 
@@ -201,6 +203,11 @@ void schedule()
                 taskid = tcb->t_id;
                 v1 = tcb->t_v1;
                 v2 = tcb->t_v2;
+#if 0
+                if (tracing) {
+                    trace(taskid+'0');
+                }
+#endif
                 newtcb = (*(tcb->t_fn))(pkt);
                 tcb->t_v1 = v1;
                 tcb->t_v2 = v2;
@@ -362,6 +369,7 @@ struct task *devfn(struct packet *pkt)
     else
     {
         v1 = (long)pkt;
+        /* if (tracing) trace(pkt->p_a1); */
         return ( holdself() );
     }
 }
@@ -415,6 +423,7 @@ int run_iter(int reps)
 
         qpktcount = holdcount = 0;
 
+        /* tracing = FALSE; */
         layout = 0;
 
         schedule();
