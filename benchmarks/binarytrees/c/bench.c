@@ -112,7 +112,7 @@ int inner_rep(int minDepth, int maxDepth)
     DeleteTree(longLivedTree);
 
     if (check != EXPECT_CKSUM) {
-        errx(EXIT_FAILURE, "checksum failed: %u vs %u", check, EXPECT_CKSUM);
+        errx(EXIT_FAILURE, "checksum failed: %u vs %lu", check, EXPECT_CKSUM);
     }
 
     return 0;
