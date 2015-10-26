@@ -276,11 +276,6 @@ class DeviceTask extends Task {
 			return $this->qpkt($pkt);
 		}
 		$d->pending = $pkt;
-        /*
-		if (TRACING) {
-			trace($pkt->datum);
-		}
-        */
 		return $this->hold();
 	}
 }
@@ -374,8 +369,6 @@ function schedule() {
 		if ($t->isTaskHoldingOrWaiting())
 			$t = $t->link;
 		else {
-			//if (TRACING)
-			//	trace(chr(ord("0") + $t->ident));
 			$t = $t->runTasks();
 		}
 	}
