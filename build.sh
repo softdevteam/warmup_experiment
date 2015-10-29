@@ -406,7 +406,7 @@ case `uname` in
 	fetch_krun
 	build_cpython
 	build_luajit
-	#build_pypy XXX waiting for new version to reenable
+	build_pypy
 	build_v8
 	build_gmake
 	build_jdk
