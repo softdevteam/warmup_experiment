@@ -117,7 +117,7 @@ build_luajit() {
 	CFLAGS=-DLUAJIT_ENABLE_LUA52COMPAT $MYMAKE || exit $?
 }
 
-PYPYV=2.6.0
+PYPYV=4.0.0
 build_pypy() {
 	cd ${wrkdir} || exit $?
 	echo "\n===> Download and build PyPy\n"
