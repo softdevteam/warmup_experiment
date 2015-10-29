@@ -13,7 +13,7 @@ all: build-vms build-benchs bench
 build-vms:
 	./build.sh
 
-build-benchs:
+build-benchs: build-krun
 	cd benchmarks && \
 		${MAKE} CC=${CC} JAVAC=${JAVAC}
 
