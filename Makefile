@@ -1,7 +1,16 @@
 PYTHON ?= python2.7
 PWD != pwd
-JAVA_HOME = ${PWD}/work/openjdk/build/linux-x86_64-normal-server-release/images/j2sdk-image
-JAVAC = ${PWD}/work/openjdk/build/linux-x86_64-normal-server-release/jdk/bin/javac
+UNAME != uname
+ifeq (${UNAME}, Linux)
+	JAVA_HOME = ${PWD}/work/openjdk/build/linux-x86_64-normal-server-release/images/j2sdk-image
+	JAVAC = ${PWD}/work/openjdk/build/linux-x86_64-normal-server-release/jdk/bin/javac
+	JAVA_INC = ${JAVA_HOME}/include/linux
+endif
+ifeq (${UNAME}, OpenBSD)
+	JAVA_HOME = ${PWD}/work/openjdk/build/bsd-x86_64-normal-server-release/images/j2sdk-image
+	JAVAC = ${PWD}/work/openjdk/build/bsd-x86_64-normal-server-release/jdk/bin/javac
+	JAVA_INC = ${JAVA_HOME}/include/openbsd
+endif
 
 # XXX build our on GCC and plug in
 CC = cc
@@ -18,8 +27,7 @@ build-benchs: build-krun
 		${MAKE} CC=${CC} JAVAC=${JAVAC}
 
 build-krun:
-	cd krun && ${MAKE} JAVA_CPPFLAGS='"-I${JAVA_HOME}/include \
-		-I${JAVA_HOME}/include/linux"' \
+	cd krun && ${MAKE} JAVA_CPPFLAGS='"-I${JAVA_HOME}/include -I${JAVA_INC}"' \
 		JAVA_LDFLAGS=-L${JAVA_HOME}/lib \
 		JAVAC=${JAVAC} ENABLE_JAVA=1
 
