@@ -189,7 +189,12 @@ build_gmake() {
 
 JDK_DIST=openjdk-8u45b14-bsd-port-20150618.tar.xz
 JDK_INNER_DIR=openjdk-8u45b14-bsd-port-20150618
-JDK_JAVAC=${wrkdir}/openjdk/build/`uname | tr '[:upper:]' '[:lower:]'`-x86_64-normal-server-release/jdk/bin/javac
+case `uname` in
+    Linux)
+      JDK_JAVAC=${wrkdir}/openjdk/build/linux-x86_64-normal-server-release/jdk/bin/javac;;
+    OpenBSD)
+      JDK_JAVAC=${wrkdir}/openjdk/build/bsd-x86_64-normal-server-release/jdk/bin/javac;;
+esac
 build_jdk() {
 	echo "\n===> Download and build JDK8\n"
 	if [ -f ${JDK_JAVAC} ]; then return; fi
