@@ -158,7 +158,15 @@ build_v8() {
 	patch -Ep1 < ${PATCH_DIR}/v8_various.diff || exit $?
 	case `uname` in
   	    Linux*) make native || exit $? ;;
-  	    OpenBSD*) CC=egcc CXX=eg++ gmake native || exit $? ;;
+  	    OpenBSD*)
+	        # On OpenBSD, the build fails for silly reasons near the very
+		# end, even though the main v8 binary has been built. So we
+		# simply check that the binary exists and suppress unrelated
+		# build errors.
+		# Bug report https://code.google.com/p/v8/issues/detail?id=4500
+	        CC=egcc CXX=eg++ gmake native
+		test -f out/native/d8 || exit $?
+		;;
 	esac
 	PATH=${OLDPATH}
 }
