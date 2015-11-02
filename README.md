@@ -7,7 +7,6 @@ This is a work in progress. Watch this space.
 ```
 All original files are under the following MIT license:
 
-  Copyright (c)2012 Carl Friedrich Bolz and Laurence Tratt
   Copyright (c)2015 King's College London
 
   Permission is hereby granted, free of charge, to any person obtaining a
