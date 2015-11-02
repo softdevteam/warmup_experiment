@@ -117,7 +117,7 @@ build_luajit() {
 	CFLAGS=-DLUAJIT_ENABLE_LUA52COMPAT $MYMAKE || exit $?
 }
 
-PYPYV=2.6.0
+PYPYV=4.0.0
 build_pypy() {
 	cd ${wrkdir} || exit $?
 	echo "\n===> Download and build PyPy\n"
@@ -158,7 +158,15 @@ build_v8() {
 	patch -Ep1 < ${PATCH_DIR}/v8_various.diff || exit $?
 	case `uname` in
   	    Linux*) make native || exit $? ;;
-  	    OpenBSD*) CC=egcc CXX=eg++ gmake native || exit $? ;;
+  	    OpenBSD*)
+	        # On OpenBSD, the build fails for silly reasons near the very
+		# end, even though the main v8 binary has been built. So we
+		# simply check that the binary exists and suppress unrelated
+		# build errors.
+		# Bug report https://code.google.com/p/v8/issues/detail?id=4500
+	        CC=egcc CXX=eg++ gmake native
+		test -f out/native/d8 || exit $?
+		;;
 	esac
 	PATH=${OLDPATH}
 }
@@ -181,7 +189,12 @@ build_gmake() {
 
 JDK_DIST=openjdk-8u45b14-bsd-port-20150618.tar.xz
 JDK_INNER_DIR=openjdk-8u45b14-bsd-port-20150618
-JDK_JAVAC=${wrkdir}/openjdk/build/`uname | tr '[:upper:]' '[:lower:]'`-x86_64-normal-server-release/jdk/bin/javac
+case `uname` in
+    Linux)
+      JDK_JAVAC=${wrkdir}/openjdk/build/linux-x86_64-normal-server-release/jdk/bin/javac;;
+    OpenBSD)
+      JDK_JAVAC=${wrkdir}/openjdk/build/bsd-x86_64-normal-server-release/jdk/bin/javac;;
+esac
 build_jdk() {
 	echo "\n===> Download and build JDK8\n"
 	if [ -f ${JDK_JAVAC} ]; then return; fi
@@ -406,7 +419,7 @@ case `uname` in
 	fetch_krun
 	build_cpython
 	build_luajit
-	#build_pypy XXX waiting for new version to reenable
+	build_pypy
 	build_v8
 	build_gmake
 	build_jdk
