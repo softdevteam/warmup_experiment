@@ -321,6 +321,7 @@ build_jruby_truffle() {
 	fi
 	cd ${wrkdir}/jruby || exit $?
 	git checkout ${JRUBY_V} || exit $?
+	patch -Ep1 < ${PATCH_DIR}/jruby_monotonic_clock.diff || exit $?
 	./mvnw || exit $?
 }
 
