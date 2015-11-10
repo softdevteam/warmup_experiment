@@ -1,0 +1,173 @@
+import os
+from krun.vm_defs import (PythonVMDef, LuaVMDef, JavaVMDef, GraalVMDef,
+    PHPVMDef, JRubyTruffleVMDef, V8VMDef, NativeCodeVMDef,
+    find_internal_jvmci_java_bin, GenericScriptingVMDef)
+from krun import EntryPoint
+
+# this file is a minimally hacky way to do startup measurements with all the
+# krun goodies, but without changing krun.
+#
+#
+# the way it works is as follows:
+#
+# before the invocation of the VM, another executable is inserted:
+#
+# sudo -u krun nice -20 taskset 0x2 env <some variables> \
+# outer_startup_runner_c jruby startup_runner.rb
+#
+# outer_startup_runner_c is a small C program that prints the current time,
+# then execs its arguments. startup_runner.rb will then also print the current
+# time and exit. The warmup time is therefore the difference of the two (both
+# of these times are stored in the JSON file, the substraction happens in
+# post-processing). That way, all the extra commands are not included in the
+# measurement, but we still get the krun goodies.
+#
+# this works by patching two things:
+# - the runner file for each VM is patched to point to the startup runner
+#   instead (function patch_runner). The startup runners are in
+#   startup_runners/
+# - the bench_cmdline_adjust method is patched to insert the call to
+#   outer_startup_runner_c
+#
+
+# Who to mail
+MAIL_TO = []
+
+# Maximum number of error emails to send per-run
+#MAX_MAILS = 2
+
+DIR = os.getcwd()
+JKRUNTIME_DIR = os.path.join(DIR, "krun", "libkruntime", "")
+JDK8_HOME = os.path.join(DIR, "work/openjdk/build/linux-x86_64-normal-server-release/images/j2sdk-image/")
+STARTUP_RUNNER_DIR = os.path.join(DIR, "startup_runners")
+
+HEAP_LIMIT = 2097152  # K == 2Gb
+
+# Variant name -> EntryPoint
+VARIANTS = {
+    "default-c": EntryPoint("bench.so", subdir="c"),
+    "default-java": EntryPoint("KrunEntry", subdir="java"),
+    "default-lua": EntryPoint("bench.lua", subdir="lua"),
+    "default-python": EntryPoint("bench.py", subdir="python"),
+    "default-php": EntryPoint("bench.php", subdir="php"),
+    "default-ruby": EntryPoint("bench.rb", subdir="ruby"),
+    "default-javascript": EntryPoint("bench.js", subdir="javascript"),
+}
+
+ITERATIONS_ALL_VMS = 1
+
+def patch_runner(vm_def):
+    from krun.env import EnvChangeAppend
+    if vm_def.iterations_runner == "IterationsRunner":
+        vm_def.iterations_runner = "startup_runner"
+        change = EnvChangeAppend("CLASSPATH", STARTUP_RUNNER_DIR)
+        vm_def.add_env_change(change)
+    elif vm_def.iterations_runner.endswith("iterations_runner_c"):
+        vm_def.iterations_runner = os.path.join(STARTUP_RUNNER_DIR, "startup_runner_c")
+    else:
+        assert "iterations_runner." in vm_def.iterations_runner
+        _, suffix = vm_def.iterations_runner.rsplit(".", 1)
+        vm_def.iterations_runner = os.path.join(STARTUP_RUNNER_DIR, "startup_runner." + suffix)
+    return vm_def
+
+
+from krun.platform import BasePlatform, detect_platform
+
+def patch_platform(platform):
+    Cls = type(platform)
+    assert Cls is not BasePlatform, "must be subclassed"
+
+    def bench_cmdline_adjust(self, args, env_dct):
+        # this function inserts the outer runner into the arguments
+        prepend_args = BasePlatform.bench_cmdline_adjust(self, [], env_dct)
+        # all platform checks are also run with the same mechanism, meaning their
+        # output needs to be valid JSON. When running check_user_change, this is
+        # not the case when using the outer startup runner. Therefore, we don't.
+        if "check_user_change" in args[-3]:
+            return prepend_args + args
+        return prepend_args + ["startup_runners/outer_startup_runner_c"] + args
+    assert Cls.__dict__.get('bench_cmdline_adjust') is None
+    Cls.bench_cmdline_adjust = bench_cmdline_adjust
+
+patch_platform(detect_platform(None))
+
+VMS = {
+        'C': {
+                'vm_def': patch_runner(NativeCodeVMDef()),
+                'variants': ['default-c'],
+                'n_iterations': ITERATIONS_ALL_VMS,
+                'warm_upon_iter': 0,
+
+        },
+        'PyPy': {
+                'vm_def': patch_runner(PythonVMDef('work/pypy/pypy/goal/pypy-c')),
+                'variants': ['default-python'],
+                'n_iterations': ITERATIONS_ALL_VMS,
+                'warm_upon_iter': 0,
+        },
+        'Hotspot': {
+                'vm_def': patch_runner(JavaVMDef('work/openjdk/build/linux-x86_64-normal-server-release/images/j2sdk-image/bin/java')),
+                'variants': ['default-java'],
+                'n_iterations': ITERATIONS_ALL_VMS,
+                'warm_upon_iter': 0,
+        },
+        'Graal': {
+                'vm_def': patch_runner(GraalVMDef(find_internal_jvmci_java_bin('work/jvmci/'), JDK8_HOME)),
+                'variants': ['default-java'],
+                'n_iterations': ITERATIONS_ALL_VMS,
+                'warm_upon_iter': 0,
+        },
+        'LuaJIT': {
+                'vm_def': patch_runner(LuaVMDef('work/luajit/src/luajit')),
+                'variants': ['default-lua'],
+                'n_iterations': ITERATIONS_ALL_VMS,
+                'warm_upon_iter': 0,
+        },
+        'HHVM': {
+                'vm_def': patch_runner(PHPVMDef('work/hhvm/hphp/hhvm/php')),
+                'variants': ['default-php'],
+                'n_iterations': ITERATIONS_ALL_VMS,
+                'warm_upon_iter': 0,
+        },
+        'JRubyTruffle' : {
+                'vm_def': patch_runner(JRubyTruffleVMDef('work/jruby/bin/jruby',
+                                            java_path=find_internal_jvmci_java_bin('work/jvmci/'))),
+                'variants': ['default-ruby'],
+                'n_iterations': ITERATIONS_ALL_VMS,
+                'warm_upon_iter': 0,
+        },
+        'V8': {
+                'vm_def': patch_runner(V8VMDef('work/v8/out/native/d8')),
+                'variants': ['default-javascript'],
+                'n_iterations': ITERATIONS_ALL_VMS,
+                'warm_upon_iter': 0,
+        },
+        'CPython': {
+                'vm_def': patch_runner(PythonVMDef('work/cpython-inst/bin/python')),
+                'variants': ['default-python'],
+                'n_iterations': ITERATIONS_ALL_VMS,
+                'warm_upon_iter': 0,
+        }
+}
+
+
+BENCHMARKS = {
+    # this is ignored by the startup runner, but we use an existing one as a
+    # dummy
+    'binarytrees': 18,
+}
+
+# list of "bench:vm:variant"
+SKIP=[
+    #"*:PyPy:*",
+    #"*:CPython:*",
+    #"*:Hotspot:*",
+    #"*:Graal:*",
+    #"*:LuaJIT:*",
+    #"*:HHVM:*",
+    #"*:JRubyTruffle:*",
+    #"*:V8:*",
+]
+
+N_EXECUTIONS = 200  # Number of fresh processes.
+N_GRAPHS_PER_BENCH = 2

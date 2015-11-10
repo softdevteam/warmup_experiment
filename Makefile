@@ -15,9 +15,9 @@ endif
 # XXX build our on GCC and plug in
 CC = cc
 
-all: build-vms build-benchs bench
+all: build-vms build-benchs build-krun build-startup bench
 
-.PHONY: build-vms build-benchs bench
+.PHONY: build-vms build-benchs build-krun build-startup bench
 
 build-vms:
 	./build.sh
@@ -28,6 +28,12 @@ build-benchs: build-krun
 
 build-krun:
 	cd krun && ${MAKE} JAVA_CPPFLAGS='"-I${JAVA_HOME}/include -I${JAVA_INC}"' \
+		JAVA_LDFLAGS=-L${JAVA_HOME}/lib \
+		JAVAC=${JAVAC} ENABLE_JAVA=1
+
+build-startup: build-krun
+	cd startup_runners && ${MAKE} JAVA_CPPFLAGS='"-I${JAVA_HOME}/include \
+		-I${JAVA_HOME}/include/linux"' \
 		JAVA_LDFLAGS=-L${JAVA_HOME}/lib \
 		JAVAC=${JAVAC} ENABLE_JAVA=1
 
