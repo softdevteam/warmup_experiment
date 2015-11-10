@@ -34,57 +34,48 @@ VMS = {
 		'vm_def': NativeCodeVMDef(),
 		'variants': ['default-c'],
 		'n_iterations': ITERATIONS_ALL_VMS,
-		'warm_upon_iter': 0,
 
         },
 	'PyPy': {
 		'vm_def': PythonVMDef('work/pypy/pypy/goal/pypy-c'),
 		'variants': ['default-python'],
 		'n_iterations': ITERATIONS_ALL_VMS,
-		'warm_upon_iter': 0,
 	},
 	'Hotspot': {
 		'vm_def': JavaVMDef('work/openjdk/build/linux-x86_64-normal-server-release/images/j2sdk-image/bin/java'),
 		'variants': ['default-java'],
 		'n_iterations': ITERATIONS_ALL_VMS,
-		'warm_upon_iter': 0,
 	},
 	'Graal': {
 		'vm_def': GraalVMDef(find_internal_jvmci_java_bin('work/jvmci/'), JDK8_HOME),
 		'variants': ['default-java'],
 		'n_iterations': ITERATIONS_ALL_VMS,
-		'warm_upon_iter': 0,
 	},
 	'LuaJIT': {
 		'vm_def': LuaVMDef('work/luajit/src/luajit'),
 		'variants': ['default-lua'],
 		'n_iterations': ITERATIONS_ALL_VMS,
-		'warm_upon_iter': 0,
 	},
 	'HHVM': {
 		'vm_def': PHPVMDef('work/hhvm/hphp/hhvm/php'),
 		'variants': ['default-php'],
 		'n_iterations': ITERATIONS_ALL_VMS,
-		'warm_upon_iter': 0,
 	},
 	'JRubyTruffle' : {
 		'vm_def': JRubyTruffleVMDef('work/jruby/bin/jruby',
 		                            java_path=find_internal_jvmci_java_bin('work/jvmci/')),
 		'variants': ['default-ruby'],
 		'n_iterations': ITERATIONS_ALL_VMS,
-		'warm_upon_iter': 0,
 	},
 	'V8': {
 		'vm_def': V8VMDef('work/v8/out/native/d8'),
 		'variants': ['default-javascript'],
 		'n_iterations': ITERATIONS_ALL_VMS,
-		'warm_upon_iter': 0,
 	},
 	'CPython': {
 		'vm_def': PythonVMDef('work/cpython-inst/bin/python'),
 		'variants': ['default-python'],
 		'n_iterations': ITERATIONS_ALL_VMS,
-		'warm_upon_iter': 0,
 	}
 }
 
@@ -118,4 +109,3 @@ SKIP=[
 ]
 
 N_EXECUTIONS = 2  # Number of fresh processes.
-N_GRAPHS_PER_BENCH = 2
