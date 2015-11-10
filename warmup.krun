@@ -99,13 +99,7 @@ SKIP=[
     #"*:HHVM:*",
     #"*:JRubyTruffle:*",
     #"*:V8:*",
-
-    # XXX these will go eventually.
-    "binarytrees:C:*",
-    "spectralnorm:C:*",
-    "nbody:C:*",
-    "fasta:C:*",
-    "fannkuch_redux:C:*",
+    #"*:C:*",
 ]
 
 N_EXECUTIONS = 2  # Number of fresh processes.
