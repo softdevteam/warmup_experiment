@@ -81,16 +81,18 @@ VMS = {
 
 
 BENCHMARKS = {
-    'binarytrees': 18,
-    'richards': 1000,
-    'spectralnorm': 3000,
-    'nbody': 1000000,
-    'fasta': 1000000,
-    'fannkuch_redux': 10,
+    'binarytrees': 25,
+    'richards': 500,
+    'spectralnorm': 3,
+    'nbody': 15,
+    'fasta': 100,
+    'fannkuch_redux': 200,
 }
 
 # list of "bench:vm:variant"
 SKIP=[
+    # Uncomment to skip whole VMs
+    #
     #"*:PyPy:*",
     #"*:CPython:*",
     #"*:Hotspot:*",
@@ -100,6 +102,12 @@ SKIP=[
     #"*:JRubyTruffle:*",
     #"*:V8:*",
     #"*:C:*",
+
+    # We skip fasta on JRuby/Truffle, as it is so slow.
+    "fasta:JRubyTruffle:default-ruby",
+
+    # And all CPython runs for now. After the draft paper, reenable.
+    "*:CPython:*",
 ]
 
 N_EXECUTIONS = 2  # Number of fresh processes.
