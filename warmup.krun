@@ -103,8 +103,9 @@ SKIP=[
     #"*:V8:*",
     #"*:C:*",
 
-    # We skip fasta on JRuby/Truffle, as it is so slow.
+    # We skip the *really* slow experiments for now
     "fasta:JRubyTruffle:default-ruby",
+    "richards:HHVM:default-php",
 
     # And all CPython runs for now. After the draft paper, reenable.
     "*:CPython:*",
