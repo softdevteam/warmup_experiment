@@ -373,18 +373,6 @@ EOF
 	cd ${HERE}/benchmarks/richards/java || exit $?
 	patch ${PATCH_ARGS} < ${PATCH_DIR}/java_richards.patch || exit $?
 	rm -fr $t
-
-	# XXX hook these in later.
-	#t=`mktemp -d`
-	#cd $t
-	#wget http://hotpy.googlecode.com/svn-history/r96/trunk/benchmarks/java/dhry.java \
-	#  http://hotpy.googlecode.com/svn-history/r96/trunk/benchmarks/java/GlobalVariables.java \
-	#  http://hotpy.googlecode.com/svn-history/r96/trunk/benchmarks/java/DhrystoneConstants.java \
-	#  http://hotpy.googlecode.com/svn-history/r96/trunk/benchmarks/java/Record_Type.java || exit $?
-	#patch < $wrkdir/patches/java_dhrystone.patch || exit $?
-	#mv dhry.java dhrystone.java
-	#cp *.java $wrkdir/benchmarks
-	#rm -fr $t
 }
 
 
