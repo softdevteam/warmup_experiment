@@ -251,6 +251,7 @@ build_jdk() {
 }
 
 MX_REPO=https://bitbucket.org/allr/mx
+MX_VERSION=d94328febb37
 GRAAL_REPO=http://hg.openjdk.java.net/graal/graal-compiler
 GRAAL_VERSION=9dafd1dc5ff9
 # Building with the JDK we built earlier is troublesome (SSL+maven issues).
@@ -264,7 +265,7 @@ build_graal() {
 	echo "\n===> Download and build graal\n"
 
 	if [ ! -d ${wrkdir}/mx ]; then
-		cd ${wrkdir} && hg clone ${MX_REPO} || exit $?
+		cd ${wrkdir} && hg clone -r ${MX_VERSION} ${MX_REPO} || exit $?
 	fi
 
 	if [ -f ${wrkdir}/jvmci/jdk1.8.0-internal/product/bin/javac ]; then return; fi
