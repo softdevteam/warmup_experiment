@@ -103,11 +103,15 @@ SKIP=[
     #"*:V8:*",
     #"*:C:*",
 
-    # We skip the *really* slow experiments for now
+    # XXX: We skip the *really* slow experiments for now
     "fasta:JRubyTruffle:default-ruby",
     "richards:HHVM:default-php",
 
-    # And all CPython runs for now. After the draft paper, reenable.
+    # XXX: This experiment crashes, after about 250 iterations. We skip it for
+    # now. There is a good chance a newer Graal and/or JRuby may fix this.
+    "spectralnorm:JRubyTruffle:default-ruby",
+
+    # XXX: And skip all CPython runs for now. After the draft paper, reenable.
     "*:CPython:*",
 ]
 
