@@ -121,14 +121,33 @@ PYPYV=4.0.0
 build_pypy() {
 	cd ${wrkdir} || exit $?
 	echo "\n===> Download and build PyPy\n"
-	if [ -f ${wrkdir}/pypy/pypy/goal/pypy-c ]; then return; fi
-	wget https://bitbucket.org/pypy/pypy/downloads/pypy-${PYPYV}-src.tar.bz2 || exit $?
-	bunzip2 -c - pypy-${PYPYV}-src.tar.bz2 | tar xf -
-	mv pypy-${PYPYV}-src pypy
-	cd pypy/pypy/goal/
-	usession=`mktemp -d`
-	PYPY_USESSION_DIR=$usession $PYTHON ../../rpython/bin/rpython -Ojit || exit $?
-	rm -rf $usession
+
+	if ! [ -f "${wrkdir}/pypy-${PYPYV}-src.tar.bz2" ]; then
+		wget https://bitbucket.org/pypy/pypy/downloads/pypy-${PYPYV}-src.tar.bz2 || exit $?
+	fi
+
+	if ! [ -d "${wrkdir}/pypy" ]; then
+		bunzip2 -c - pypy-${PYPYV}-src.tar.bz2 | tar xf -
+		mv pypy-${PYPYV}-src pypy
+	fi
+
+	if ! [ -f ${wrkdir}/pypy/pypy/goal/pypy-c ]; then
+		cd pypy/pypy/goal/
+		usession=`mktemp -d`
+
+		case `uname` in
+		Linux*)
+			env PYPY_USESSION_DIR=$usession $PYTHON \
+				../../rpython/bin/rpython -Ojit || exit $? ;;
+		OpenBSD*)
+			# Use GCC from packages, as otherwise the build will
+			# swap the system to death. Long known issue in GCC-4.2
+			env CC=egcc PYPY_USESSION_DIR=$usession $PYTHON \
+				../../rpython/bin/rpython -Ojit || exit $? ;;
+		esac
+
+		rm -rf $usession
+	fi
 }
 
 V8_V=4.8.90
