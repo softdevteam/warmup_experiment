@@ -1,4 +1,5 @@
 import os
+import sys
 from krun.vm_defs import (PythonVMDef, LuaVMDef, JavaVMDef, GraalVMDef,
 		          PHPVMDef, JRubyTruffleVMDef, V8VMDef, NativeCodeVMDef,
 			  find_internal_jvmci_java_bin)
@@ -12,7 +13,13 @@ MAIL_TO = []
 
 DIR = os.getcwd()
 JKRUNTIME_DIR = os.path.join(DIR, "krun", "libkruntime", "")
-JDK8_HOME = os.path.join(DIR, "work/openjdk/build/linux-x86_64-normal-server-release/images/j2sdk-image/")
+
+if not sys.platform.startswith("openbsd"):
+    JDK8_HOME = os.path.join(DIR, "work/openjdk/build/linux-x86_64-normal-server-release/images/j2sdk-image/")
+else:
+    JDK8_HOME = os.path.join(DIR, "work/openjdk/build/bsd-x86_64-normal-server-release/images/j2sdk-image/")
+
+JDK8_BIN = os.path.join(JDK8_HOME, "bin", "java")
 
 HEAP_LIMIT = 2097152  # K == 2Gb
 
@@ -42,29 +49,13 @@ VMS = {
 		'n_iterations': ITERATIONS_ALL_VMS,
 	},
 	'Hotspot': {
-		'vm_def': JavaVMDef('work/openjdk/build/linux-x86_64-normal-server-release/images/j2sdk-image/bin/java'),
-		'variants': ['default-java'],
-		'n_iterations': ITERATIONS_ALL_VMS,
-	},
-	'Graal': {
-		'vm_def': GraalVMDef(find_internal_jvmci_java_bin('work/jvmci/'), JDK8_HOME),
+		'vm_def': JavaVMDef(JDK8_BIN),
 		'variants': ['default-java'],
 		'n_iterations': ITERATIONS_ALL_VMS,
 	},
 	'LuaJIT': {
 		'vm_def': LuaVMDef('work/luajit/src/luajit'),
 		'variants': ['default-lua'],
-		'n_iterations': ITERATIONS_ALL_VMS,
-	},
-	'HHVM': {
-		'vm_def': PHPVMDef('work/hhvm/hphp/hhvm/php'),
-		'variants': ['default-php'],
-		'n_iterations': ITERATIONS_ALL_VMS,
-	},
-	'JRubyTruffle' : {
-		'vm_def': JRubyTruffleVMDef('work/jruby/bin/jruby',
-		                            java_path=find_internal_jvmci_java_bin('work/jvmci/')),
-		'variants': ['default-ruby'],
 		'n_iterations': ITERATIONS_ALL_VMS,
 	},
 	'V8': {
@@ -78,6 +69,27 @@ VMS = {
 		'n_iterations': ITERATIONS_ALL_VMS,
 	}
 }
+
+if not sys.platform.startswith("openbsd"):
+    # The following VMs do not run on OpenBSD.
+    VMS.update({
+        'Graal': {
+            'vm_def': GraalVMDef(find_internal_jvmci_java_bin('work/jvmci/'), JDK8_HOME),
+            'variants': ['default-java'],
+            'n_iterations': ITERATIONS_ALL_VMS,
+        },
+        'HHVM': {
+            'vm_def': PHPVMDef('work/hhvm/hphp/hhvm/php'),
+            'variants': ['default-php'],
+            'n_iterations': ITERATIONS_ALL_VMS,
+        },
+        'JRubyTruffle' : {
+            'vm_def': JRubyTruffleVMDef('work/jruby/bin/jruby',
+                                        java_path=find_internal_jvmci_java_bin('work/jvmci/')),
+            'variants': ['default-ruby'],
+            'n_iterations': ITERATIONS_ALL_VMS,
+        },
+    })
 
 
 BENCHMARKS = {
