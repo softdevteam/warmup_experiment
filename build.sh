@@ -150,8 +150,7 @@ build_pypy() {
 	fi
 }
 
-V8_V=4.8.90
-DEPOT_V=015cdc34ba4be808c47267123b0a97b93f5a0407
+V8_V=4.8.271.9
 DEPOT_REPO="https://chromium.googlesource.com/chromium/tools/depot_tools.git"
 build_v8() {
 	cd ${wrkdir} || exit $?
@@ -159,9 +158,8 @@ build_v8() {
 
 	if [ -f ${wrkdir}/v8/out/native/d8 ]; then return; fi
 
-	git clone ${DEPOT_REPO}
+	git clone ${DEPOT_REPO} || exit $?
 	cd depot_tools || exit $?
-	git checkout ${DEPOT_V} || exit $?
 
 	# The build actually requires that you clone using this git wrapper tool
 	cd ${wrkdir}
@@ -169,15 +167,18 @@ build_v8() {
 	# v8's build needs python 2.7.10; as we've already built that, we might
 	# as well use it rather than forcing the user to install their own.
 	PATH=${wrkdir}/cpython-inst/bin:${wrkdir}/depot_tools:${PATH}
-	# XXX we should check for errors when fetching, but currently that
-	# causes problems because fetch runs a script which aborts on OpenBSD
+	# XXX we should check for errors when fetching and syncing, but
+	# currently that causes problems because fetch runs a script which
+	# aborts on OpenBSD
 	fetch v8
 	cd v8 || exit $?
-	git checkout ${V8_V} || exit $?
+	git checkout ${V8_V}
+	gclient sync
 	patch -Ep1 < ${PATCH_DIR}/v8_various.diff || exit $?
 	case `uname` in
   	    Linux*) make native || exit $? ;;
   	    OpenBSD*)
+		patch -Ep1 < ${PATCH_DIR}/v8_openbsd.diff || exit $?
 	        # On OpenBSD, the build fails for silly reasons near the very
 		# end, even though the main v8 binary has been built. So we
 		# simply check that the binary exists and suppress unrelated
