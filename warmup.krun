@@ -2,7 +2,7 @@ import os
 import sys
 from krun.vm_defs import (PythonVMDef, LuaVMDef, JavaVMDef, GraalVMDef,
 		          PHPVMDef, JRubyTruffleVMDef, V8VMDef, NativeCodeVMDef,
-			  find_internal_jvmci_java_bin)
+			  find_internal_jvmci_java_bin, PyPyVMDef)
 from krun import EntryPoint
 
 # Who to mail
@@ -44,7 +44,7 @@ VMS = {
 
         },
 	'PyPy': {
-		'vm_def': PythonVMDef('work/pypy/pypy/goal/pypy-c'),
+		'vm_def': PyPyVMDef('work/pypy/pypy/goal/pypy-c'),
 		'variants': ['default-python'],
 		'n_iterations': ITERATIONS_ALL_VMS,
 	},
