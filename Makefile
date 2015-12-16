@@ -15,7 +15,12 @@ endif
 # XXX build our on GCC and plug in
 CC = cc
 
-all: build-vms build-benchs build-krun build-startup bench
+all: build-vms build-benchs build-krun build-startup
+	@echo ""
+	@echo "============================================================"
+	@echo "Now run 'make bench-no-reboots' or 'make bench-with-reboots'"
+	@echo "If you want reboots, make sure you set up the init system!"
+	@echo "============================================================"
 
 .PHONY: build-vms build-benchs build-krun build-startup bench
 
@@ -37,8 +42,11 @@ build-startup: build-krun
 		JAVA_LDFLAGS=-L${JAVA_HOME}/lib \
 		JAVAC=${JAVAC} ENABLE_JAVA=1
 
-bench: build-krun build-benchs
+bench-no-reboots: build-krun build-benchs
 	${PYTHON} krun/krun.py warmup.krun
+
+bench-with-reboots: build-krun build-benchs
+	${PYTHON} krun/krun.py --reboot warmup.krun
 
 export-graphs:
 	${PYTHON} export_all_graphs.py
