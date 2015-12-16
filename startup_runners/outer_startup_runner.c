@@ -4,9 +4,6 @@
  * Code style here is KNF, but with 4 spaces instead of tabs.
  */
 
-/* To correctly expose asprintf() on Linux */
-#define _GNU_SOURCE
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -22,6 +19,10 @@ main(int argc, char **argv)
 {
     double start_time = -1;
     int result;
+
+    /* silence gcc */
+    argc = argc;
+    argv = argv;
 
     start_time = clock_gettime_monotonic();
     fprintf(stdout, "[%f,\n", start_time);
