@@ -4,7 +4,9 @@ work
 **/*.swp
 **/*.pyc
 **/*.class
+**/*.so
 warmup_results.json
 benchmarks/richards/java/Benchmark.java
 benchmarks/richards/java/Program.java
 benchmarks/richards/java/richards.java
+benchmarks/richards/java/richards.java.orig

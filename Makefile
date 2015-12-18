@@ -22,7 +22,8 @@ all: build-vms build-benchs build-krun build-startup
 	@echo "If you want reboots, make sure you set up the init system!"
 	@echo "============================================================"
 
-.PHONY: build-vms build-benchs build-krun build-startup bench
+.PHONY: build-vms build-benchs build-krun build-startup bench clean
+.PHONY: clean-benchmarks clean-krun
 
 build-vms:
 	./build.sh
@@ -52,3 +53,11 @@ export-graphs:
 	${PYTHON} export_all_graphs.py
 
 # XXX target to format results.
+
+clean: clean-benchmarks clean-krun
+
+clean-benchmarks:
+	cd benchmarks && ${MAKE} clean
+
+clean-krun:
+	cd krun && ${MAKE} clean
