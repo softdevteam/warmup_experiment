@@ -146,7 +146,7 @@ void run_iter(int n) {
       rand_fasta(homosapiens, SCALE * 5);
 
       if (checksum != EXPECT_CKSUM) {
-         errx(EXIT_FAILURE, "checksum fail: %llu vs %u",
+         errx(EXIT_FAILURE, "checksum fail: %lu vs %u",
 	     checksum, EXPECT_CKSUM);
       }
 
