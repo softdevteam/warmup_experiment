@@ -268,6 +268,7 @@ build_jdk() {
 		  ../make-${GMAKE_V}/make all || exit $?
 		;;
 	esac
+	chmod -R 755 ${wrkdir}/openjdk/build || exit $?
 }
 
 MX_REPO=https://bitbucket.org/allr/mx
