@@ -1,4 +1,5 @@
 # GNU Make!
+PHONY: java-benchmarks c-benchmarks clean-java-benchmarks clean-c-benchmarks clean
 
 PWD !=		pwd
 
@@ -33,3 +34,15 @@ c-benchmarks:
 		${CC} ${CFLAGS} ${CPPFLAGS} ${C_EXTRA_LDFLAGS_${i}} \
 		${BENCH_CFLAGS} -o bench.so bench.c || exit $?; \
 		)
+
+clean: clean-c-benchmarks clean-java-benchmarks
+
+clean-java-benchmarks:
+	for i in ${BENCHMARKS}; do \
+		cd ${PWD}/$${i}/java && rm -f *.class; \
+	done
+
+clean-c-benchmarks:
+	for i in ${BENCHMARKS}; do \
+		cd ${PWD}/$${i}/c && rm -f bench.so; \
+	done
