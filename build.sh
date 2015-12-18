@@ -288,7 +288,7 @@ build_graal() {
 		cd ${wrkdir} && hg clone -r ${MX_VERSION} ${MX_REPO} || exit $?
 	fi
 
-	if [ -f ${wrkdir}/jvmci/jdk1.8.0-internal/product/bin/javac ]; then return; fi
+	if [ -f ${wrkdir}/jvmci/jdk1.8*-internal/product/bin/javac ]; then return; fi
 
 	cd ${wrkdir}
 	if ! [ -d ${wrkdir}/graal ]; then
