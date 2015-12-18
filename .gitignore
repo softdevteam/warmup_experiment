@@ -10,3 +10,6 @@ benchmarks/richards/java/Benchmark.java
 benchmarks/richards/java/Program.java
 benchmarks/richards/java/richards.java
 benchmarks/richards/java/richards.java.orig
+startup_runners/outer_startup_runner_c
+startup_runners/startup_runner_c
+
