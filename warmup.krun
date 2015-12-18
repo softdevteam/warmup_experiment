@@ -22,6 +22,7 @@ else:
 JDK8_BIN = os.path.join(JDK8_HOME, "bin", "java")
 
 HEAP_LIMIT = 2097152  # K == 2Gb
+STACK_LIMIT = 8192  # K
 
 # Variant name -> EntryPoint
 VARIANTS = {
