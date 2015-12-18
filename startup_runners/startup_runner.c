@@ -21,7 +21,7 @@
 double clock_gettime_monotonic();
 
 int
-main(int argc, char **argv)
+main(void)
 {
     double    start_time = -1;
 
