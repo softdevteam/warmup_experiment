@@ -31,4 +31,4 @@ startup_runner_c: startup_runner.c
 		${LDFLAGS}
 
 clean:
-	-rm startup_runner_c outer_startup_runner_c startup_runner.class
+	rm -f startup_runner_c outer_startup_runner_c startup_runner.class
