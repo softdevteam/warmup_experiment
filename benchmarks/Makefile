@@ -1,5 +1,5 @@
 # GNU Make!
-PHONY: java-benchmarks c-benchmarks clean-java-benchmarks clean-c-benchmarks clean
+.PHONY: java-benchmarks c-benchmarks clean-java-benchmarks clean-c-benchmarks clean
 
 PWD !=		pwd
 
