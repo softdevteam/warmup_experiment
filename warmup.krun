@@ -6,7 +6,7 @@ from krun.vm_defs import (PythonVMDef, LuaVMDef, JavaVMDef, GraalVMDef,
 from krun import EntryPoint
 
 # Who to mail
-MAIL_TO = []
+MAIL_TO = ["vext01@gmail.com", "mount.sarah@gmail.com"]
 
 # Maximum number of error emails to send per-run
 #MAX_MAILS = 2
@@ -75,7 +75,7 @@ if not sys.platform.startswith("openbsd"):
     # The following VMs do not run on OpenBSD.
     VMS.update({
         'Graal': {
-            'vm_def': GraalVMDef(find_internal_jvmci_java_bin('work/jvmci/'), JDK8_HOME),
+            'vm_def': GraalVMDef("dummy", JDK8_HOME),
             'variants': ['default-java'],
             'n_iterations': ITERATIONS_ALL_VMS,
         },
@@ -86,7 +86,7 @@ if not sys.platform.startswith("openbsd"):
         },
         'JRubyTruffle' : {
             'vm_def': JRubyTruffleVMDef('work/jruby/bin/jruby',
-                                        java_path=find_internal_jvmci_java_bin('work/jvmci/')),
+                                        java_path="dummy"),
             'variants': ['default-ruby'],
             'n_iterations': ITERATIONS_ALL_VMS,
         },
@@ -128,4 +128,4 @@ SKIP=[
     "*:CPython:*",
 ]
 
-N_EXECUTIONS = 2  # Number of fresh processes.
+N_EXECUTIONS = 10  # Number of fresh processes.
