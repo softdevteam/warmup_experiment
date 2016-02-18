@@ -40,13 +40,13 @@ else
     PYTHON=`which python2.7`
 fi
 
-# This all requires GNU make and assumes you have it installed.
-which gmake > /dev/null 2> /dev/null
-if [ $? -eq 0 ]; then
-    MYMAKE=gmake
-else
-    MYMAKE=make
-fi
+# Let's use GNU make across the board
+case `uname` in
+    OpenBSD) GMAKE=gmake;;
+    Linux) GMAKE=make;;
+    *) unknown_platform;;
+esac
+check_for ${GMAKE}
 
 if [ $missing -eq 1 ]; then
     exit 1
@@ -119,8 +119,8 @@ build_gcc() {
         --enable-cpp \
         --enable-shared \
       || exit $?
-    $MYMAKE -j4 || exit $?
-    $MYMAKE -j4 install || exit $?
+    ${GMAKE} || exit $?
+    ${GMAKE} install || exit $?
 }
 
 CPYTHONV=2.7.10
@@ -137,8 +137,8 @@ build_cpython() {
     mv Python-${CPYTHONV} cpython
     cd cpython
     CC=${OUR_CC} ./configure --prefix=${wrkdir}/cpython-inst || exit $?
-    $MYMAKE || exit $?
-    $MYMAKE install || exit $?
+    ${GMAKE} || exit $?
+    ${GMAKE} install || exit $?
 
     # Install packages.
     # I would liked to have used virtualenv, but cffi fails to install using our manually
@@ -162,7 +162,7 @@ build_luajit() {
     tar xfz LuaJIT-${LUAJITV}.tar.gz
     mv LuaJIT-${LUAJITV} luajit
     cd luajit
-    CFLAGS=-DLUAJIT_ENABLE_LUA52COMPAT $MYMAKE CC=${OUR_CC} || exit $?
+    CFLAGS=-DLUAJIT_ENABLE_LUA52COMPAT ${GMAKE} CC=${OUR_CC} || exit $?
 }
 
 PYPYV=4.0.0
@@ -215,8 +215,6 @@ build_v8() {
     git checkout ${V8_V}
     gclient sync
     patch -Ep1 < ${PATCH_DIR}/v8_various.diff || exit $?
-
-    # We are forcing clang=0
     patch -Ep1 < ${PATCH_DIR}/v8_openbsd.diff || exit $?
 
     # The build fails for silly reasons near the very end, even though the main
@@ -229,7 +227,7 @@ build_v8() {
     #
     # V8 also mistakes our compiler for clang for some reason, hence
     # setting GYP_DEFINES.
-    env GYP_DEFINES="clang=0" CC=${OUR_CC} CXX=${OUR_CXX} ${MYMAKE} native
+    env GYP_DEFINES="clang=0" CC=${OUR_CC} CXX=${OUR_CXX} ${GMAKE} native
     test -f out/native/d8 || exit $?
     PATH=${OLDPATH}
 }
@@ -246,7 +244,7 @@ build_gmake() {
     tar zxvf make-${GMAKE_V}.tar.gz || exit $?
     cd make-${GMAKE_V} || exit $?
     CC=${OUR_CC} ./configure || exit $?
-    make || exit $?
+    ${GMAKE} || exit $?
     cp make gmake
 }
 
@@ -269,7 +267,7 @@ build_jdk() {
     xzdec ${JDK_DIST} | tar xf - || exit $?
     mv ${JDK_INNER_DIR} openjdk
     cd openjdk || exit $?
-    JDK_BUILD_PATH=${wrkdir}/make-${GMAKE_V}:`dirname ${OUR_CC}`:${PATH}
+    JDK_BUILD_PATH=`dirname ${OUR_CC}`:${PATH}
     case `uname` in
         Linux)
 	    env CC=zgcc CXX=zg++ PATH=${JDK_BUILD_PATH} bash configure \
@@ -423,7 +421,7 @@ build_hhvm() {
     ln -sf ${OUR_CXX} `dirname ${OUR_CXX}`/g++ || exit $?
     HHVM_PATH=`dirname ${OUR_CC}`:${PATH}
 
-    env PATH=${HHVM_PATH} CC=${OUR_CC} CXX=${OUR_CXX} sh -c "cmake -DMYSQL_UNIX_SOCK_ADDR=/dev/null -DBOOST_LIBRARYDIR=/usr/lib/x86_64-linux-gnu/ . && make" || exit $?
+    env PATH=${HHVM_PATH} CC=${OUR_CC} CXX=${OUR_CXX} sh -c "cmake -DMYSQL_UNIX_SOCK_ADDR=/dev/null -DBOOST_LIBRARYDIR=/usr/lib/x86_64-linux-gnu/ . && make" || ${GMAKE} $?
 
     # remove the symlinks
     rm `dirname ${OUR_CC}`/gcc `dirname ${OUR_CC}`/g++ || exit $?
