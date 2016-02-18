@@ -6,23 +6,29 @@ from krun.vm_defs import (PythonVMDef, LuaVMDef, JavaVMDef, GraalVMDef,
 from krun import EntryPoint
 
 # Who to mail
-MAIL_TO = ["vext01@gmail.com", "mount.sarah@gmail.com"]
-
-# Maximum number of error emails to send per-run
-#MAX_MAILS = 2
+MAIL_TO = []
 
 DIR = os.getcwd()
 JKRUNTIME_DIR = os.path.join(DIR, "krun", "libkruntime", "")
 
-if not sys.platform.startswith("openbsd"):
+if sys.platform.startswith("linux"):
     JDK8_HOME = os.path.join(DIR, "work/openjdk/build/linux-x86_64-normal-server-release/images/j2sdk-image/")
-else:
+elif sys.platform.startswith("openbsd"):
     JDK8_HOME = os.path.join(DIR, "work/openjdk/build/bsd-x86_64-normal-server-release/images/j2sdk-image/")
+else:
+    raise NotImplementedError("unknown platform")
 
 JDK8_BIN = os.path.join(JDK8_HOME, "bin", "java")
 
-HEAP_LIMIT = 2097152  # K == 2Gb
-STACK_LIMIT = 8192  # K
+if sys.platform.startswith("linux"):
+    GCC_ENV = {"LD_LIBRARY_PATH": os.path.join(DIR, "work/gcc-inst/lib64")}
+elif sys.platform.startswith("openbsd"):
+    GCC_ENV = {"LD_LIBRARY_PATH": os.path.join(DIR, "work/gcc-inst/lib")}
+else:
+    raise NotImplementedError("unknown platform")
+
+HEAP_LIMIT = 2097152  # 2GiB
+STACK_LIMIT = 8192  # 8 MiB
 
 # Variant name -> EntryPoint
 VARIANTS = {
@@ -39,33 +45,35 @@ ITERATIONS_ALL_VMS = 2000
 
 VMS = {
         'C': {
-		'vm_def': NativeCodeVMDef(),
+		'vm_def': NativeCodeVMDef(env=GCC_ENV),
 		'variants': ['default-c'],
 		'n_iterations': ITERATIONS_ALL_VMS,
 
         },
 	'PyPy': {
-		'vm_def': PyPyVMDef('work/pypy/pypy/goal/pypy-c'),
+		'vm_def': PyPyVMDef('work/pypy/pypy/goal/pypy-c',
+                      env=GCC_ENV),
 		'variants': ['default-python'],
 		'n_iterations': ITERATIONS_ALL_VMS,
 	},
 	'Hotspot': {
-		'vm_def': JavaVMDef(JDK8_BIN),
+		'vm_def': JavaVMDef(JDK8_BIN, env=GCC_ENV),
 		'variants': ['default-java'],
 		'n_iterations': ITERATIONS_ALL_VMS,
 	},
 	'LuaJIT': {
-		'vm_def': LuaVMDef('work/luajit/src/luajit'),
+		'vm_def': LuaVMDef('work/luajit/src/luajit', env=GCC_ENV),
 		'variants': ['default-lua'],
 		'n_iterations': ITERATIONS_ALL_VMS,
 	},
 	'V8': {
-		'vm_def': V8VMDef('work/v8/out/native/d8'),
+		'vm_def': V8VMDef('work/v8/out/native/d8', env=GCC_ENV),
 		'variants': ['default-javascript'],
 		'n_iterations': ITERATIONS_ALL_VMS,
 	},
 	'CPython': {
-		'vm_def': PythonVMDef('work/cpython-inst/bin/python'),
+		'vm_def': PythonVMDef('work/cpython-inst/bin/python',
+                        env=GCC_ENV),
 		'variants': ['default-python'],
 		'n_iterations': ITERATIONS_ALL_VMS,
 	}
@@ -75,18 +83,20 @@ if not sys.platform.startswith("openbsd"):
     # The following VMs do not run on OpenBSD.
     VMS.update({
         'Graal': {
-            'vm_def': GraalVMDef("dummy", JDK8_HOME),
+            'vm_def': GraalVMDef(find_internal_jvmci_java_bin('work/jvmci/'),
+                                 JDK8_HOME, env=GCC_ENV),
             'variants': ['default-java'],
             'n_iterations': ITERATIONS_ALL_VMS,
         },
         'HHVM': {
-            'vm_def': PHPVMDef('work/hhvm/hphp/hhvm/php'),
+            'vm_def': PHPVMDef('work/hhvm/hphp/hhvm/php', env=GCC_ENV),
             'variants': ['default-php'],
             'n_iterations': ITERATIONS_ALL_VMS,
         },
         'JRubyTruffle' : {
             'vm_def': JRubyTruffleVMDef('work/jruby/bin/jruby',
-                                        java_path="dummy"),
+                                        java_path=find_internal_jvmci_java_bin('work/jvmci/'),
+                                        env=GCC_ENV),
             'variants': ['default-ruby'],
             'n_iterations': ITERATIONS_ALL_VMS,
         },
