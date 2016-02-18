@@ -1,6 +1,9 @@
 #! /bin/sh
 
-# This assumes a linux x86_64 machine. We used Debian 8.
+unknown_platform() {
+    echo "Unknown platform: `uname`"
+    exit 1
+}
 
 missing=0
 check_for () {
@@ -27,14 +30,6 @@ check_for xzdec
 check_for wget
 
 case `uname` in
-    OpenBSD)
-        check_for egcc
-        check_for eg++
-    ;;
-esac
-
-
-case `uname` in
     Linux*) PATCH_ARGS=--backup
 esac
 
@@ -45,6 +40,7 @@ else
     PYTHON=`which python2.7`
 fi
 
+# This all requires GNU make and assumes you have it installed.
 which gmake > /dev/null 2> /dev/null
 if [ $? -eq 0 ]; then
     MYMAKE=gmake
@@ -74,6 +70,59 @@ fetch_krun() {
     fi
 }
 
+# We build our own fixed version of GCC, thus ruling out differences in
+# packaged compilers for the different platforms.
+GCC_V=4.9.3
+OUR_CC=${wrkdir}/gcc-inst/bin/zgcc
+OUR_CXX=${wrkdir}/gcc-inst/bin/zg++
+GCC_TARBALL_URL=ftp://ftp.mirrorservice.org/sites/ftp.gnu.org/gnu/gcc/gcc-${GCC_V}/gcc-${GCC_V}.tar.gz
+build_gcc() {
+    echo "\n===> Download and build GCC\n"
+    if [ -f ${OUR_CC} ]; then return; fi
+    cd ${wrkdir}
+    if ! [ -f ${wrkdir}/gcc-${GCC_V}.tar.gz ]; then
+        wget ${GCC_TARBALL_URL} || exit $?
+    fi
+    if ! [ -d ${wrkdir}/gcc ]; then
+        tar xfzp gcc-${GCC_V}.tar.gz || exit $?;
+        mv gcc-${GCC_V} gcc || exit $?
+    fi
+    cd gcc || exit $?
+
+    # OpenBSD needs patches
+    if [ `uname` -eq "openbsd" ]; then
+        for i in ../../patches/openbsd_gcc_patches/patch*; do
+            patch -Ep0 < $i || exit $?
+        done
+    fi
+
+    # download script uses fixed versions, so OK.
+    ./contrib/download_prerequisites || exit $?
+
+    mkdir sd_build || exit $?
+    cd sd_build || exit $?
+
+    ../configure \
+        --prefix=${wrkdir}/gcc-inst \
+        --disable-libcilkrts \
+        --program-transform-name=s,^,z, \
+        --verbose \
+        --disable-libmudflap \
+        --disable-libgomp \
+        --disable-tls \
+        --enable-languages=c,c++ \
+        --with-system-zlib \
+        --disable-tls \
+        --enable-threads=posix \
+        --enable-wchar_t \
+        --disable-libstdcxx-pch \
+        --enable-cpp \
+        --enable-shared \
+      || exit $?
+    $MYMAKE -j4 || exit $?
+    $MYMAKE -j4 install || exit $?
+}
+
 CPYTHONV=2.7.10
 CFFI_V=1.1.2
 SETUPTOOLS_V=18.1
@@ -87,10 +136,9 @@ build_cpython() {
     tar xfz Python-${CPYTHONV}.tgz || exit $?
     mv Python-${CPYTHONV} cpython
     cd cpython
-    ./configure --prefix=${wrkdir}/cpython-inst || exit $?
+    CC=${OUR_CC} ./configure --prefix=${wrkdir}/cpython-inst || exit $?
     $MYMAKE || exit $?
     $MYMAKE install || exit $?
-    #cp $wrkdir/cpython/Lib/test/pystone.py $wrkdir/benchmarks/dhrystone.py
 
     # Install packages.
     # I would liked to have used virtualenv, but cffi fails to install using our manually
@@ -114,7 +162,7 @@ build_luajit() {
     tar xfz LuaJIT-${LUAJITV}.tar.gz
     mv LuaJIT-${LUAJITV} luajit
     cd luajit
-    CFLAGS=-DLUAJIT_ENABLE_LUA52COMPAT $MYMAKE || exit $?
+    CFLAGS=-DLUAJIT_ENABLE_LUA52COMPAT $MYMAKE CC=${OUR_CC} || exit $?
 }
 
 PYPYV=4.0.0
@@ -135,16 +183,8 @@ build_pypy() {
         cd pypy/pypy/goal/
         usession=`mktemp -d`
 
-        case `uname` in
-	    Linux*)
-		env PYPY_USESSION_DIR=$usession $PYTHON \
-		    ../../rpython/bin/rpython -Ojit || exit $? ;;
-	    OpenBSD*)
-		# Use GCC from packages, as otherwise the build will
-		# swap the system to death. Long known issue in GCC-4.2
-		env CC=egcc PYPY_USESSION_DIR=$usession $PYTHON \
-		    ../../rpython/bin/rpython -Ojit || exit $? ;;
-        esac
+        env CC=${OUR_CC} PYPY_USESSION_DIR=$usession $PYTHON \
+            ../../rpython/bin/rpython -Ojit || exit $?
 
         rm -rf $usession
     fi
@@ -175,19 +215,22 @@ build_v8() {
     git checkout ${V8_V}
     gclient sync
     patch -Ep1 < ${PATCH_DIR}/v8_various.diff || exit $?
-    case `uname` in
-        Linux*) make native || exit $? ;;
-        OpenBSD*)
-	    patch -Ep1 < ${PATCH_DIR}/v8_openbsd.diff || exit $?
-		# On OpenBSD, the build fails for silly reasons near the very
-	    # end, even though the main v8 binary has been built. So we
-	    # simply check that the binary exists and suppress unrelated
-	    # build errors.
-	    # Bug report https://code.google.com/p/v8/issues/detail?id=4500
-		CC=egcc CXX=eg++ gmake native
-	    test -f out/native/d8 || exit $?
-	    ;;
-    esac
+
+    # We are forcing clang=0
+    patch -Ep1 < ${PATCH_DIR}/v8_openbsd.diff || exit $?
+
+    # The build fails for silly reasons near the very end, even though the main
+    # v8 binary has been built. So we simply check that the binary exists and
+    # suppress unrelated build errors.
+    # Bug report https://code.google.com/p/v8/issues/detail?id=4500
+    #
+    # This used to be only the case on OpenBSD, but since we started building
+    # our own gcc, the tests also fail in strange ways on linux.
+    #
+    # V8 also mistakes our compiler for clang for some reason, hence
+    # setting GYP_DEFINES.
+    env GYP_DEFINES="clang=0" CC=${OUR_CC} CXX=${OUR_CXX} ${MYMAKE} native
+    test -f out/native/d8 || exit $?
     PATH=${OLDPATH}
 }
 
@@ -202,7 +245,7 @@ build_gmake() {
     wget http://ftp.gnu.org/gnu/make/make-${GMAKE_V}.tar.gz || exit $?
     tar zxvf make-${GMAKE_V}.tar.gz || exit $?
     cd make-${GMAKE_V} || exit $?
-    ./configure || exit $?
+    CC=${OUR_CC} ./configure || exit $?
     make || exit $?
     cp make gmake
 }
@@ -214,6 +257,7 @@ case `uname` in
       JDK_JAVAC=${wrkdir}/openjdk/build/linux-x86_64-normal-server-release/jdk/bin/javac;;
     OpenBSD)
       JDK_JAVAC=${wrkdir}/openjdk/build/bsd-x86_64-normal-server-release/jdk/bin/javac;;
+    *) unknown_platform;;
 esac
 build_jdk() {
     echo "\n===> Download and build JDK8\n"
@@ -225,10 +269,10 @@ build_jdk() {
     xzdec ${JDK_DIST} | tar xf - || exit $?
     mv ${JDK_INNER_DIR} openjdk
     cd openjdk || exit $?
-    JDK_BUILD_PATH=${wrkdir}/make-${GMAKE_V}:${PATH}
+    JDK_BUILD_PATH=${wrkdir}/make-${GMAKE_V}:`dirname ${OUR_CC}`:${PATH}
     case `uname` in
         Linux)
-	    PATH=${JDK_BUILD_PATH} bash configure \
+	    env CC=zgcc CXX=zg++ PATH=${JDK_BUILD_PATH} bash configure \
 	      --disable-option-checking \
 	      --with-cups-include=/usr/local/include \
 	      --with-jobs=8 \
@@ -245,9 +289,9 @@ build_jdk() {
 		PATH=${JDK_BUILD_PATH} ../make-${GMAKE_V}/make all || exit $?
 	    ;;
         OpenBSD)
-            CPPFLAGS=-I/usr/local/include \
+            env CPPFLAGS=-I/usr/local/include \
               LDFLAGS=-L/usr/local/lib \
-              PATH=${JDK_BUILD_PATH} CC=egcc CXX=eg++ ac_cv_path_NAWK=awk bash configure \
+              CC=zgcc CXX=zg++ PATH=${JDK_BUILD_PATH} ac_cv_path_NAWK=awk bash configure \
 	    --disable-option-checking \
 	    --with-cups-include=/usr/local/include \
 	    --with-jobs=8 \
@@ -267,6 +311,8 @@ build_jdk() {
 	    DEFAULT_LIBPATH="/usr/lib:/usr/X11R6/lib:/usr/local/lib"\
 	    ../make-${GMAKE_V}/make all || exit $?
 	    ;;
+        *)
+            unknown_platform;;
     esac
     chmod -R 755 ${wrkdir}/openjdk/build || exit $?
 }
@@ -280,6 +326,7 @@ GRAAL_VERSION=9dafd1dc5ff9
 case `uname` in
     Linux)   SYSTEM_JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-amd64;;
     OpenBSD) SYSTEM_JAVA_HOME=/usr/local/jdk-1.8.0;;
+    *) unknown_platform;;
 esac
 MX="env DEFAULT_VM=jvmci JAVA_HOME=${SYSTEM_JAVA_HOME} python2.7 ${wrkdir}/mx/mx.py"
 build_graal() {
@@ -315,13 +362,22 @@ build_graal() {
     # feature off.
     ${MX} makefile -o ../jvmci/make/jvmci.make
 
+    # mx won't listen to CC/CXX
+    ln -sf ${OUR_CC} `dirname ${OUR_CC}`/gcc
+    ln -sf ${OUR_CXX} `dirname ${OUR_CXX}`/g++
+    GRAAL_PATH=`dirname ${OUR_CC}`:${PATH}
+
     # Then we can build as usual.
-    ${MX} build || exit $?
+    env PATH=${GRAAL_PATH} ${MX} build || exit $?
 
     # Build both server backends.
     # We need jvmci for Java and server for JRuby.
-    ${MX} --vm jvmci --vmbuild product build
-    ${MX} --vm server --vmbuild product build
+    env PATH=${GRAAL_PATH} ${MX} --vm jvmci --vmbuild product build
+    env PATH=${GRAAL_PATH} ${MX} --vm server --vmbuild product build
+
+    # remove the symlinks
+    rm `dirname ${OUR_CC}`/gcc `dirname ${OUR_CC}`/g++ || exit $?
+
 }
 
 
@@ -361,8 +417,16 @@ build_hhvm() {
     git submodule update --init --recursive || exit $?
     patch -Ep1 < ${PATCH_DIR}/hhvm_clock_gettime_monotonic.diff || exit $?
     patch -Ep1 < ${PATCH_DIR}/hhvm_cmake.diff || exit $?
-    sh -c "cmake -DMYSQL_UNIX_SOCK_ADDR=/dev/null -DBOOST_LIBRARYDIR=/usr/lib/x86_64-linux-gnu/ . && make" || exit $?
-    # vm is ${wrkdir}/hhvm/hphp/hhvm/php
+
+    # Some parts of the build (e.g. OCaml)  won't listen to CC/CXX
+    ln -sf ${OUR_CC} `dirname ${OUR_CC}`/gcc || exit $?
+    ln -sf ${OUR_CXX} `dirname ${OUR_CXX}`/g++ || exit $?
+    HHVM_PATH=`dirname ${OUR_CC}`:${PATH}
+
+    env PATH=${HHVM_PATH} CC=${OUR_CC} CXX=${OUR_CXX} sh -c "cmake -DMYSQL_UNIX_SOCK_ADDR=/dev/null -DBOOST_LIBRARYDIR=/usr/lib/x86_64-linux-gnu/ . && make" || exit $?
+
+    # remove the symlinks
+    rm `dirname ${OUR_CC}`/gcc `dirname ${OUR_CC}`/g++ || exit $?
 }
 
 
@@ -410,7 +474,19 @@ fetch_libkalibera() {
     fi
 }
 
+
 fetch_external_benchmarks
+build_gcc
+
+# Put GCC libs into linker path
+# Needed for (e.g.) V8 to find libstdc++
+case `uname` in
+    Linux) export LD_LIBRARY_PATH=${wrkdir}/gcc-inst/lib64;;
+    OpenBSD) export LD_LIBRARY_PATH=${wrkdir}/gcc-inst/lib;;
+    *) unknown_platform;;
+esac
+
+
 case `uname` in
     Linux)
 	fetch_libkalibera
@@ -435,4 +511,5 @@ case `uname` in
 	build_gmake
 	build_jdk
     ;;
+    *) unknown_platform;;
 esac
