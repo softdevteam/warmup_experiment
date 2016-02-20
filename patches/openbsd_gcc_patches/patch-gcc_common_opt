@@ -1,0 +1,11 @@
+--- gcc/common.opt.orig	Thu Feb 11 14:05:25 2016
++++ gcc/common.opt	Thu Feb 11 14:06:13 2016
+@@ -1648,7 +1648,7 @@
+ Generate position-independent code if possible (large mode)
+ 
+ fPIE
+-Common Report Var(flag_pie,2) Negative(fpic)
++Common Report Var(flag_pie,2) Negative(fpic) Init(PIE_DEFAULT)
+ Generate position-independent code for executables if possible (large mode)
+ 
+ fpic
