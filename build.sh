@@ -109,6 +109,7 @@ build_gcc() {
         --verbose \
         --disable-libmudflap \
         --disable-libgomp \
+        --disable-multilib \
         --disable-tls \
         --enable-languages=c,c++ \
         --with-system-zlib \
