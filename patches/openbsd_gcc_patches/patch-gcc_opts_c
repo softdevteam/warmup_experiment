@@ -1,0 +1,11 @@
+--- gcc/opts.c.orig	Thu Feb 11 14:44:27 2016
++++ gcc/opts.c	Thu Feb 11 14:47:17 2016
+@@ -716,6 +716,8 @@
+ 
+   if (!opts->x_flag_opts_finished)
+     {
++      if (opts->x_flag_pic || opts->x_profile_flag)
++        opts->x_flag_pie = 0;
+       if (opts->x_flag_pie)
+ 	opts->x_flag_pic = opts->x_flag_pie;
+       if (opts->x_flag_pic && !opts->x_flag_pie)
