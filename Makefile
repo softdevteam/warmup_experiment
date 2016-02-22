@@ -32,21 +32,21 @@ build-vms:
 build-benchs: build-krun
 	cd benchmarks && \
 		env LD_LIBRARY_PATH=${GCC_LIB_DIR} \
-		${MAKE} CC=${CC} JAVAC=${JAVAC}
+		CC=${CC} JAVAC=${JAVAC} ${MAKE}
 
 build-krun:
-	cd krun && env LD_LIBRARY_PATH=${GCC_LIB_DIR} ${MAKE} CC=${CC} \
+	cd krun && env LD_LIBRARY_PATH=${GCC_LIB_DIR} CC=${CC} \
 		JAVA_CPPFLAGS='"-I${JAVA_HOME}/include -I${JAVA_INC}"' \
 		JAVA_LDFLAGS=-L${JAVA_HOME}/lib \
-		JAVAC=${JAVAC} ENABLE_JAVA=1
+		JAVAC=${JAVAC} ENABLE_JAVA=1 ${MAKE}
 
 build-startup: build-krun
 	cd startup_runners && \
-		env LD_LIBRARY_PATH=${GCC_LIB_DIR} ${MAKE} CC=${CC} \
-		${MAKE} JAVA_CPPFLAGS='"-I${JAVA_HOME}/include \
+		env LD_LIBRARY_PATH=${GCC_LIB_DIR} CC=${CC} \
+		JAVA_CPPFLAGS='"-I${JAVA_HOME}/include \
 		-I${JAVA_HOME}/include/linux"' \
 		JAVA_LDFLAGS=-L${JAVA_HOME}/lib \
-		JAVAC=${JAVAC} ENABLE_JAVA=1
+		JAVAC=${JAVAC} ENABLE_JAVA=1 ${MAKE}
 
 bench-no-reboots: build-krun build-benchs
 	${PYTHON} krun/krun.py warmup.krun

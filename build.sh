@@ -123,9 +123,9 @@ build_gcc() {
     ${GMAKE} install || exit $?
 }
 
-CPYTHONV=2.7.10
-CFFI_V=1.1.2
-SETUPTOOLS_V=18.1
+CPYTHONV=2.7.11
+CFFI_V=1.5.0
+SETUPTOOLS_V=20.1.1
 CPYTHON=${wrkdir}/cpython-inst/bin/python
 build_cpython() {
     cd ${wrkdir} || exit $?
@@ -165,7 +165,7 @@ build_luajit() {
     CFLAGS=-DLUAJIT_ENABLE_LUA52COMPAT ${GMAKE} CC=${OUR_CC} || exit $?
 }
 
-PYPYV=4.0.0
+PYPYV=4.0.1
 build_pypy() {
     cd ${wrkdir} || exit $?
     echo "\n===> Download and build PyPy\n"
@@ -190,7 +190,7 @@ build_pypy() {
     fi
 }
 
-V8_V=4.8.271.9
+V8_V=4.9.385.21
 DEPOT_REPO="https://chromium.googlesource.com/chromium/tools/depot_tools.git"
 build_v8() {
     cd ${wrkdir} || exit $?
@@ -204,7 +204,7 @@ build_v8() {
     # The build actually requires that you clone using this git wrapper tool
     cd ${wrkdir}
     OLDPATH=${PATH}
-    # v8's build needs python 2.7.10; as we've already built that, we might
+    # v8's build needs python 2.7.11; as we've already built that, we might
     # as well use it rather than forcing the user to install their own.
     PATH=${wrkdir}/cpython-inst/bin:${wrkdir}/depot_tools:${PATH}
     # XXX we should check for errors when fetching and syncing, but
@@ -316,9 +316,9 @@ build_jdk() {
 }
 
 MX_REPO=https://bitbucket.org/allr/mx
-MX_VERSION=d94328febb37
+MX_VERSION=072da2b
 GRAAL_REPO=http://hg.openjdk.java.net/graal/graal-compiler
-GRAAL_VERSION=9dafd1dc5ff9
+GRAAL_VERSION=graal-0.13
 # Building with the JDK we built earlier is troublesome (SSL+maven issues).
 # Instead we use the system JDK8.
 case `uname` in
@@ -379,15 +379,7 @@ build_graal() {
 }
 
 
-# This is a recent revision on the truffle-head branch which I know to
-# work, however, it has a bug which crashes our fasta benchmark.
-#JRUBY_V=7b4cee81891e7b7db996f6dbc0d7f9d5266910bf
-
-# This is a branch diverging from the above revision, but with a
-# fix for the crash applied. In the long term we need to get the latest
-# truffle-head working, however this is proving difficult XXX
-JRUBY_V=f4cd59cdd1c89c111fb7d09db7250cc667ae3ec5
-
+JRUBY_V=f82ac77137da265d2447d723ce5973a04459a609
 build_jruby_truffle() {
     echo "\n===> Download and build truffle+jruby\n"
     cd ${wrkdir}
@@ -402,7 +394,7 @@ build_jruby_truffle() {
 }
 
 
-HHVM_VERSION=HHVM-3.7.1
+HHVM_VERSION=HHVM-3.12.0
 build_hhvm() {
     echo "\n===> Download and build HHVM\n"
     if [ -f ${wrkdir}/hhvm/hphp/hhvm/php ]; then return; fi
