@@ -1,0 +1,928 @@
+--- richards.java	2015-10-01 12:25:59.058030765 +0200
++++ trace_richards.java	2015-10-01 12:33:35.290036803 +0200
+@@ -6,47 +6,83 @@
+ //  Translation from C++, Mario Wolczko
+ //  Outer loop added by Alex Jacoby
+ 
+-//----- Packet -------------------------------------------------------
++//----- trace_Packet -------------------------------------------------------
+ 
+-class Packet {
++class trace_Packet {
+   static final int BUFSIZE = 4;
+ 
+-  private Packet link;
++  private trace_Packet link;
+   private int id;
+   private int kind;
+   private int datum;
+   private int[] data = new int[BUFSIZE];
+ 
+-  Packet(Packet l, int i, int k) {
++  trace_Packet(trace_Packet l, int i, int k) {
++    System.out.println("trace_Packet(trace_Packet l, int i, int k) {");
+     SetLink(l);
+     SetIdent(i);
+     SetKind(k);
+     SetDatum(0);
+-    for(int j = 0; j < BUFSIZE; j++)
++    for(int j = 0; j < BUFSIZE; j++) {
++      System.out.println("for(int j = 0; j < BUFSIZE; j++) {");
+       SetData(j, 0);
++    }
+   }
+ 
+-  Packet Link() { return link; }
+-  int 	Ident() { return id; }
+-  int    Kind() { return kind; }
+-  int   Datum() { return datum; }
+-
+-  void SetLink(Packet l)     { link = l; }
+-  void SetIdent(int i)       { id = i; }
+-  void SetKind(int k)        { kind = k; }
+-  void SetDatum(int d)       { datum = d; }
++  trace_Packet Link() {
++    System.out.println("trace_Packet Link() {");
++    return link;
++  }
++  int 	Ident() {
++    System.out.println("int 	Ident() {");
++    return id;
++  }
++  int    Kind() {
++    System.out.println("int    Kind() {");
++    return kind;
++  }
++  int   Datum() {
++    System.out.println("int   Datum() {");
++    return datum;
++  }
+ 
+-  int     Data(int i)        { return data[i]; }
+-  void SetData(int i, int d) { data[i] = d; }
++  void SetLink(trace_Packet l)     {
++    System.out.println("void SetLink(trace_Packet l)     {");
++    link = l;
++  }
++  void SetIdent(int i)       {
++    System.out.println("void SetIdent(int i)       {");
++    id = i;
++  }
++  void SetKind(int k)        {
++    System.out.println("void SetKind(int k)        {");
++    kind = k;
++  }
++  void SetDatum(int d)       {
++    System.out.println("void SetDatum(int d)       {");
++    datum = d;
++  }
+ 
+-  Packet append_to(Packet list) {
++  int     Data(int i)        {
++    System.out.println("int     Data(int i)        {");
++    return data[i];
++  }
++  void SetData(int i, int d) {
++    System.out.println("void SetData(int i, int d) {");
++    data[i] = d;
++  }
++
++  trace_Packet append_to(trace_Packet list) {
++    System.out.println("trace_Packet append_to(trace_Packet list) {");
+     SetLink(null);
+-    if (list == null) 
++    if (list == null) {
++      System.out.println("if (list == null) {");
+       return this;
+-    else {
+-      Packet p = list;
+-      Packet next = p.Link();
++    } else {
++      trace_Packet p = list;
++      trace_Packet next = p.Link();
+       while (next != null) {
++        System.out.println("while (next != null) {");
+         p = next;
+ 	next = p.Link();
+       }
+@@ -57,157 +93,291 @@
+ 
+ }
+ 
+-//----- Task Records------------------------------
++//----- trace_Task Records------------------------------
+ 
+-abstract class TaskRec { } // so we have a common type for all task records
++abstract class trace_TaskRec { } // so we have a common type for all trace_task records
+ 
+-class DeviceTaskRec extends TaskRec {
+-  private Packet pending;
++class trace_DeviceTaskRec extends trace_TaskRec {
++  private trace_Packet pending;
+ 
+-  DeviceTaskRec()           { pending = null; }
+-  Packet Pending()          { return pending; }
+-  void SetPending(Packet p) { pending = p; }
++  trace_DeviceTaskRec() {
++    System.out.println("trace_DeviceTaskRec() {");
++    pending = null;
++  }
++  trace_Packet Pending() {
++    System.out.println("trace_Packet Pending() {");
++    return pending;
++  }
++  void SetPending(trace_Packet p) {
++    System.out.println("void SetPending(trace_Packet p) {");
++    pending = p;
++  }
+ }
+ 
+ 
+-class IdleTaskRec extends TaskRec {
++class trace_IdleTaskRec extends trace_TaskRec {
+   private int control, count;
+ 
+-  IdleTaskRec() { control = 1; count = 10000; }
+-  int Control() { return control; }
+-  int Count()   { return count; }
+-  void SetControl(int n) { control = n; }
+-  void SetCount(int n)   { count = n; }
++  trace_IdleTaskRec() {
++    System.out.println("trace_IdleTaskRec() {");
++    control = 1; count = 10000; }
++  int Control() {
++    System.out.println("int Control() {");
++    return control;
++  }
++  int Count() {
++    System.out.println("int Count() {");
++    return count;
++  }
++  void SetControl(int n) {
++    System.out.println("void SetControl(int n) {");
++    control = n;
++  }
++  void SetCount(int n) {
++    System.out.println("void SetCount(int n) {");
++    count = n;
++  }
+ }
+ 
+ 
+-class HandlerTaskRec extends TaskRec {
+-  private Packet workIn, deviceIn;
++class trace_HandlerTaskRec extends trace_TaskRec {
++  private trace_Packet workIn, deviceIn;
+ 
+-  HandlerTaskRec() { workIn = deviceIn = null; }
++  trace_HandlerTaskRec() {
++    System.out.println("trace_HandlerTaskRec() {");
++      workIn = deviceIn = null;
++  }
+ 
+-  Packet   WorkIn() { return workIn; }
+-  Packet DeviceIn() { return deviceIn; }
++  trace_Packet   WorkIn() {
++    System.out.println("trace_Packet   WorkIn() {");
++    return workIn;
++  }
++  trace_Packet DeviceIn() {
++    System.out.println("trace_Packet DeviceIn() {");
++    return deviceIn;
++  }
+ 
+-  void SetDeviceIn(Packet p) { deviceIn = p; }
+-  void SetWorkIn  (Packet p) { workIn = p; }
++  void SetDeviceIn(trace_Packet p) {
++    System.out.println("void SetDeviceIn(trace_Packet p) {");
++    deviceIn = p;
++  }
++  void SetWorkIn  (trace_Packet p) {
++    System.out.println("void SetWorkIn  (trace_Packet p) {");
++    workIn = p;
++  }
+ 
+-  Packet   WorkInAdd(Packet p) { return workIn = p.append_to(workIn); }
+-  Packet DeviceInAdd(Packet p) { return deviceIn = p.append_to(deviceIn); }
++  trace_Packet   WorkInAdd(trace_Packet p) {
++    System.out.println("trace_Packet   WorkInAdd(trace_Packet p) {");
++    return workIn = p.append_to(workIn);
++  }
++  trace_Packet DeviceInAdd(trace_Packet p) {
++    System.out.println("trace_Packet DeviceInAdd(trace_Packet p) {");
++    return deviceIn = p.append_to(deviceIn);
++  }
+ }
+ 
+ 
+ 
+-class WorkerTaskRec extends TaskRec {
++class trace_WorkerTaskRec extends trace_TaskRec {
+   private int destination;
+   private int count;
+ 
+-  WorkerTaskRec() { destination = richards.I_HANDLERA; count = 0; }
++  trace_WorkerTaskRec() {
++    System.out.println("trace_WorkerTaskRec() {");
++    destination = trace_richards.I_HANDLERA; count = 0;
++  }
+ 
+-  int       Count() { return count; }
+-  int Destination() { return destination; }
++  int       Count() {
++    System.out.println("int       Count() {");
++    return count;
++  }
++  int Destination() {
++    System.out.println("int Destination() {");
++    return destination;
++  }
+ 
+-  void SetCount      (int n) { count = n; }
+-  void SetDestination(int d) { destination = d; }
++  void SetCount      (int n) {
++    System.out.println("void SetCount      (int n) {");
++    count = n;
++  }
++  void SetDestination(int d) {
++    System.out.println("void SetDestination(int d) {");
++    destination = d;
++  }
+ }
+ 
+ 
+-//----- Task ---------------------------------------------------------
++//----- trace_Task ---------------------------------------------------------
+ 
+-class TaskState {
++class trace_TaskState {
+ 
+   protected boolean packetPending, taskWaiting, taskHolding;
+ 
+-  TaskState() {
++  trace_TaskState() {
++    System.out.println("trace_TaskState() {");
+     packetPending = true;
+     taskWaiting = false;
+     taskHolding = false;
+   }
+ 
+-  TaskState PacketPending() {
++  trace_TaskState PacketPending() {
++    System.out.println("trace_TaskState PacketPending() {");
+     packetPending = true;
+     taskWaiting = taskHolding = false;
+     return this;
+   }
+-  TaskState Waiting() {
++  trace_TaskState Waiting() {
++    System.out.println("trace_TaskState Waiting() {");
+     packetPending = taskHolding = false;
+     taskWaiting = true;
+     return this;
+   }
+-  TaskState Running() {
++  trace_TaskState Running() {
++    System.out.println("trace_TaskState Running() {");
+     packetPending = taskWaiting = taskHolding = false;
+     return this;
+   }
+-  TaskState WaitingWithPacket() {
++  trace_TaskState WaitingWithPacket() {
++    System.out.println("trace_TaskState WaitingWithPacket() {");
+     packetPending = taskWaiting = true; taskHolding = false;
+     return this;
+   }
+ 
+   /* accessing */
+-  boolean IsPacketPending() { return packetPending; }
+-  boolean IsTaskWaiting()   { return taskWaiting; }
+-  boolean IsTaskHolding()   { return taskHolding; }
+-
+-  void SetTaskHolding(boolean state) { taskHolding = state; }
+-  void SetTaskWaiting(boolean state) { taskWaiting = state; }
+-  void SetPacketPending(boolean state) { packetPending = state; }
++  boolean IsPacketPending() {
++    System.out.println("boolean IsPacketPending() {");
++    return packetPending;
++  }
++  boolean IsTaskWaiting()   {
++    System.out.println("boolean IsTaskWaiting()   {");
++    return taskWaiting;
++  }
++  boolean IsTaskHolding()   {
++    System.out.println("boolean IsTaskHolding()   {");
++    return taskHolding;
++  }
++
++  void SetTaskHolding(boolean state) {
++    System.out.println("void SetTaskHolding(boolean state) {");
++    taskHolding = state;
++  }
++  void SetTaskWaiting(boolean state) {
++    System.out.println("void SetTaskWaiting(boolean state) {");
++    taskWaiting = state;
++  }
++  void SetPacketPending(boolean state) {
++    System.out.println("void SetPacketPending(boolean state) {");
++    packetPending = state;
++  }
+ 
+   /* testing */ 
+   boolean IsTaskHoldingOrWaiting() {
++    System.out.println("boolean IsTaskHoldingOrWaiting() {");
+     return IsTaskHolding() || !IsPacketPending() && IsTaskWaiting();
+   }
+   boolean IsWaitingWithPacket() {
++    System.out.println("boolean IsWaitingWithPacket() {");
+     return IsPacketPending() && IsTaskWaiting() && !IsTaskHolding();
+   }
+ }
+ 
+-abstract class Task extends TaskState {
++abstract class trace_Task extends trace_TaskState {
+ 
+   static int layout = 0;
+ 
+-  protected Task link;
++  protected trace_Task link;
+   protected int id;
+   protected int pri;
+-  protected Packet wkq;
+-  protected TaskRec handle;
++  protected trace_Packet wkq;
++  protected trace_TaskRec handle;
+ 
+-  Task      Link() { return link; }
+-  int      Ident() { return id; }
+-  int   Priority() { return pri; }
+-  Packet   Input() { return wkq; }
+-  TaskRec Handle() { return handle; }
+-
+-  void     SetLink(Task x)    { link = x; }
+-  void    SetIdent(int x)     { id = x; }
+-  void SetPriority(int x)     { pri = x; }
+-  void    SetInput(Packet x)  { wkq = x; }
+-  void   SetHandle(TaskRec x) { handle = x; }
++  trace_Task      Link() {
++    System.out.println("trace_Task      Link() {");
++    return link;
++  }
++  int      Ident() {
++    System.out.println("int      Ident() {");
++    return id;
++  }
++  int   Priority() {
++    System.out.println("int   Priority() {");
++    return pri;
++  }
++  trace_Packet   Input() {
++    System.out.println("trace_Packet   Input() {");
++    return wkq;
++  }
++  trace_TaskRec Handle() {
++    System.out.println("trace_TaskRec Handle() {");
++    return handle;
++  }
++
++  void     SetLink(trace_Task x)    {
++    System.out.println("void     SetLink(trace_Task x)    {");
++    link = x;
++  }
++  void    SetIdent(int x)     {
++    System.out.println("void    SetIdent(int x)     {");
++    id = x;
++  }
++  void SetPriority(int x)     {
++    System.out.println("void SetPriority(int x)     {");
++    pri = x;
++  }
++  void    SetInput(trace_Packet x)  {
++    System.out.println("void    SetInput(trace_Packet x)  {");
++    wkq = x;
++  }
++  void   SetHandle(trace_TaskRec x) {
++    System.out.println("void   SetHandle(trace_TaskRec x) {");
++    handle = x;
++  }
+ 
+   static final int TaskTabSize = 10;
+-  private static Task[] taskTab = new Task[TaskTabSize];
+-  static Task    TaskTab(int i)         { return taskTab[i]; }
+-  static void SetTaskTab(int i, Task t) { taskTab[i] = t; }
++  private static trace_Task[] taskTab = new trace_Task[TaskTabSize];
++  static trace_Task    TaskTab(int i)         {
++    System.out.println("static trace_Task    TaskTab(int i)         {");
++    return taskTab[i];
++  }
++  static void SetTaskTab(int i, trace_Task t) {
++    System.out.println("static void SetTaskTab(int i, trace_Task t) {");
++    taskTab[i] = t;
++  }
+ 
+-  static Task taskList;
++  static trace_Task taskList;
+ 
+   static final boolean tracing = false;
+   private static int holdCount = 0;
+   private static int qpktCount = 0;
+ 
+-  static int  get_holdCount()      { return holdCount; }
+-  static void set_holdCount(int i) { holdCount = i; }
+-
+-  static int  get_queuePacketCount()      { return qpktCount; }
+-  static void set_queuePacketCount(int i) { qpktCount = i; }
++  static int  get_holdCount()      {
++    System.out.println("static int  get_holdCount()      {");
++    return holdCount;
++  }
++  static void set_holdCount(int i) {
++    System.out.println("static void set_holdCount(int i) {");
++    holdCount = i;
++  }
++
++  static int  get_queuePacketCount()      {
++    System.out.println("static int  get_queuePacketCount()      {");
++    return qpktCount;
++  }
++  static void set_queuePacketCount(int i) {
++    System.out.println("static void set_queuePacketCount(int i) {");
++    qpktCount = i;
++  }
+ 
+   public static void reset() {
+-      Task.taskTab = new Task[TaskTabSize];
+-      Task.taskList = null;
+-      Task.holdCount = 0;
+-      Task.qpktCount = 0;
++    System.out.println("public static void reset() {");
++      trace_Task.taskTab = new trace_Task[TaskTabSize];
++      trace_Task.taskList = null;
++      trace_Task.holdCount = 0;
++      trace_Task.qpktCount = 0;
+   }
+ 
+-  Task(int i, int p, Packet w, TaskState initialState, TaskRec r) {
++  trace_Task(int i, int p, trace_Packet w, trace_TaskState initialState, trace_TaskRec r) {
++    System.out.println("trace_Task(int i, int p, trace_Packet w, trace_TaskState initialState, trace_TaskRec r) {");
+     link = taskList;
+     SetIdent(i);
+     SetPriority(p);
+@@ -220,70 +390,86 @@
+     SetTaskTab(i, this);
+   }
+ 
+-  abstract Task fn(Packet pkt, TaskRec r);
++  abstract trace_Task fn(trace_Packet pkt, trace_TaskRec r);
+ 
+-  private Task AddPacket(Packet p, Task old) {
++  private trace_Task AddPacket(trace_Packet p, trace_Task old) {
++    System.out.println("private trace_Task AddPacket(trace_Packet p, trace_Task old) {");
+     if (Input() == null) {
++      System.out.println("if (Input() == null) {");
+       SetInput(p);
+       SetPacketPending(true);
+-      if (Priority() > old.Priority())
++      if (Priority() > old.Priority()) {
++        System.out.println("if (Priority() > old.Priority()) {");
+         return this;
++      }
+     } else {
+       p.append_to(Input());
+     }
+     return old;
+   }
+ 
+-  Task RunTask() {
+-    Packet msg;
++  trace_Task RunTask() {
++    System.out.println("trace_Task RunTask() {");
++    trace_Packet msg;
+ 
+     if (IsWaitingWithPacket()) {
++      System.out.println("if (IsWaitingWithPacket()) {");
+       msg = Input();
+       SetInput(msg.Link());
+-      if (Input() == null)
++      if (Input() == null) {
++        System.out.println("if (Input() == null) {");
+ 	Running();
+-      else
++      }
++      else {
+ 	PacketPending();
++      }
+     } else {
+       msg = null;
+     }
+     return fn(msg, Handle());
+   }
+ 
+-  protected Task waitTask() {
++  protected trace_Task waitTask() {
++    System.out.println("protected trace_Task waitTask() {");
+     SetTaskWaiting(true);
+     return this;
+   }
+ 
+-  protected Task hold() {
++  protected trace_Task hold() {
++    System.out.println("protected trace_Task hold() {");
+     set_holdCount(get_holdCount() + 1);
+     SetTaskHolding(true);
+     return Link();
+   }
+ 
+-  protected Task release(int i) {
+-    Task t = findtcb(i);
++  protected trace_Task release(int i) {
++    System.out.println("protected trace_Task release(int i) {");
++    trace_Task t = findtcb(i);
+     t.SetTaskHolding(false);
+     return t.Priority() > Priority() ? t : this;
+   }
+ 
+-  protected Task qpkt(Packet pkt) {
+-    Task t = findtcb(pkt.Ident());
++  protected trace_Task qpkt(trace_Packet pkt) {
++    System.out.println("protected trace_Task qpkt(trace_Packet pkt) {");
++    trace_Task t = findtcb(pkt.Ident());
+     set_queuePacketCount(get_queuePacketCount() + 1);
+     pkt.SetLink(null);
+     pkt.SetIdent(Ident());
+     return t.AddPacket(pkt, this);
+   }
+ 
+-  static Task findtcb(int id) {
+-    Task t = Task.TaskTab(id);
++  static trace_Task findtcb(int id) {
++    System.out.println("static trace_Task findtcb(int id) {");
++    trace_Task t = trace_Task.TaskTab(id);
+     if (t == null) 
+-      System.out.println("\nBad task id " + id);
++      System.out.println("\nBad trace_task id " + id);
+     return t;
+   }
+ 
+   static void trace(char a) {
++    System.out.println("static void trace(char a) {");
+     if (--layout <= 0) {
++      System.out.println("if (--layout <= 0) {");
+       System.out.println();
+       layout = 50;
+     }
+@@ -292,17 +478,20 @@
+ 
+ }
+ 
+-//----- DeviceTask ---------------------------------------------------
++//----- trace_DeviceTask ---------------------------------------------------
+ 
+-class DeviceTask extends Task
++class trace_DeviceTask extends trace_Task
+ {
+-  DeviceTask(int i, int p, Packet w, TaskState s, TaskRec r) {
++  trace_DeviceTask(int i, int p, trace_Packet w, trace_TaskState s, trace_TaskRec r) {
+     super(i, p, w, s, r);
++    System.out.println("trace_DeviceTask(int i, int p, trace_Packet w, trace_TaskState s, trace_TaskRec r) {");
+   }
+ 
+-  Task fn(Packet pkt, TaskRec r) {
+-    DeviceTaskRec d = (DeviceTaskRec)r;
++  trace_Task fn(trace_Packet pkt, trace_TaskRec r) {
++    System.out.println("trace_Task fn(trace_Packet pkt, trace_TaskRec r) {");
++    trace_DeviceTaskRec d = (trace_DeviceTaskRec)r;
+     if (pkt == null) {
++      System.out.println("if (pkt == null) {");
+       pkt = d.Pending();
+       if (pkt == null) 
+         return waitTask();
+@@ -319,36 +508,46 @@
+ }
+ 
+ 
+-//----- HandlerTask --------------------------------------------------
++//----- trace_HandlerTask --------------------------------------------------
+ 
+-class HandlerTask extends Task
++class trace_HandlerTask extends trace_Task
+ {
+-  HandlerTask(int i, int p, Packet w, TaskState s, TaskRec r) {
++  trace_HandlerTask(int i, int p, trace_Packet w, trace_TaskState s, trace_TaskRec r) {
+     super(i, p, w, s, r);
++    System.out.println("trace_HandlerTask(int i, int p, trace_Packet w, trace_TaskState s, trace_TaskRec r) {");
+   }
+ 
+-  Task fn(Packet pkt, TaskRec r) {
+-    HandlerTaskRec h = (HandlerTaskRec)r;
++  trace_Task fn(trace_Packet pkt, trace_TaskRec r) {
++    System.out.println("trace_Task fn(trace_Packet pkt, trace_TaskRec r) {");
++    trace_HandlerTaskRec h = (trace_HandlerTaskRec)r;
+     if (pkt != null) {
+-      if (pkt.Kind() == richards.K_WORK)
++      System.out.println("if (pkt != null) {");
++      if (pkt.Kind() == trace_richards.K_WORK) {
++        System.out.println("if (pkt.Kind() == trace_richards.K_WORK) {");
+ 	h.WorkInAdd(pkt);
+-      else
++      } else {
+         h.DeviceInAdd(pkt);
++      }
+     }
+-    Packet work = h.WorkIn();
+-    if (work == null)
++    trace_Packet work = h.WorkIn();
++    if (work == null) {
++      System.out.println("if (work == null) {");
+       return waitTask();
++    }
+ 
+     int count = work.Datum();
+ 
+-    if (count >= Packet.BUFSIZE) {
++    if (count >= trace_Packet.BUFSIZE) {
++      System.out.println("if (count >= trace_Packet.BUFSIZE) {");
+       h.SetWorkIn(work.Link());
+       return qpkt(work);
+     }
+ 
+-    Packet dev = h.DeviceIn();
+-    if (dev == null)
++    trace_Packet dev = h.DeviceIn();
++    if (dev == null) {
++      System.out.println("if (dev == null) {");
+       return waitTask();
++    }
+ 
+     h.SetDeviceIn(dev.Link());
+     dev.SetDatum(work.Data(count));
+@@ -358,55 +557,67 @@
+ }
+ 
+ 
+-//----- IdleTask -----------------------------------------------------
++//----- trace_IdleTask -----------------------------------------------------
+ 
+-class IdleTask extends Task 
++class trace_IdleTask extends trace_Task 
+ {
+-  IdleTask(int i, int a1, int a2, TaskState s, TaskRec r) {
++  trace_IdleTask(int i, int a1, int a2, trace_TaskState s, trace_TaskRec r) {
+     super(i, 0, null, s, r);
++    System.out.println("trace_IdleTask(int i, int a1, int a2, trace_TaskState s, trace_TaskRec r) {");
+   }
+ 
+-  Task fn(Packet pkt, TaskRec r) {
+-    IdleTaskRec i = (IdleTaskRec)r;
++  trace_Task fn(trace_Packet pkt, trace_TaskRec r) {
++    System.out.println("trace_Task fn(trace_Packet pkt, trace_TaskRec r) {");
++    trace_IdleTaskRec i = (trace_IdleTaskRec)r;
+ 
+     i.SetCount(i.Count() - 1);
+     if (i.Count() == 0) {
++      System.out.println("if (i.Count() == 0) {");
+       return hold();
+     } else if ((i.Control() & 1) == 0) {
++      System.out.println("} else if ((i.Control() & 1) == 0) {");
+       i.SetControl(i.Control() / 2);
+-      return release(richards.I_DEVA);
++      return release(trace_richards.I_DEVA);
+     } else {
+       i.SetControl((i.Control() / 2) ^ 0XD008);
+-      return release(richards.I_DEVB);
++      return release(trace_richards.I_DEVB);
+     }
+   }
+ 
+ }
+ 
+ 
+-//----- WorkTask -----------------------------------------------------
++//----- trace_WorkTask -----------------------------------------------------
+ 
+-class WorkTask extends Task 
++class trace_WorkTask extends trace_Task 
+ {
+-  WorkTask(int i, int p, Packet w, TaskState s, TaskRec r) {
++  trace_WorkTask(int i, int p, trace_Packet w, trace_TaskState s, trace_TaskRec r) {
+     super(i, p, w, s, r);
++    System.out.println("trace_WorkTask(int i, int p, trace_Packet w, trace_TaskState s, trace_TaskRec r) {");
+   }
+ 
+-  Task fn(Packet pkt, TaskRec r) {
+-    WorkerTaskRec w = (WorkerTaskRec)r;
++  trace_Task fn(trace_Packet pkt, trace_TaskRec r) {
++    System.out.println("trace_Task fn(trace_Packet pkt, trace_TaskRec r) {");
++    trace_WorkerTaskRec w = (trace_WorkerTaskRec)r;
+ 
+-    if (pkt == null)
++    if (pkt == null) {
++      System.out.println("if (pkt == null) {");
+       return waitTask();
++    }
+ 
+-    int dest = (w.Destination() == richards.I_HANDLERA
+-		? richards.I_HANDLERB
+-		: richards.I_HANDLERA);
++    int dest = (w.Destination() == trace_richards.I_HANDLERA
++		? trace_richards.I_HANDLERB
++		: trace_richards.I_HANDLERA);
+     w.SetDestination(dest);
+     pkt.SetIdent(dest);
+     pkt.SetDatum(0);
+-    for (int i = 0; i < Packet.BUFSIZE; i++) { 
++    for (int i = 0; i < trace_Packet.BUFSIZE; i++) {
++      System.out.println("for (int i = 0; i < trace_Packet.BUFSIZE; i++) {");
+       w.SetCount(w.Count() + 1);
+-      if (w.Count() > 26) w.SetCount(1);
++      if (w.Count() > 26) {
++        System.out.println("if (w.Count() > 26) {");
++        w.SetCount(1);
++      }
+       pkt.SetData(i, 'A' + w.Count() - 1);
+     }
+     return qpkt(pkt);
+@@ -417,38 +628,50 @@
+ //----- Richards -----------------------------------------------------
+ 
+ 
+-public class richards implements Benchmark
++public class trace_richards implements Benchmark
+ {
+   private long total_ms;
+-  public long getRunTime() { return total_ms; }
++  public long getRunTime() {
++    System.out.println("public long getRunTime() {");
++    return total_ms;
++  }
+ 
+   public static void main(String[] args) {
+-    (new richards()).inst_main(args);
++    System.out.println("public static void main(String[] args) {");
++    (new trace_richards()).inst_main(args);
+   }
+ 
+   int iterations;
+ 
+   // krun entry point
+   public void runIter(int param) {
++    System.out.println("public void runIter(int param) {");
+       iterations = param;
+       boolean result = run();
+       //assert(result);
+       // Assertions are off by default in java
+       // ensure this check really happens
+       if (!result) {
++        System.out.println("if (!result) {");
+           System.out.println("failed!");
+       }
+   }
+ 
+-  public void inst_main(String[] args) { 
+-    if (args.length > 0)
++  public void inst_main(String[] args) {
++    System.out.println("public void inst_main(String[] args) {");
++    if (args.length > 0) {
++      System.out.println("if (args.length > 0) {");
+         iterations = Integer.parseInt(args[0]);
+-    else
++    }
++    else {
+         iterations = 10;
++    }
+     System.out.println("Richards benchmark (deutsch_acc_virtual) starting...");
+     long startTime = System.currentTimeMillis();
+-    if (!run())
++    if (!run()) {
++      System.out.println("if (!run()) {");
+       return;
++    }
+     long endTime = System.currentTimeMillis();
+     System.out.println("finished.");
+     total_ms= endTime - startTime;
+@@ -459,63 +682,72 @@
+   }
+ 
+   static void schedule() {
+-    Task t = Task.taskList;
++    System.out.println("static void schedule() {");
++    trace_Task t = trace_Task.taskList;
+     while (t != null) {
+-      Packet pkt = null;
++      System.out.println("while (t != null) {");
++      trace_Packet pkt = null;
+ 
+-      if (Task.tracing) 
++      if (trace_Task.tracing) {
++        System.out.println("if (trace_Task.tracing) {");
+ 	System.out.println("tcb=" + t.Ident());
++      }
+ 
+-      if (t.IsTaskHoldingOrWaiting()) 
++      if (t.IsTaskHoldingOrWaiting()) {
++        System.out.println("if (t.IsTaskHoldingOrWaiting()) {");
+         t = t.Link();
++      }
+       else {
+-        if (Task.tracing) Task.trace((char)('0' + t.Ident()));
++        if (trace_Task.tracing) trace_Task.trace((char)('0' + t.Ident()));
+         t = t.RunTask();
+       }
+     }
+   }
+ 
+   public boolean run() {
++    System.out.println("public boolean run() {");
+     for (int i= 0; i < iterations; i++){
+-      //Task.set_holdCount(0);
+-      //Task.set_queuePacketCount(0);  // Added to allow repeated execution
++      System.out.println("for (int i= 0; i < iterations; i++){");
++      //trace_Task.set_holdCount(0);
++      //trace_Task.set_queuePacketCount(0);  // Added to allow repeated execution
+ 				     // of the test.    Ole Agesen, 3/95.
+-      Task.reset();
++      trace_Task.reset();
+ 
+-      new IdleTask(I_IDLE, 1, 10000, (new TaskState()).Running(),
+-		   new IdleTaskRec());
++      new trace_IdleTask(I_IDLE, 1, 10000, (new trace_TaskState()).Running(),
++		   new trace_IdleTaskRec());
+ 
+-      Packet wkq = new Packet(null, 0, K_WORK);
+-      wkq = new Packet(wkq, 0, K_WORK);
+-      new WorkTask(I_WORK, 1000, wkq,
+-		   (new TaskState()).WaitingWithPacket(),
+-		   new WorkerTaskRec());
+-
+-      wkq = new Packet(null, I_DEVA, K_DEV);
+-      wkq = new Packet(wkq, I_DEVA, K_DEV);
+-      wkq = new Packet(wkq, I_DEVA, K_DEV);
+-      new HandlerTask(I_HANDLERA, 2000, wkq,
+-		      (new TaskState()).WaitingWithPacket(),
+-		      new HandlerTaskRec());
+-
+-      wkq = new Packet(null, I_DEVB, K_DEV);
+-      wkq = new Packet(wkq, I_DEVB, K_DEV);
+-      wkq = new Packet(wkq, I_DEVB, K_DEV);
+-      new HandlerTask(I_HANDLERB, 3000, wkq,
+-		      (new TaskState()).WaitingWithPacket(),
+-		      new HandlerTaskRec());
++      trace_Packet wkq = new trace_Packet(null, 0, K_WORK);
++      wkq = new trace_Packet(wkq, 0, K_WORK);
++      new trace_WorkTask(I_WORK, 1000, wkq,
++		   (new trace_TaskState()).WaitingWithPacket(),
++		   new trace_WorkerTaskRec());
++
++      wkq = new trace_Packet(null, I_DEVA, K_DEV);
++      wkq = new trace_Packet(wkq, I_DEVA, K_DEV);
++      wkq = new trace_Packet(wkq, I_DEVA, K_DEV);
++      new trace_HandlerTask(I_HANDLERA, 2000, wkq,
++		      (new trace_TaskState()).WaitingWithPacket(),
++		      new trace_HandlerTaskRec());
++
++      wkq = new trace_Packet(null, I_DEVB, K_DEV);
++      wkq = new trace_Packet(wkq, I_DEVB, K_DEV);
++      wkq = new trace_Packet(wkq, I_DEVB, K_DEV);
++      new trace_HandlerTask(I_HANDLERB, 3000, wkq,
++		      (new trace_TaskState()).WaitingWithPacket(),
++		      new trace_HandlerTaskRec());
+ 
+       wkq = null;
+-      new DeviceTask(I_DEVA, 4000, wkq, (new TaskState()).Waiting(),
+-		     new DeviceTaskRec());
+-      new DeviceTask(I_DEVB, 5000, wkq, (new TaskState()).Waiting(),
+-		     new DeviceTaskRec());
++      new trace_DeviceTask(I_DEVA, 4000, wkq, (new trace_TaskState()).Waiting(),
++		     new trace_DeviceTaskRec());
++      new trace_DeviceTask(I_DEVB, 5000, wkq, (new trace_TaskState()).Waiting(),
++		     new trace_DeviceTaskRec());
+ 
+       schedule();
+ 
+-      if (Task.get_queuePacketCount() == 23246 && Task.get_holdCount() == 9297) 
++      if (trace_Task.get_queuePacketCount() == 23246 && trace_Task.get_holdCount() == 9297) {
++        System.out.println("if (trace_Task.get_queuePacketCount() == 23246 && trace_Task.get_holdCount() == 9297) {");
+         ; // correct
+-      else {
++      } else {
+         //System.out.println("Incorrect results!");
+         return false;
+       }
+@@ -523,7 +755,7 @@
+     return true;
+   }
+ 
+-  // Task IDs
++  // trace_Task IDs
+   static final int
+     I_IDLE = 1,
+     I_WORK = 2,
+@@ -532,7 +764,7 @@
+     I_DEVA = 5,
+     I_DEVB = 6;
+ 
+-  // Packet types
++  // trace_Packet types
+   static final int
+     K_DEV = 1000,
+     K_WORK = 1001;
