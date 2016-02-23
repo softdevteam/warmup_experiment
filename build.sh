@@ -291,21 +291,21 @@ build_jdk() {
             env CPPFLAGS=-I/usr/local/include \
               LDFLAGS=-L/usr/local/lib \
               CC=zgcc CXX=zg++ PATH=${JDK_BUILD_PATH} ac_cv_path_NAWK=awk bash configure \
-	    --disable-option-checking \
-	    --with-cups-include=/usr/local/include \
-	    --with-jobs=8 \
-		    --with-debug-level=release \
-	    --with-debug-level=release \
-	    --disable-ccache \
-	    --disable-freetype-bundling \
-	    --disable-zip-debug-info \
-	    --disable-debug-symbols \
-	    --enable-static-libjli \
-	    --with-zlib=system \
-	    --with-giflib=system \
-	    --with-milestone=fcs \
-	    || exit $?
-	      PATH=${JDK_BUILD_PATH} \
+              --disable-option-checking \
+              --with-cups-include=/usr/local/include \
+              --with-jobs=8 \
+          	    --with-debug-level=release \
+              --with-debug-level=release \
+              --disable-ccache \
+              --disable-freetype-bundling \
+              --disable-zip-debug-info \
+              --disable-debug-symbols \
+              --enable-static-libjli \
+              --with-zlib=system \
+              --with-giflib=system \
+              --with-milestone=fcs \
+	      || exit $?
+	    PATH=${JDK_BUILD_PATH} \
 	    COMPILER_WARNINGS_FATAL=false \
 	    DEFAULT_LIBPATH="/usr/lib:/usr/X11R6/lib:/usr/local/lib"\
 	    ../make-${GMAKE_V}/make all || exit $?
