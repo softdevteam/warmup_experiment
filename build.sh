@@ -249,8 +249,7 @@ build_gmake() {
     cp make gmake
 }
 
-JDK_DIST=openjdk-8u45b14-bsd-port-20150618.tar.xz
-JDK_INNER_DIR=openjdk-8u45b14-bsd-port-20150618
+JDK_DIR=openjdk-8u72b15-bsd-port-20160220
 case `uname` in
     Linux)
       JDK_JAVAC=${wrkdir}/openjdk/build/linux-x86_64-normal-server-release/jdk/bin/javac;;
@@ -262,11 +261,11 @@ build_jdk() {
     echo "\n===> Download and build JDK8\n"
     if [ -f ${JDK_JAVAC} ]; then return; fi
     cd ${wrkdir} || exit $?
-    if ! [ -f "${wrkdir}/${JDK_DIST}" ]; then
-        wget http://www.intricatesoftware.com/distfiles/${JDK_DIST} || exit $?
+    if ! [ -f "${wrkdir}/${JDK_DIR}" ]; then
+        wget http://www.intricatesoftware.com/distfiles/${JDK_DIR}.tar.xz || exit $?
     fi
-    xzdec ${JDK_DIST} | tar xf - || exit $?
-    mv ${JDK_INNER_DIR} openjdk
+    xzdec ${JDK_DIR}.tar.xz | tar xf - || exit $?
+    mv ${JDK_DIR} openjdk
     cd openjdk || exit $?
     JDK_BUILD_PATH=`dirname ${OUR_CC}`:${PATH}
     case `uname` in
