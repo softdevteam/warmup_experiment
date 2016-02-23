@@ -89,10 +89,9 @@ build_gcc() {
     fi
     cd gcc || exit $?
 
-    # OpenBSD needs patches
-    if [ `uname` -eq "openbsd" ]; then
-        for i in ../../patches/openbsd_gcc_patches/patch*; do
-            patch -Ep0 < $i || exit $?
+    if [ `uname` = "OpenBSD" ]; then
+        for p in `ls ${PATCH_DIR}/openbsd_gcc_patches`; do
+            patch -Ep0 < ${PATCH_DIR}/openbsd_gcc_patches/$p || exit $?
         done
     fi
 
