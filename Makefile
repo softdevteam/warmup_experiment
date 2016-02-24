@@ -16,20 +16,20 @@ endif
 
 CC=${PWD}/work/gcc-inst/bin/zgcc
 
-all: build-vms build-benchs build-krun build-startup
+all: build-vms build-benchmarks build-krun build-startup
 	@echo ""
 	@echo "============================================================"
 	@echo "Now run 'make bench-no-reboots' or 'make bench-with-reboots'"
 	@echo "If you want reboots, make sure you set up the init system!"
 	@echo "============================================================"
 
-.PHONY: build-vms build-benchs build-krun build-startup bench clean
+.PHONY: build-vms build-benchmarks build-krun build-startup bench clean
 .PHONY: clean-benchmarks clean-krun
 
 build-vms:
 	./build.sh
 
-build-benchs: build-krun
+build-benchmarks: build-krun
 	cd benchmarks && \
 		env LD_LIBRARY_PATH=${GCC_LIB_DIR} \
 		CC=${CC} JAVAC=${JAVAC} ${MAKE}
@@ -48,10 +48,10 @@ build-startup: build-krun
 		JAVA_LDFLAGS=-L${JAVA_HOME}/lib \
 		JAVAC=${JAVAC} ENABLE_JAVA=1 ${MAKE}
 
-bench-no-reboots: build-krun build-benchs
+bench-no-reboots: build-krun build-benchmarks
 	${PYTHON} krun/krun.py warmup.krun
 
-bench-with-reboots: build-krun build-benchs
+bench-with-reboots: build-krun build-benchmarks
 	${PYTHON} krun/krun.py --reboot warmup.krun
 
 export-graphs:
