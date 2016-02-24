@@ -9,6 +9,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <inttypes.h>
 #include <err.h>
 
 typedef struct {
@@ -146,7 +147,7 @@ void run_iter(int n) {
       rand_fasta(homosapiens, SCALE * 5);
 
       if (checksum != EXPECT_CKSUM) {
-         errx(EXIT_FAILURE, "checksum fail: %lu vs %u",
+         errx(EXIT_FAILURE, "checksum fail: %" PRIu64 " vs %u",
 	     checksum, EXPECT_CKSUM);
       }
 
