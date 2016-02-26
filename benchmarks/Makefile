@@ -24,7 +24,7 @@ java-benchmarks:
 	for i in ${BENCHMARKS}; do \
 		echo "Building java benchmark $${i}..."; \
 		cd ${PWD}/$${i}/java && \
-		CLASSPATH=../../../krun/iterations_runners/ ${JAVAC} *.java; \
+		CLASSPATH=../../../krun/iterations_runners/ ${JAVAC} `ls *.java | grep -v trace`; \
 		done
 
 c-benchmarks:
