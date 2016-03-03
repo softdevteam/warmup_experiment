@@ -1,5 +1,6 @@
 import os
 import sys
+import platform
 from krun.vm_defs import (PythonVMDef, LuaVMDef, JavaVMDef, GraalVMDef,
 		          PHPVMDef, JRubyTruffleVMDef, V8VMDef, NativeCodeVMDef,
 			  find_internal_jvmci_java_bin, PyPyVMDef)
@@ -126,16 +127,48 @@ SKIP=[
     #"*:V8:*",
     #"*:C:*",
 
-    # XXX: We skip the *really* slow experiments for now
-    "fasta:JRubyTruffle:default-ruby",
+    # XXX: Really slow
     "richards:HHVM:default-php",
 
-    # XXX: This experiment crashes, after about 250 iterations. We skip it for
-    # now. There is a good chance a newer Graal and/or JRuby may fix this.
+    # XXX: This crashes, after about 250 iterations.
     "spectralnorm:JRubyTruffle:default-ruby",
 
-    # XXX: And skip all CPython runs for now. After the draft paper, reenable.
+    # XXX: This benchmark is slow *and* crashes
+    "fasta:JRubyTruffle:default-ruby",
+
+    # XXX: And skip all CPython runs for now.
     "*:CPython:*",
 ]
 
 N_EXECUTIONS = 10  # Number of fresh processes.
+
+if sys.platform.startswith("linux"):
+    PRE_EXECUTION_CMDS = [
+        "sudo service cron stop",
+        "sudo service postfix stop",
+    ]
+
+    POST_EXECUTION_CMDS = [
+        "sudo service cron start",
+        "sudo service postfix start",
+    ]
+elif sys.platform.startswith("openbsd"):
+    PRE_EXECUTION_CMDS = [
+        "sudo /etc/rc.d/cron stop",
+        "sudo /etc/rc.d/smtpd stop",
+    ]
+
+    POST_EXECUTION_CMDS = [
+        "sudo /etc/rc.d/cron start",
+        "sudo /etc/rc.d/smtpd start",
+    ]
+else:
+    assert False
+
+
+# Copy off results after each execution -- soft-dev specific!
+HOSTNAME = platform.node().split(".")[0]
+POST_EXECUTION_CMDS.append(
+    "tar czf - ${KRUN_RESULTS_FILE} ${KRUN_LOG_FILE} | "
+    "ssh -i id_rsa " "vext01@bencher2.soft-dev.org "
+    "'cat > research/krun_results/%s.tgz'" % HOSTNAME)
