@@ -145,12 +145,14 @@ N_EXECUTIONS = 10  # Number of fresh processes.
 if sys.platform.startswith("linux"):
     PRE_EXECUTION_CMDS = [
         "sudo service cron stop",
+        "sudo service atd stop",
         "sudo service postfix stop",
     ]
 
     POST_EXECUTION_CMDS = [
-        "sudo service cron start",
-        "sudo service postfix start",
+        "sudo service cron start || true",
+        "sudo service atd start || true",
+        "sudo service postfix start || true",
     ]
 elif sys.platform.startswith("openbsd"):
     PRE_EXECUTION_CMDS = [
@@ -159,16 +161,21 @@ elif sys.platform.startswith("openbsd"):
     ]
 
     POST_EXECUTION_CMDS = [
-        "sudo /etc/rc.d/cron start",
-        "sudo /etc/rc.d/smtpd start",
+        "sudo /etc/rc.d/cron start || true",
+        "sudo /etc/rc.d/smtpd start || true",
     ]
 else:
     assert False
 
 
 # Copy off results after each execution -- soft-dev specific!
+#
+# We allow failure, otherwise Krun will halt the experiment if (e.g.) the
+# SSH server hostname is temporarily unavailable.
 HOSTNAME = platform.node().split(".")[0]
+SCP_CMD = ("tar czf - ${KRUN_RESULTS_FILE} ${KRUN_LOG_FILE} | "
+           "ssh -i id_rsa " "vext01@bencher2.soft-dev.org "
+           "'cat > research/krun_results/%s.tgz'" % HOSTNAME)
 POST_EXECUTION_CMDS.append(
-    "tar czf - ${KRUN_RESULTS_FILE} ${KRUN_LOG_FILE} | "
-    "ssh -i id_rsa " "vext01@bencher2.soft-dev.org "
-    "'cat > research/krun_results/%s.tgz'" % HOSTNAME)
+    "%s || ( sleep 2; %s ) || true " % (SCP_CMD, SCP_CMD)
+)
