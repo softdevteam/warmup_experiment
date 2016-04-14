@@ -158,11 +158,13 @@ elif sys.platform.startswith("openbsd"):
     PRE_EXECUTION_CMDS = [
         "sudo /etc/rc.d/cron stop",
         "sudo /etc/rc.d/smtpd stop",
+        "sudo /etc/rc.d/pflogd stop",
     ]
 
     POST_EXECUTION_CMDS = [
         "sudo /etc/rc.d/cron start || true",
         "sudo /etc/rc.d/smtpd start || true",
+        "sudo /etc/rc.d/pflogd start || true",
     ]
 else:
     assert False
