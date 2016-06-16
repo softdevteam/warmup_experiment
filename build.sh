@@ -171,7 +171,11 @@ build_pypy() {
     echo "\n===> Download and build PyPy\n"
 
     if ! [ -f "${wrkdir}/pypy2-v${PYPYV}-src.tar.bz2" ]; then
-        wget https://bitbucket.org/pypy/pypy/downloads/pypy2-v${PYPYV}-src.tar.bz2 || exit $?
+        url="https://bitbucket.org/pypy/pypy/downloads/pypy2-v${PYPYV}-src.tar.bz2"
+        case `uname` in
+            OpenBSD) ftp $url || exit $?;;
+            *) wget $url || exit $?;;
+        esac
     fi
 
     if ! [ -d "${wrkdir}/pypy" ]; then
