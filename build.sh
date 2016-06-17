@@ -179,8 +179,8 @@ build_pypy() {
     fi
 
     if ! [ -d "${wrkdir}/pypy" ]; then
-        bunzip2 -c - pypy2-v${PYPYV}-src.tar.bz2 | tar xf -
-        mv pypy2-v${PYPYV}-src pypy
+        bunzip2 -c - pypy2-v${PYPYV}-src.tar.bz2 | tar xf - || exit $?
+        mv pypy2-v${PYPYV}-src pypy || exit $?
         cd pypy
         case `uname` in
             OpenBSD) patch < ${PATCH_DIR}/pypy_openbsd.diff || exit $?;;
@@ -188,7 +188,7 @@ build_pypy() {
     fi
 
     if ! [ -f ${wrkdir}/pypy/pypy/goal/pypy-c ]; then
-        cd ${wrkdir}/pypy/pypy/goal/
+        cd ${wrkdir}/pypy/pypy/goal/ || exit $?
         usession=`mktemp -d`
 
         env CC=${OUR_CC} PYPY_USESSION_DIR=$usession $PYTHON \
