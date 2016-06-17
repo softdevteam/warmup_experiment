@@ -165,22 +165,30 @@ build_luajit() {
     CFLAGS=-DLUAJIT_ENABLE_LUA52COMPAT ${GMAKE} CC=${OUR_CC} || exit $?
 }
 
-PYPYV=4.0.1
+PYPYV=5.3.0
 build_pypy() {
     cd ${wrkdir} || exit $?
     echo "\n===> Download and build PyPy\n"
 
-    if ! [ -f "${wrkdir}/pypy-${PYPYV}-src.tar.bz2" ]; then
-        wget https://bitbucket.org/pypy/pypy/downloads/pypy-${PYPYV}-src.tar.bz2 || exit $?
+    if ! [ -f "${wrkdir}/pypy2-v${PYPYV}-src.tar.bz2" ]; then
+        url="https://bitbucket.org/pypy/pypy/downloads/pypy2-v${PYPYV}-src.tar.bz2"
+        case `uname` in
+            OpenBSD) ftp $url || exit $?;;
+            *) wget $url || exit $?;;
+        esac
     fi
 
     if ! [ -d "${wrkdir}/pypy" ]; then
-        bunzip2 -c - pypy-${PYPYV}-src.tar.bz2 | tar xf -
-        mv pypy-${PYPYV}-src pypy
+        bunzip2 -c - pypy2-v${PYPYV}-src.tar.bz2 | tar xf - || exit $?
+        mv pypy2-v${PYPYV}-src pypy || exit $?
+        cd pypy
+        case `uname` in
+            OpenBSD) patch < ${PATCH_DIR}/pypy_openbsd.diff || exit $?;;
+        esac
     fi
 
     if ! [ -f ${wrkdir}/pypy/pypy/goal/pypy-c ]; then
-        cd pypy/pypy/goal/
+        cd ${wrkdir}/pypy/pypy/goal/ || exit $?
         usession=`mktemp -d`
 
         env CC=${OUR_CC} PYPY_USESSION_DIR=$usession $PYTHON \
@@ -190,7 +198,7 @@ build_pypy() {
     fi
 }
 
-V8_V=4.9.385.21
+V8_V=5.1.281.65
 DEPOT_REPO="https://chromium.googlesource.com/chromium/tools/depot_tools.git"
 build_v8() {
     cd ${wrkdir} || exit $?
@@ -215,7 +223,6 @@ build_v8() {
     git checkout ${V8_V}
     gclient sync
     patch -Ep1 < ${PATCH_DIR}/v8_various.diff || exit $?
-    patch -Ep1 < ${PATCH_DIR}/v8_openbsd.diff || exit $?
 
     # The build fails for silly reasons near the very end, even though the main
     # v8 binary has been built. So we simply check that the binary exists and
@@ -393,7 +400,7 @@ build_jruby_truffle() {
 }
 
 
-HHVM_VERSION=HHVM-3.12.0
+HHVM_VERSION=HHVM-3.14.0
 build_hhvm() {
     echo "\n===> Download and build HHVM\n"
     if [ -f ${wrkdir}/hhvm/hphp/hhvm/php ]; then return; fi
