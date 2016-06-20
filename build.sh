@@ -62,11 +62,10 @@ echo "===> Working in $wrkdir"
 PATCH_DIR=`pwd`/patches/
 
 # XXX when we stabilise, fix the krun revision.
-KRUN_REPO=https://github.com/softdevteam/krun.git
 fetch_krun() {
     echo "\n===> Download and build krun\n"
     if ! [ -d "${HERE}/krun" ]; then
-        cd ${HERE} && git clone ${KRUN_REPO} || exit $?
+        cd ${HERE} && git clone https://github.com/softdevteam/krun.git || exit $?
     fi
 }
 
@@ -199,14 +198,13 @@ build_pypy() {
 }
 
 V8_V=5.1.281.65
-DEPOT_REPO="https://chromium.googlesource.com/chromium/tools/depot_tools.git"
 build_v8() {
     cd ${wrkdir} || exit $?
     echo "\n===> Download and build V8\n"
 
     if [ -f ${wrkdir}/v8/out/native/d8 ]; then return; fi
 
-    git clone ${DEPOT_REPO} || exit $?
+    git clone "https://chromium.googlesource.com/chromium/tools/depot_tools.git" || exit $?
     cd depot_tools || exit $?
 
     # The build actually requires that you clone using this git wrapper tool
@@ -255,23 +253,25 @@ build_gmake() {
     cp make gmake
 }
 
-JDK_DIR=openjdk-8u72b15-bsd-port-20160220
+# We use the JDK we just built for all consequent Java compilation (and as a
+# basis for the Graal compiler).
 case `uname` in
-    Linux)
-      JDK_JAVAC=${wrkdir}/openjdk/build/linux-x86_64-normal-server-release/jdk/bin/javac;;
-    OpenBSD)
-      JDK_JAVAC=${wrkdir}/openjdk/build/bsd-x86_64-normal-server-release/jdk/bin/javac;;
+    Linux)   OUR_JAVA_HOME=${wrkdir}/openjdk/build/linux-x86_64-normal-server-release/images/j2sdk-image/;;
+    OpenBSD) OUR_JAVA_HOME=${wrkdir}/openjdk/build/bsd-x86_64-normal-server-release/images/j2sdk-image/;;
     *) unknown_platform;;
 esac
+JDK_TARBALL_BASE=openjdk-8u72b15-bsd-port-20160220
 build_jdk() {
     echo "\n===> Download and build JDK8\n"
-    if [ -f ${JDK_JAVAC} ]; then return; fi
+    if [ -f ${OUR_JAVA_HOME}/bin/javac ]; then return; fi
     cd ${wrkdir} || exit $?
-    if ! [ -f "${wrkdir}/${JDK_DIR}" ]; then
-        wget http://www.intricatesoftware.com/distfiles/${JDK_DIR}.tar.xz || exit $?
+    if ! [ -f "${wrkdir}/${JDK_TARBALL_BASE}.tar.xz" ]; then
+        wget http://www.intricatesoftware.com/distfiles/${JDK_TARBALL_BASE}.tar.xz || exit $?
     fi
-    xzdec ${JDK_DIR}.tar.xz | tar xf - || exit $?
-    mv ${JDK_DIR} openjdk
+    if ! [ -d ${wkrdir}/openjdk ]; then
+        xzdec ${JDK_TARBALL_BASE}.tar.xz | tar xf - || exit $?
+        mv ${JDK_TARBALL_BASE} openjdk
+    fi
     cd openjdk || exit $?
     JDK_BUILD_PATH=`dirname ${OUR_CC}`:${PATH}
     case `uname` in
@@ -321,37 +321,27 @@ build_jdk() {
     chmod -R 755 ${wrkdir}/openjdk/build || exit $?
 }
 
-MX_REPO=https://bitbucket.org/allr/mx
-MX_VERSION=072da2b
-GRAAL_REPO=http://hg.openjdk.java.net/graal/graal-compiler
-GRAAL_VERSION=graal-0.13
-# Building with the JDK we built earlier is troublesome (SSL+maven issues).
-# Instead we use the system JDK8.
-case `uname` in
-    Linux)   SYSTEM_JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-amd64;;
-    OpenBSD) SYSTEM_JAVA_HOME=/usr/local/jdk-1.8.0;;
-    *) unknown_platform;;
-esac
-MX="env DEFAULT_VM=jvmci JAVA_HOME=${SYSTEM_JAVA_HOME} python2.7 ${wrkdir}/mx/mx.py"
+# The latest Graal and MX at the time of writing.
+# MX doesn't have releases.
+MX_VERSION=9405be47481c8ce1ef14e2c04e9f8182c4a49cf1
+GRAAL_VERSION=graal-vm-0.12
+MX="env JAVA_HOME=${OUR_JAVA_HOME} python2.7 ${wrkdir}/mx/mx.py"
 build_graal() {
     echo "\n===> Download and build graal\n"
 
     if [ ! -d ${wrkdir}/mx ]; then
-        cd ${wrkdir} && hg clone -r ${MX_VERSION} ${MX_REPO} || exit $?
+        cd ${wrkdir} && git clone https://github.com/graalvm/mx || exit $?
+        cd mx && git checkout ${MX_VERSION} && cd .. || exit $?
     fi
 
-    if [ -f ${wrkdir}/jvmci/jdk1.8*-internal/product/bin/javac ]; then return; fi
+    if [ -f ${wrkdir}/jvmci/jdk1.8*/product/bin/javac ]; then return; fi
 
     cd ${wrkdir}
     if ! [ -d ${wrkdir}/graal ]; then
         # Officially you are supposed to use mx to get the latest graal, but since
         # we need a fixed version, we deviate.
-        # i.e. We do NOT do this:
-        #${MX} sclone http://hg.openjdk.java.net/graal/graal-compiler graal || exit $?
-
-        # But instead, clone a fixed revision of graal
-        hg clone -r ${GRAAL_VERSION} ${GRAAL_REPO} graal || exit $?
-        cd graal || exit $?
+        git clone https://github.com/graalvm/graal-core graal || exit $?
+        cd graal && git checkout ${GRAAL_VERSION} || exit $?
 
         if ! [ -d ${wrkdir}/jvmci ]; then
             # Then graal has in mx.graal/suite.py specifies a fixed version
@@ -361,23 +351,13 @@ build_graal() {
         fi
     fi
 
-    # There is a bug in the build system which assumes you have the
-    # the closed-source jrockit JVM component. This forces that
-    # feature off.
-    ${MX} makefile -o ../jvmci/make/jvmci.make
-
     # mx won't listen to CC/CXX
     ln -sf ${OUR_CC} `dirname ${OUR_CC}`/gcc
     ln -sf ${OUR_CXX} `dirname ${OUR_CXX}`/g++
     GRAAL_PATH=`dirname ${OUR_CC}`:${PATH}
 
     # Then we can build as usual.
-    env PATH=${GRAAL_PATH} ${MX} build || exit $?
-
-    # Build both server backends.
-    # We need jvmci for Java and server for JRuby.
-    env PATH=${GRAAL_PATH} ${MX} --vm jvmci --vmbuild product build
-    env PATH=${GRAAL_PATH} ${MX} --vm server --vmbuild product build
+    env PATH=${GRAAL_PATH} ${MX} --vm server build || exit $?
 
     # remove the symlinks
     rm `dirname ${OUR_CC}`/gcc `dirname ${OUR_CC}`/g++ || exit $?
@@ -385,7 +365,9 @@ build_graal() {
 }
 
 
-JRUBY_V=f82ac77137da265d2447d723ce5973a04459a609
+# 9.1.2.0 with build system fixes for the buildkit.
+JRUBY_V=graal-vm-0.12-build-pack-compat
+JRUBY_BUILDKIT_V=graal-vm-0.12
 build_jruby_truffle() {
     echo "\n===> Download and build truffle+jruby\n"
     cd ${wrkdir}
@@ -393,10 +375,16 @@ build_jruby_truffle() {
     if ! [ -d ${wrkdir}/jruby ]; then
         git clone https://github.com/jruby/jruby.git || exit $?
     fi
-    cd ${wrkdir}/jruby || exit $?
-    git checkout ${JRUBY_V} || exit $?
-    patch -Ep1 < ${PATCH_DIR}/jruby_monotonic_clock.diff || exit $?
-    ./mvnw || exit $?
+    if [ ! -d jruby-build-pack ]; then
+        git clone https://github.com/jruby/jruby-build-pack.git || exit $?
+    fi
+    cd ${wrkdir}/jruby-build-pack && git checkout ${JRUBY_BUILDKIT_V} || exit $?
+    cd ${wrkdir}/jruby && git checkout ${JRUBY_V} || exit $?
+    # NOTE: At the time of writing, JRuby will only build Truffle support if
+    # the build is initiated using JDK>=8. The JDK we built earlier thus
+    # suffices.
+    JAVACMD=${OUR_JAVA_HOME}/bin/java ./mvnw \
+        -Dmaven.repo.local=../jruby-build-pack/maven --offline || exit $?
 }
 
 
