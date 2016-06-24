@@ -321,8 +321,9 @@ build_jdk() {
     chmod -R 755 ${wrkdir}/openjdk/build || exit $?
 }
 
-# The latest Graal and MX at the time of writing.
-# MX doesn't have releases.
+# The latest Graal and MX at the time of writing. Note that Graal will be part
+# of JDK9 soon, so the build steps you see here will be out of date soon. Also
+# note that MX doesn't have releases.
 MX_VERSION=9405be47481c8ce1ef14e2c04e9f8182c4a49cf1
 GRAAL_VERSION=graal-vm-0.12
 MX="env JAVA_HOME=${OUR_JAVA_HOME} python2.7 ${wrkdir}/mx/mx.py"
@@ -357,17 +358,18 @@ build_graal() {
     GRAAL_PATH=`dirname ${OUR_CC}`:${PATH}
 
     # Then we can build as usual.
-    env PATH=${GRAAL_PATH} ${MX} --vm server build || exit $?
+    env PATH=${GRAAL_PATH} ${MX} build || exit $?
 
     # remove the symlinks
     rm `dirname ${OUR_CC}`/gcc `dirname ${OUR_CC}`/g++ || exit $?
-
 }
 
 
 # 9.1.2.0 with build system fixes for the buildkit.
 JRUBY_V=graal-vm-0.12-build-pack-compat
-JRUBY_BUILDKIT_V=graal-vm-0.12
+JRUBY_BUILDPACK_V=graal-vm-0.12
+JRUBY_BUILDPACK_DIR=${wrkdir}/jruby-build-pack/maven
+
 build_jruby_truffle() {
     echo "\n===> Download and build truffle+jruby\n"
     cd ${wrkdir}
@@ -378,13 +380,33 @@ build_jruby_truffle() {
     if [ ! -d jruby-build-pack ]; then
         git clone https://github.com/jruby/jruby-build-pack.git || exit $?
     fi
-    cd ${wrkdir}/jruby-build-pack && git checkout ${JRUBY_BUILDKIT_V} || exit $?
+    cd ${wrkdir}/jruby-build-pack && git checkout ${JRUBY_BUILDPACK_V} || exit $?
     cd ${wrkdir}/jruby && git checkout ${JRUBY_V} || exit $?
+
+    # Install our truffle version into into the buildpack.  Apparently this
+    # should not be needed under normal circumstances, as truffle from the
+    # graal build is supposed to be picked up automatically. For some reason
+    # this doesn't work for us, but this explicit workaround does.
+    #
+    # Must be run from the truffle dir!
+    cd ${wrkdir}/truffle || exit $?
+    env JAVACMD=${OUR_JAVA_HOME}/bin/java \
+        MAVEN_OPTS=-Dmaven.repo.local=${JRUBY_BUILDPACK_DIR} \
+        ${MX} maven-install || exit $?
+
     # NOTE: At the time of writing, JRuby will only build Truffle support if
-    # the build is initiated using JDK>=8. The JDK we built earlier thus
-    # suffices.
-    JAVACMD=${OUR_JAVA_HOME}/bin/java ./mvnw \
-        -Dmaven.repo.local=../jruby-build-pack/maven --offline || exit $?
+    # the build is initiated using JDK>=8.
+    #
+    # Note the use of a specific truffle version (the same cloned by mx during
+    # the graal build). This means we force jruby to build against the truffle
+    # version we installed into the buildpack earlier.
+    cd ${wrkdir}/jruby && JAVACMD=${OUR_JAVA_HOME}/bin/java \
+        ./mvnw -Dtruffle.version=`cd ${wrkdir}/truffle && git rev-parse HEAD` \
+        -Dmaven.repo.local=${JRUBY_BUILDPACK_DIR} --offline || exit $?
+
+    # Then to invoke the VM:
+    # JAVACMD=${wrkdir}/jvmci/jdk1.8.0/product/bin/java \
+    #     ./work/jruby/bin/jruby -J-Djvmci.Compiler=graal -X+T ...
 }
 
 
