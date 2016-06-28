@@ -2,8 +2,9 @@ import os
 import sys
 import platform
 from krun.vm_defs import (PythonVMDef, LuaVMDef, JavaVMDef, GraalVMDef,
-		          PHPVMDef, JRubyTruffleVMDef, V8VMDef, NativeCodeVMDef,
-			  find_internal_jvmci_java_bin, PyPyVMDef)
+                          PHPVMDef, JRubyTruffleVMDef, V8VMDef, NativeCodeVMDef,
+                          find_internal_jvmci_java_home,
+                          find_internal_jvmci_java_bin, PyPyVMDef)
 from krun import EntryPoint
 
 # Who to mail
@@ -84,8 +85,9 @@ if not sys.platform.startswith("openbsd"):
     # The following VMs do not run on OpenBSD.
     VMS.update({
         'Graal': {
-            'vm_def': GraalVMDef(find_internal_jvmci_java_bin('work/jvmci/'),
-                                 JDK8_HOME, env=GCC_ENV),
+            'vm_def': GraalVMDef('work/graal', 'work/mx/mx',
+                                 java_home=find_internal_jvmci_java_home('work/jvmci/'),
+                                 env=GCC_ENV),
             'variants': ['default-java'],
             'n_iterations': ITERATIONS_ALL_VMS,
         },
