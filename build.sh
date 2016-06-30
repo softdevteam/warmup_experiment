@@ -407,6 +407,12 @@ build_jruby_truffle() {
     # Then to invoke the VM:
     # JAVACMD=${wrkdir}/jvmci/jdk1.8.0/product/bin/java \
     #     ./work/jruby/bin/jruby -J-Djvmci.Compiler=graal -X+T ...
+    #
+    # However, we found a commit where the meaning of -X+T is changed. This is
+    # currently not in-place in the tag we are using, but if you update JRuby,
+    # please investigate. Krun would also need a change.
+    #
+    # https://github.com/jruby/jruby/commit/47120e11b8c7a7be9beca90ffee988b8a4b1c3a9
 }
 
 
