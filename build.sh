@@ -284,22 +284,22 @@ build_jdk() {
     JDK_BUILD_PATH=`dirname ${OUR_CC}`:${PATH}
     case `uname` in
         Linux)
-	    env CC=zgcc CXX=zg++ PATH=${JDK_BUILD_PATH} bash configure \
-	      --disable-option-checking \
-	      --with-cups-include=/usr/local/include \
-	      --with-jobs=8 \
-		      --with-debug-level=release \
-	      --with-debug-level=release \
-	      --disable-ccache \
-	      --disable-freetype-bundling \
-	      --disable-zip-debug-info \
-	      --disable-debug-symbols \
-	      --enable-static-libjli \
-	      --with-zlib=system \
-	      --with-milestone=fcs \
-	      || exit $?
-		PATH=${JDK_BUILD_PATH} ../make-${GMAKE_V}/make all || exit $?
-	    ;;
+            env CC=zgcc CXX=zg++ PATH=${JDK_BUILD_PATH} bash configure \
+                --disable-option-checking \
+                --with-cups-include=/usr/local/include \
+                --with-jobs=8 \
+                --with-debug-level=release \
+                --with-debug-level=release \
+                --disable-ccache \
+                --disable-freetype-bundling \
+                --disable-zip-debug-info \
+                --disable-debug-symbols \
+                --enable-static-libjli \
+                --with-zlib=system \
+                --with-milestone=fcs \
+                || exit $?
+            PATH=${JDK_BUILD_PATH} ../make-${GMAKE_V}/make all || exit $?
+            ;;
         OpenBSD)
             env CPPFLAGS=-I/usr/local/include \
               LDFLAGS=-L/usr/local/lib \
@@ -307,7 +307,7 @@ build_jdk() {
               --disable-option-checking \
               --with-cups-include=/usr/local/include \
               --with-jobs=8 \
-          	    --with-debug-level=release \
+              --with-debug-level=release \
               --with-debug-level=release \
               --disable-ccache \
               --disable-freetype-bundling \
@@ -317,12 +317,12 @@ build_jdk() {
               --with-zlib=system \
               --with-giflib=system \
               --with-milestone=fcs \
-	      || exit $?
-	    PATH=${JDK_BUILD_PATH} \
-	    COMPILER_WARNINGS_FATAL=false \
-	    DEFAULT_LIBPATH="/usr/lib:/usr/X11R6/lib:/usr/local/lib"\
-	    ../make-${GMAKE_V}/make all || exit $?
-	    ;;
+              || exit $?
+            PATH=${JDK_BUILD_PATH} \
+                COMPILER_WARNINGS_FATAL=false \
+                DEFAULT_LIBPATH="/usr/lib:/usr/X11R6/lib:/usr/local/lib"\
+                ../make-${GMAKE_V}/make all || exit $?
+            ;;
         *)
             unknown_platform;;
     esac
@@ -533,30 +533,30 @@ case `uname` in
     Linux)
     fetch_external_benchmarks
     build_gcc
-	fetch_libkalibera
-	fetch_krun
-	build_cpython
-	build_luajit
-	build_pypy
-	build_v8
-	build_gmake
-	build_jdk
-	build_graal
+    fetch_libkalibera
+    fetch_krun
+    build_cpython
+    build_luajit
+    build_pypy
+    build_v8
+    build_gmake
+    build_jdk
+    build_graal
     fetch_maven
-	build_jruby_truffle
-	build_hhvm
+    build_jruby_truffle
+    build_hhvm
     ;;
-    OpenBSD)
+OpenBSD)
     fetch_external_benchmarks
     build_gcc
-	fetch_libkalibera
-	fetch_krun
-	build_cpython
-	build_luajit
-	build_pypy
-	build_v8
-	build_gmake
-	build_jdk
+    fetch_libkalibera
+    fetch_krun
+    build_cpython
+    build_luajit
+    build_pypy
+    build_v8
+    build_gmake
+    build_jdk
     ;;
     *) unknown_platform;;
 esac
