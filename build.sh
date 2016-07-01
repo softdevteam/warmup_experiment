@@ -120,14 +120,6 @@ build_gcc() {
       || exit $?
     ${GMAKE} || exit $?
     ${GMAKE} install || exit $?
-
-    # Put GCC libs into linker path
-    # Needed for (e.g.) V8 to find libstdc++
-    case `uname` in
-        Linux) export LD_LIBRARY_PATH=${wrkdir}/gcc-inst/lib64;;
-        OpenBSD) export LD_LIBRARY_PATH=${wrkdir}/gcc-inst/lib;;
-        *) unknown_platform;;
-    esac
 }
 
 CPYTHONV=2.7.11
@@ -372,32 +364,6 @@ build_graal() {
     rm `dirname ${OUR_CC}`/gcc `dirname ${OUR_CC}`/g++ || exit $?
 }
 
-# We had problems with offline mode in maven2, which at the time of writing is
-# the version in Debian stable packages. We download a newer version from the
-# 3.x branch.
-MAVEN_V=3.3.9
-MAVEN_TARBALL=apache-maven-${MAVEN_V}-bin.tar.gz
-MAVEN_TARBALL_URL=https://archive.apache.org/dist/maven/maven-3/${MAVEN_V}/binaries/${MAVEN_TARBALL}
-fetch_maven() {
-    echo "\n===> Fetch Maven\n"
-    cd ${wrkdir}
-
-    if ! [ -f ${wrkdir}/${MAVEN_TARBALL} ]; then
-       wget ${MAVEN_TARBALL_URL} || exit $?
-    fi
-
-    if ! [ -d ${wrkdir}/maven ]; then
-        tar zxvf ${MAVEN_TARBALL} && mv apache-maven-${MAVEN_V} maven || exit $?
-    fi
-
-    # Put maven into the PATH
-    export PATH=${wrkdir}/maven/bin:${PATH}
-    if [ "`which mvn`" != "${wrkdir}/maven/bin/mvn" ]; then
-        echo "The mvn we installed is not in the path correctly"
-        exit 1
-    fi
-}
-
 
 # 9.1.2.0 with build system fixes for the buildkit.
 JRUBY_V=graal-vm-0.12-build-pack-compat
@@ -406,14 +372,6 @@ JRUBY_BUILDPACK_DIR=${wrkdir}/jruby-build-pack/maven
 
 build_jruby_truffle() {
     echo "\n===> Download and build truffle+jruby\n"
-
-    # maven caches dependencies, we dont ever want to pick those up, only
-    # what's in the jruby build pack.
-    if [ -e "~/.m2"  ] || [ -e "~/.maven-gems" ]; then
-        echo "Please remove your maven configurations: ~/.m2 ~/.maven-gems";
-        exit $?
-    fi
-
     cd ${wrkdir}
     if [ -f ${wrkdir}/jruby/bin/jruby ]; then return; fi
     if ! [ -d ${wrkdir}/jruby ]; then
@@ -443,7 +401,7 @@ build_jruby_truffle() {
     # the graal build). This means we force jruby to build against the truffle
     # version we installed into the buildpack earlier.
     cd ${wrkdir}/jruby && JAVACMD=${OUR_JAVA_HOME}/bin/java \
-        mvn -Dtruffle.version=`cd ${wrkdir}/truffle && git rev-parse HEAD` \
+        ./mvnw -Dtruffle.version=`cd ${wrkdir}/truffle && git rev-parse HEAD` \
         -Dmaven.repo.local=${JRUBY_BUILDPACK_DIR} --offline || exit $?
 
     # Then to invoke the VM:
@@ -529,10 +487,20 @@ fetch_libkalibera() {
 }
 
 
+fetch_external_benchmarks
+build_gcc
+
+# Put GCC libs into linker path
+# Needed for (e.g.) V8 to find libstdc++
+case `uname` in
+    Linux) export LD_LIBRARY_PATH=${wrkdir}/gcc-inst/lib64;;
+    OpenBSD) export LD_LIBRARY_PATH=${wrkdir}/gcc-inst/lib;;
+    *) unknown_platform;;
+esac
+
+
 case `uname` in
     Linux)
-    fetch_external_benchmarks
-    build_gcc
 	fetch_libkalibera
 	fetch_krun
 	build_cpython
@@ -542,13 +510,10 @@ case `uname` in
 	build_gmake
 	build_jdk
 	build_graal
-    fetch_maven
 	build_jruby_truffle
 	build_hhvm
     ;;
     OpenBSD)
-    fetch_external_benchmarks
-    build_gcc
 	fetch_libkalibera
 	fetch_krun
 	build_cpython
