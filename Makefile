@@ -16,7 +16,7 @@ endif
 
 CC=${PWD}/work/gcc-inst/bin/zgcc
 
-all: build-vms build-benchmarks build-krun build-startup
+all: build-vms build-benchmarks build-krun
 	@echo ""
 	@echo "============================================================"
 	@echo "Now run 'make bench-no-reboots' or 'make bench-with-reboots'"
