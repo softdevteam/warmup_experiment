@@ -97,7 +97,6 @@ def make_random_fasta(table, n)
     EOF
 end
 
-# work around ruby scoping using lambda
 def run_iter(n)
     $last = INITIAL_STATE
     puts "def run_iter(n)"

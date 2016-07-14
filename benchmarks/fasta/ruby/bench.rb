@@ -93,9 +93,8 @@ def make_random_fasta(table, n)
 end
 
 
-# work around ruby scoping using lambda
 def run_iter(n)
-    for i in 0..n-1  # inclusive upper bound
+    for i in 0..n-1
         make_repeat_fasta(@alu, @SCALE*2)
         make_random_fasta(@iub, @SCALE*3)
         make_random_fasta(@homosapiens, @SCALE*5)
