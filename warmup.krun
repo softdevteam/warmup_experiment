@@ -2,8 +2,8 @@ import os
 import sys
 import platform
 from krun.vm_defs import (PythonVMDef, LuaVMDef, JavaVMDef, GraalVMDef,
-                          PHPVMDef, JRubyTruffleVMDef, V8VMDef, NativeCodeVMDef,
-                          find_internal_jvmci_java_home,
+                          PHPVMDef, JRubyTruffleVMDef, V8VMDef,
+                          NativeCodeVMDef, find_internal_jvmci_java_home,
                           find_internal_jvmci_java_bin, PyPyVMDef)
 from krun import EntryPoint
 
@@ -46,48 +46,49 @@ VARIANTS = {
 ITERATIONS_ALL_VMS = 2000
 
 VMS = {
-        'C': {
-		'vm_def': NativeCodeVMDef(env=GCC_ENV),
-		'variants': ['default-c'],
-		'n_iterations': ITERATIONS_ALL_VMS,
-
-        },
-	'PyPy': {
-		'vm_def': PyPyVMDef('work/pypy/pypy/goal/pypy-c',
-                      env=GCC_ENV),
-		'variants': ['default-python'],
-		'n_iterations': ITERATIONS_ALL_VMS,
-	},
-	'Hotspot': {
-		'vm_def': JavaVMDef(JDK8_BIN, env=GCC_ENV),
-		'variants': ['default-java'],
-		'n_iterations': ITERATIONS_ALL_VMS,
-	},
-	'LuaJIT': {
-		'vm_def': LuaVMDef('work/luajit/src/luajit', env=GCC_ENV),
-		'variants': ['default-lua'],
-		'n_iterations': ITERATIONS_ALL_VMS,
-	},
-	'V8': {
-		'vm_def': V8VMDef('work/v8/out/native/d8', env=GCC_ENV),
-		'variants': ['default-javascript'],
-		'n_iterations': ITERATIONS_ALL_VMS,
-	},
-	'CPython': {
-		'vm_def': PythonVMDef('work/cpython-inst/bin/python',
-                        env=GCC_ENV),
-		'variants': ['default-python'],
-		'n_iterations': ITERATIONS_ALL_VMS,
-	}
+    'C': {
+        'vm_def': NativeCodeVMDef(env=GCC_ENV),
+        'variants': ['default-c'],
+        'n_iterations': ITERATIONS_ALL_VMS,
+    },
+    'PyPy': {
+        'vm_def': PyPyVMDef('work/pypy/pypy/goal/pypy-c',
+                            env=GCC_ENV),
+        'variants': ['default-python'],
+        'n_iterations': ITERATIONS_ALL_VMS,
+    },
+    'Hotspot': {
+        'vm_def': JavaVMDef(JDK8_BIN, env=GCC_ENV),
+        'variants': ['default-java'],
+        'n_iterations': ITERATIONS_ALL_VMS,
+    },
+    'LuaJIT': {
+        'vm_def': LuaVMDef('work/luajit/src/luajit', env=GCC_ENV),
+        'variants': ['default-lua'],
+        'n_iterations': ITERATIONS_ALL_VMS,
+    },
+    'V8': {
+        'vm_def': V8VMDef('work/v8/out/native/d8', env=GCC_ENV),
+        'variants': ['default-javascript'],
+        'n_iterations': ITERATIONS_ALL_VMS,
+    },
+    'CPython': {
+        'vm_def': PythonVMDef('work/cpython-inst/bin/python',
+                              env=GCC_ENV),
+        'variants': ['default-python'],
+        'n_iterations': ITERATIONS_ALL_VMS,
+    }
 }
 
 if not sys.platform.startswith("openbsd"):
+    JVMCI_JAVA_HOME = find_internal_jvmci_java_home('work/jvmci/')
+    JVMCI_JAVA_BIN = find_internal_jvmci_java_bin('work/jvmci/'),
+
     # The following VMs do not run on OpenBSD.
     VMS.update({
         'Graal': {
             'vm_def': GraalVMDef('work/graal', 'work/mx/mx',
-                                 java_home=find_internal_jvmci_java_home('work/jvmci/'),
-                                 env=GCC_ENV),
+                                 java_home=JVMCI_JAVA_HOME, env=GCC_ENV),
             'variants': ['default-java'],
             'n_iterations': ITERATIONS_ALL_VMS,
         },
@@ -96,10 +97,9 @@ if not sys.platform.startswith("openbsd"):
             'variants': ['default-php'],
             'n_iterations': ITERATIONS_ALL_VMS,
         },
-        'JRubyTruffle' : {
+        'JRubyTruffle': {
             'vm_def': JRubyTruffleVMDef('work/jruby/bin/jruby',
-                                        java_path=find_internal_jvmci_java_bin('work/jvmci/'),
-                                        env=GCC_ENV),
+                                        java_path=JVMCI_JAVA_BIN, env=GCC_ENV),
             'variants': ['default-ruby'],
             'n_iterations': ITERATIONS_ALL_VMS,
         },
@@ -116,7 +116,7 @@ BENCHMARKS = {
 }
 
 # list of "bench:vm:variant"
-SKIP=[
+SKIP = [
     # Uncomment to skip whole VMs
     #
     #"*:PyPy:*",
@@ -129,14 +129,8 @@ SKIP=[
     #"*:V8:*",
     #"*:C:*",
 
-    # XXX: Really slow
-    "richards:HHVM:default-php",
-
     # XXX: This benchmark is slow *and* crashes
     "fasta:JRubyTruffle:default-ruby",
-
-    # XXX: And skip all CPython runs for now.
-    "*:CPython:*",
 ]
 
 N_EXECUTIONS = 10  # Number of fresh processes.
