@@ -132,9 +132,6 @@ SKIP=[
     # XXX: Really slow
     "richards:HHVM:default-php",
 
-    # XXX: This crashes, after about 250 iterations.
-    "spectralnorm:JRubyTruffle:default-ruby",
-
     # XXX: This benchmark is slow *and* crashes
     "fasta:JRubyTruffle:default-ruby",
 
