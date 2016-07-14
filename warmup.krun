@@ -129,14 +129,8 @@ SKIP=[
     #"*:V8:*",
     #"*:C:*",
 
-    # XXX: Really slow
-    "richards:HHVM:default-php",
-
     # XXX: This benchmark is slow *and* crashes
     "fasta:JRubyTruffle:default-ruby",
-
-    # XXX: And skip all CPython runs for now.
-    "*:CPython:*",
 ]
 
 N_EXECUTIONS = 10  # Number of fresh processes.
