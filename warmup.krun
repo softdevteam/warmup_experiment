@@ -82,7 +82,7 @@ VMS = {
 
 if not sys.platform.startswith("openbsd"):
     JVMCI_JAVA_HOME = find_internal_jvmci_java_home('work/jvmci/')
-    JVMCI_JAVA_BIN = find_internal_jvmci_java_bin('work/jvmci/'),
+    JVMCI_JAVA_BIN = find_internal_jvmci_java_bin('work/jvmci/')
 
     # The following VMs do not run on OpenBSD.
     VMS.update({
