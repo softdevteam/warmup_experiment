@@ -19,13 +19,13 @@ startup_runner.class: startup_runner.java
 
 
 outer_startup_runner_c: outer_startup_runner.c
-	${CC} ${C_ITER_RUNNER_CFLAGS} ${CFLAGS} -L${PWD}/../krun/libkruntime \
+	${CC} ${C_ITER_RUNNER_CFLAGS} ${CFLAGS} -L${PWD}/../krun/libkrun \
 		${CPPFLAGS} outer_startup_runner.c \
 		-o outer_startup_runner_c -lkruntime ${C_ITER_RUNNER_LDFLAGS} \
 		${LDFLAGS}
 
 startup_runner_c: startup_runner.c
-	${CC} ${C_ITER_RUNNER_CFLAGS} ${CFLAGS} -L${PWD}/../krun/libkruntime \
+	${CC} ${C_ITER_RUNNER_CFLAGS} ${CFLAGS} -L${PWD}/../krun/libkrun \
 		${CPPFLAGS} startup_runner.c \
 		-o startup_runner_c -lkruntime ${C_ITER_RUNNER_LDFLAGS} \
 		${LDFLAGS}
