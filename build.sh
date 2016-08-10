@@ -469,7 +469,7 @@ build_hhvm() {
     cd hhvm || exit $?
     git checkout ${HHVM_VERSION} || exit $?
     git submodule update --init --recursive || exit $?
-    patch -Ep1 < ${PATCH_DIR}/hhvm_clock_gettime_monotonic.diff || exit $?
+    patch -Ep1 < ${PATCH_DIR}/hhvm_exts.diff || exit $?
     patch -Ep1 < ${PATCH_DIR}/hhvm_cmake.diff || exit $?
 
     # Some parts of the build (e.g. OCaml)  won't listen to CC/CXX
