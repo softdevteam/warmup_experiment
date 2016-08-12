@@ -442,7 +442,9 @@ build_jruby_truffle() {
     # Note the use of a specific truffle version (the same cloned by mx during
     # the graal build). This means we force jruby to build against the truffle
     # version we installed into the buildpack earlier.
-    cd ${wrkdir}/jruby && JAVACMD=${OUR_JAVA_HOME}/bin/java \
+    cd ${wrkdir}/jruby || exit $?
+    patch -Ep1 < ${PATCH_DIR}/jruby_tsr.diff || exit $?
+    JAVACMD=${OUR_JAVA_HOME}/bin/java \
         mvn -Dtruffle.version=`cd ${wrkdir}/truffle && git rev-parse HEAD` \
         -Dmaven.repo.local=${JRUBY_BUILDPACK_DIR} --offline || exit $?
 
@@ -469,7 +471,7 @@ build_hhvm() {
     cd hhvm || exit $?
     git checkout ${HHVM_VERSION} || exit $?
     git submodule update --init --recursive || exit $?
-    patch -Ep1 < ${PATCH_DIR}/hhvm_clock_gettime_monotonic.diff || exit $?
+    patch -Ep1 < ${PATCH_DIR}/hhvm_exts.diff || exit $?
     patch -Ep1 < ${PATCH_DIR}/hhvm_cmake.diff || exit $?
 
     # Some parts of the build (e.g. OCaml)  won't listen to CC/CXX
