@@ -54,6 +54,12 @@ bench-no-reboots: build-krun build-benchmarks
 bench-with-reboots: build-krun build-benchmarks
 	${PYTHON} krun/krun.py --reboot warmup.krun
 
+bench-startup-no-reboots: build-startup build-benchmarks
+	${PYTHON} krun/krun.py startup.krun
+
+bench-startup-with-reboots: build-startup build-benchmarks
+	${PYTHON} krun/krun.py --reboot startup.krun
+
 export-graphs:
 	${PYTHON} export_all_graphs.py
 
