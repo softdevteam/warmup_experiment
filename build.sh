@@ -189,6 +189,7 @@ build_pypy() {
         bunzip2 -c - pypy2-v${PYPYV}-src.tar.bz2 | tar xf - || exit $?
         mv pypy2-v${PYPYV}-src pypy || exit $?
         cd pypy
+        patch -p0 < ${PATCH_DIR}/pypy_fix_nesting.diff || exit $?
         case `uname` in
             OpenBSD) patch < ${PATCH_DIR}/pypy_openbsd.diff || exit $?;;
         esac
