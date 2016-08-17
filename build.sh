@@ -480,7 +480,11 @@ build_hhvm() {
     ln -sf ${OUR_CXX} `dirname ${OUR_CXX}`/g++ || exit $?
     HHVM_PATH=`dirname ${OUR_CC}`:${PATH}
 
-    env PATH=${HHVM_PATH} CC=${OUR_CC} CXX=${OUR_CXX} sh -c "cmake -DMYSQL_UNIX_SOCK_ADDR=/dev/null -DBOOST_LIBRARYDIR=/usr/lib/x86_64-linux-gnu/ . && ${GMAKE}" || exit $?
+    env LIBKRUN_DIR=${HERE}/krun/libkrun PATH=${HHVM_PATH} CC=${OUR_CC} \
+        CXX=${OUR_CXX} sh -c \
+        "cmake -DMYSQL_UNIX_SOCK_ADDR=/dev/null -DBOOST_LIBRARYDIR=/usr/lib/x86_64-linux-gnu/ -DCMAKE_CXX_FLAGS=-I${HERE}/krun/libkrun . " \
+        || exit $?
+    ${GMAKE} VERBOSE=1 || exit $?
 
     # remove the symlinks
     rm `dirname ${OUR_CC}`/gcc `dirname ${OUR_CC}`/g++ || exit $?
