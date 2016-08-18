@@ -241,7 +241,7 @@ build_v8() {
     #
     # V8 also mistakes our compiler for clang for some reason, hence
     # setting GYP_DEFINES.
-    env GYP_DEFINES="clang=0" CC=${OUR_CC} CXX=${OUR_CXX} ${GMAKE} native
+    env GYP_DEFINES="clang=0" CC=${OUR_CC} CXX=${OUR_CXX} ${GMAKE} native V=1
     test -f out/native/d8 || exit $?
     PATH=${OLDPATH}
 }
