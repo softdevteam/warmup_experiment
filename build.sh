@@ -62,11 +62,23 @@ echo "===> Working in $wrkdir"
 PATCH_DIR=`pwd`/patches/
 
 # XXX when we stabilise, fix the krun revision.
-fetch_krun() {
+build_initial_krun() {
     echo "\n===> Download and build krun\n"
     if ! [ -d "${HERE}/krun" ]; then
         cd ${HERE} && git clone https://github.com/softdevteam/krun.git || exit $?
     fi
+
+    # We do a quick build now so that VMs which link libkruntime can find it.
+    # Not that we will build again later once we have the JVM built, so that
+    # libkruntime can itself be built with Java support.
+    #
+    # Due to the above, We don't care what compiler we use at this stage.
+    cd ${HERE}/krun && ${GMAKE} || exit $?
+}
+
+clean_krun() {
+    # See build_initial_krun() comment for why this exists
+    cd ${HERE}/krun && ${GMAKE} clean || exit $?
 }
 
 # We build our own fixed version of GCC, thus ruling out differences in
@@ -120,7 +132,9 @@ build_gcc() {
       || exit $?
     ${GMAKE} || exit $?
     ${GMAKE} install || exit $?
+}
 
+apply_gcc_lib_path() {
     # Put GCC libs into linker path
     # Needed for (e.g.) V8 to find libstdc++
     case `uname` in
@@ -241,7 +255,8 @@ build_v8() {
     #
     # V8 also mistakes our compiler for clang for some reason, hence
     # setting GYP_DEFINES.
-    env GYP_DEFINES="clang=0" CC=${OUR_CC} CXX=${OUR_CXX} ${GMAKE} native V=1
+    env GYP_DEFINES="clang=0" CC=${OUR_CC} CXX=${OUR_CXX} \
+        LIBKRUN_DIR=${HERE}/krun/libkrun ${GMAKE} native V=1
     test -f out/native/d8 || exit $?
     PATH=${OLDPATH}
 }
@@ -444,7 +459,7 @@ build_jruby_truffle() {
     # the graal build). This means we force jruby to build against the truffle
     # version we installed into the buildpack earlier.
     cd ${wrkdir}/jruby || exit $?
-    patch -Ep1 < ${PATCH_DIR}/jruby_tsr.diff || exit $?
+    patch -Ep1 < ${PATCH_DIR}/jruby.diff || exit $?
     JAVACMD=${OUR_JAVA_HOME}/bin/java \
         mvn -Dtruffle.version=`cd ${wrkdir}/truffle && git rev-parse HEAD` \
         -Dmaven.repo.local=${JRUBY_BUILDPACK_DIR} --offline || exit $?
@@ -472,8 +487,7 @@ build_hhvm() {
     cd hhvm || exit $?
     git checkout ${HHVM_VERSION} || exit $?
     git submodule update --init --recursive || exit $?
-    patch -Ep1 < ${PATCH_DIR}/hhvm_exts.diff || exit $?
-    patch -Ep1 < ${PATCH_DIR}/hhvm_cmake.diff || exit $?
+    patch -Ep1 < ${PATCH_DIR}/hhvm.diff || exit $?
 
     # Some parts of the build (e.g. OCaml)  won't listen to CC/CXX
     ln -sf ${OUR_CC} `dirname ${OUR_CC}`/gcc || exit $?
@@ -538,10 +552,11 @@ fetch_libkalibera() {
 
 case `uname` in
     Linux)
+    build_initial_krun
     fetch_external_benchmarks
     build_gcc
+    apply_gcc_lib_path
     fetch_libkalibera
-    fetch_krun
     build_cpython
     build_luajit
     build_pypy
@@ -552,18 +567,21 @@ case `uname` in
     fetch_maven
     build_jruby_truffle
     build_hhvm
+    clean_krun
     ;;
 OpenBSD)
+    build_initial_krun
     fetch_external_benchmarks
     build_gcc
+    apply_gcc_lib_path
     fetch_libkalibera
-    fetch_krun
     build_cpython
     build_luajit
     build_pypy
     build_v8
     build_gmake
     build_jdk
+    clean_krun
     ;;
     *) unknown_platform;;
 esac
