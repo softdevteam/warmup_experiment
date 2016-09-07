@@ -85,7 +85,7 @@ def plot_results(outliers_per_thresh, filename):
         window = WINDOWS[index]
         axis = axes[row, col]
         axis.ticklabel_format(useOffset=False)
-        x_bounds = (0, len(outliers_per_thresh[window].keys()))
+        x_bounds = (0, len(outliers_per_thresh[window].keys()) - 1)
         axis.set_xlim(x_bounds)
         axis.set_ylim(y_bounds)
         # Keep hold of handles / labels for legend.
@@ -144,8 +144,8 @@ def draw_subplot(axis, data, x_range, y_range, window_size):
     axis.set_ylabel('Number of outliers', fontsize=AXIS_FONTSIZE)
     axis.set_ylim(y_range)
     # Format ticks.
-    axis.xaxis.set_major_locator(MaxNLocator(integer=True, steps=xrange(11)))
-    axis.xaxis.set_major_formatter(FuncFormatter(lambda x, pos: str(int(x + 1))))
+    axis.xaxis.set_major_locator(MaxNLocator(integer=True, steps=xrange(10)))
+    axis.xaxis.set_major_formatter(FuncFormatter(lambda x, pos: str(int(x + 2))))
     axis.yaxis.set_major_formatter(FormatStrFormatter(YTICK_FORMAT))
     # Return artists needed for legend.
     handles, labels = axis.get_legend_handles_labels()
