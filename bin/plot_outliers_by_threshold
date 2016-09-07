@@ -12,10 +12,13 @@ from matplotlib.ticker import FormatStrFormatter, FuncFormatter, MaxNLocator
 import os
 import os.path
 import seaborn
+import sys
 
-from calculate_outliers_by_threshold import WINDOWS
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "warmup"))
+from warmup.plotting import add_margin_to_axes, compute_grid_offsets, style_axis
 
 PDF_FILENAME = 'outliers_per_threshold.pdf'
+WINDOWS = [25, 50, 100, 200, 300, 400]
 
 SUBPLOT_PARAMS = {
     'hspace': 0.55,
@@ -42,9 +45,6 @@ GRID_MAJOR_Y_DIVS = 6
 YTICK_FORMAT = '%d'
 YLIM_ADJUST = 250
 
-SPINE_LINESTYLE = "solid"
-SPINE_LINEWIDTH = 1
-
 LINE_COLOUR = 'k'
 LINE_WIDTH = 1
 FILL_ALPHA = 0.2
@@ -52,9 +52,9 @@ FILL_ALPHA = 0.2
 MAX_SUBPLOTS_PER_ROW = 2
 MARKERSIZE=4
 
-seaborn.set_palette("colorblind")
-seaborn.set_style('whitegrid', {"lines.linewidth": 1.0, "axes.linewidth": 1.0})
-seaborn.set_context("paper")
+seaborn.set_palette('colorblind')
+seaborn.set_style('whitegrid', {'lines.linewidth': 1.0, 'axes.linewidth': 1.0})
+seaborn.set_context('paper')
 
 plt.figure(tight_layout=True)
 
@@ -69,7 +69,6 @@ def plot_results(outliers_per_thresh, filename):
     index, row, col = 0, 0, 0
     pdf = PdfPages(filename)
     # Calculate ymin / ymax
-    print outliers_per_thresh.keys()
     ymin = outliers_per_thresh[WINDOWS[0]][1]['all_outliers']
     ymax = ymin
     for window in outliers_per_thresh:
@@ -139,7 +138,7 @@ def draw_subplot(axis, data, x_range, y_range, window_size):
         y_range[0], y_range[1], GRID_MAJOR_Y_DIVS)
     minor_yticks = compute_grid_offsets(
         y_range[0], y_range[1], GRID_MINOR_Y_DIVS)
-    style_axis(axis, major_xticks, minor_xticks, major_yticks, minor_yticks)
+    style_axis(axis, major_xticks, minor_xticks, major_yticks, minor_yticks, TICK_FONTSIZE)
     # Set title, axis labels and legend.
     axis.set_xlabel('Threshold for window size %d' % window_size, fontsize=AXIS_FONTSIZE)
     axis.set_ylabel('Number of outliers', fontsize=AXIS_FONTSIZE)
@@ -151,53 +150,6 @@ def draw_subplot(axis, data, x_range, y_range, window_size):
     # Return artists needed for legend.
     handles, labels = axis.get_legend_handles_labels()
     return handles, labels
-
-
-def add_margin_to_axes(axis, x=0.01, y=0.01):
-    """Seaborn-friendly way to add margins to axes (default 1% margin).
-    """
-
-    if x > .0:
-        xlim = axis.get_xlim()
-        xmargin = (xlim[1] - xlim[0]) * x
-        axis.set_xlim(xlim[0] - xmargin, xlim[1] + xmargin)
-    if y > .0:
-        ylim = axis.get_ylim()
-        ymargin = (ylim[1] - ylim[0]) * y
-        axis.set_ylim(ylim[0] - ymargin, ylim[1] + ymargin)
-
-
-def compute_grid_offsets(d_min, d_max, num):
-    rng = float(d_max) - d_min
-    freq =  rng / num
-    return [d_min + i * freq for i in xrange(num + 1)]
-
-
-def style_axis(ax, major_xticks, minor_xticks, major_yticks, minor_yticks):
-    ax.set_xticks(major_xticks)
-    ax.set_xticks(minor_xticks, minor=True)
-    ax.set_yticks(major_yticks)
-    ax.set_yticks(minor_yticks, minor=True)
-
-    x_ax = ax.get_xaxis()
-    y_ax = ax.get_yaxis()
-
-    x_ax.set_ticks_position('none')
-    y_ax.set_ticks_position('none')
-    x_ax.set_tick_params(labelsize=TICK_FONTSIZE)
-    y_ax.set_tick_params(labelsize=TICK_FONTSIZE)
-
-    ax.grid(which='minor', alpha=0.4)
-    ax.grid(which='major', alpha=0.8)
-
-    for i in ["top", "bottom"]:
-        ax.spines[i].set_linestyle(SPINE_LINESTYLE)
-        ax.spines[i].set_linewidth(SPINE_LINEWIDTH)
-
-    for i in ["right", "left"]:
-        ax.spines[i].set_visible(False)
-
-    ax.frameon = False
 
 
 def _map_json_keys_to_ints(json_object):
