@@ -60,7 +60,10 @@ def patch_platform(platform):
         if "platform_sanity_check" in args[-3]:
             return prepend_args + args
 	return prepend_args + ["startup_runners/outer_startup_runner_c"] + args
-    assert Cls.__dict__.get('bench_cmdline_adjust') is None
+    old_bench_cmdline_adjust = Cls.__dict__.get('bench_cmdline_adjust')
+    assert (old_bench_cmdline_adjust is None or
+                old_bench_cmdline_adjust._startup_patch)
+    bench_cmdline_adjust._startup_patch = True
     Cls.bench_cmdline_adjust = bench_cmdline_adjust
 
 patch_platform(detect_platform(None, None))
