@@ -26,6 +26,6 @@ main(void)
     double    start_time = -1;
 
     start_time = clock_gettime_monotonic();
-    fprintf(stdout, "%f]\n", start_time);
+    fprintf(stdout, "%f], [-1.0, -1.0]]\n", start_time);
     return (EXIT_SUCCESS);
 }

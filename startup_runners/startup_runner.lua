@@ -5,4 +5,4 @@ local kruntime = ffi.load("kruntime")
 
 local BM_start_time = kruntime.clock_gettime_monotonic()
 io.stdout:write(BM_start_time)
-io.stdout:write("]")
+io.stdout:write("], [-1.0, -1.0]]")

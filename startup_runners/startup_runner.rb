@@ -12,5 +12,5 @@ end
 if __FILE__ == $0
     start_time = clock_gettime_monotonic()
     STDOUT.write String(start_time)
-    STDOUT.write "]"
+    STDOUT.write "], [-1.0, -1.0]]"
 end
