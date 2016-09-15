@@ -113,6 +113,7 @@ BENCHMARKS = {
     'nbody': 15,
     'fasta': 100,
     'fannkuch_redux': 200,
+    'empty': 1,
 }
 
 # list of "bench:vm:variant"
