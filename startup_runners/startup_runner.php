@@ -5,6 +5,6 @@
  */
 
 echo clock_gettime_monotonic();
-echo "]";
+echo "], [-1.0, -1.0]]";
 
 ?>

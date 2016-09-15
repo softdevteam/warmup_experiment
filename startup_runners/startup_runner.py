@@ -15,4 +15,4 @@ libkruntime = ffi.dlopen("libkruntime.so")
 
 clock_gettime_monotonic = libkruntime.clock_gettime_monotonic
 
-print clock_gettime_monotonic(), "]"
+print clock_gettime_monotonic(), "], [-1.0, -1.0]]"

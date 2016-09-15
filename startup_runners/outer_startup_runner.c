@@ -25,7 +25,7 @@ main(int argc, char **argv)
     argv = argv;
 
     start_time = clock_gettime_monotonic();
-    fprintf(stdout, "[%f,\n", start_time);
+    fprintf(stdout, "[[%f,\n", start_time);
     fflush(stdout);
     result = execv(argv[1], argv + 1);
     if (result) {
