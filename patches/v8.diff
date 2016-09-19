@@ -1,5 +1,5 @@
 diff --git a/src/d8.cc b/src/d8.cc
-index 0688380..ded492e 100644
+index 0688380..6ce1f3c 100644
 --- a/src/d8.cc
 +++ b/src/d8.cc
 @@ -2,6 +2,9 @@
@@ -12,7 +12,7 @@ index 0688380..ded492e 100644
  
  // Defined when linking against shared lib on Windows.
  #if defined(USING_V8_SHARED) && !defined(V8_SHARED)
-@@ -627,6 +630,27 @@ void Shell::Print(const v8::FunctionCallbackInfo<v8::Value>& args) {
+@@ -627,6 +630,35 @@ void Shell::Print(const v8::FunctionCallbackInfo<v8::Value>& args) {
    fflush(stdout);
  }
  
@@ -30,6 +30,14 @@ index 0688380..ded492e 100644
 +    args.GetReturnValue().Set(read_core_cycles_double());
 +}
 +
++void Shell::ReadAperfDouble(const v8::FunctionCallbackInfo<v8::Value>& args) {
++    args.GetReturnValue().Set(read_aperf_double());
++}
++
++void Shell::ReadMperfDouble(const v8::FunctionCallbackInfo<v8::Value>& args) {
++    args.GetReturnValue().Set(read_mperf_double());
++}
++
 +void Shell::LibKruntimeInit(const v8::FunctionCallbackInfo<v8::Value>& args) {
 +    libkruntime_init();
 +}
@@ -40,7 +48,7 @@ index 0688380..ded492e 100644
  
  void Shell::Write(const v8::FunctionCallbackInfo<v8::Value>& args) {
    for (int i = 0; i < args.Length(); i++) {
-@@ -658,6 +682,33 @@ void Shell::Write(const v8::FunctionCallbackInfo<v8::Value>& args) {
+@@ -658,6 +690,33 @@ void Shell::Write(const v8::FunctionCallbackInfo<v8::Value>& args) {
    }
  }
  
@@ -74,7 +82,7 @@ index 0688380..ded492e 100644
  
  void Shell::Read(const v8::FunctionCallbackInfo<v8::Value>& args) {
    String::Utf8Value file(args[0]);
-@@ -1082,10 +1133,34 @@ Local<ObjectTemplate> Shell::CreateGlobalTemplate(Isolate* isolate) {
+@@ -1082,10 +1141,42 @@ Local<ObjectTemplate> Shell::CreateGlobalTemplate(Isolate* isolate) {
            .ToLocalChecked(),
        FunctionTemplate::New(isolate, Print));
    global_template->Set(
@@ -89,6 +97,14 @@ index 0688380..ded492e 100644
 +      String::NewFromUtf8(isolate, "read_core_cycles_double", NewStringType::kNormal)
 +          .ToLocalChecked(),
 +      FunctionTemplate::New(isolate, ReadCoreCyclesDouble));
++  global_template->Set(
++      String::NewFromUtf8(isolate, "read_aperf_double", NewStringType::kNormal)
++          .ToLocalChecked(),
++      FunctionTemplate::New(isolate, ReadAperfDouble));
++  global_template->Set(
++      String::NewFromUtf8(isolate, "read_mperf_double", NewStringType::kNormal)
++          .ToLocalChecked(),
++      FunctionTemplate::New(isolate, ReadMperfDouble));
 +  global_template->Set(
 +      String::NewFromUtf8(isolate, "libkruntime_init", NewStringType::kNormal)
 +          .ToLocalChecked(),
@@ -132,16 +148,18 @@ index f249a78..38a5003 100644
          'd8.h',
          'd8.cc',
 diff --git a/src/d8.h b/src/d8.h
-index 321d9c1..cbc8448 100644
+index 321d9c1..5516809 100644
 --- a/src/d8.h
 +++ b/src/d8.h
-@@ -385,7 +385,13 @@ class Shell : public i::AllStatic {
+@@ -385,7 +385,15 @@ class Shell : public i::AllStatic {
                               const  PropertyCallbackInfo<void>& info);
  
    static void Print(const v8::FunctionCallbackInfo<v8::Value>& args);
 +  static void PrintErr(const v8::FunctionCallbackInfo<v8::Value>& args);
 +  static void ClockGettimeMonotonic(const v8::FunctionCallbackInfo<v8::Value>& args);
 +  static void ReadCoreCyclesDouble(const v8::FunctionCallbackInfo<v8::Value>& args);
++  static void ReadAperfDouble(const v8::FunctionCallbackInfo<v8::Value>& args);
++  static void ReadMperfDouble(const v8::FunctionCallbackInfo<v8::Value>& args);
 +  static void LibKruntimeInit(const v8::FunctionCallbackInfo<v8::Value>& args);
 +  static void LibKruntimeDone(const v8::FunctionCallbackInfo<v8::Value>& args);
    static void Write(const v8::FunctionCallbackInfo<v8::Value>& args);

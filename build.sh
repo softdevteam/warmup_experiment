@@ -243,7 +243,7 @@ build_v8() {
     cd v8 || exit $?
     git checkout ${V8_V}
     gclient sync
-    patch -Ep1 < ${PATCH_DIR}/v8_various.diff || exit $?
+    patch -Ep1 < ${PATCH_DIR}/v8.diff || exit $?
 
     # The build fails for silly reasons near the very end, even though the main
     # v8 binary has been built. So we simply check that the binary exists and
