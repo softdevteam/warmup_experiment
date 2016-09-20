@@ -525,7 +525,7 @@ EOF
 
     t=`mktemp -d` || exit $?
     cd $t || exit $?
-    wget http://www.wolczko.com/richdbsrc.zip || exit $?
+    wget https://archive.org/download/richards-benchmark/richdbsrc.zip || exit $?
     unzip richdbsrc.zip || exit $?
     mv Benchmark.java Program.java COM/sun/labs/kanban/richards_deutsch_acc_virtual/ || exit $?
     cd COM/sun/labs/kanban/richards_deutsch_acc_virtual || exit $?
