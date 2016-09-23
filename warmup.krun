@@ -141,9 +141,14 @@ if sys.platform.startswith("linux"):
         "sudo service cron stop",
         "sudo service atd stop",
         "sudo service postfix stop",
+        "sudo service networking stop",
     ]
 
+    PING_HOST = "bencher2.soft-dev.org"
     POST_EXECUTION_CMDS = [
+        # The network doesn't always come up properly on debian. We keep trying
+        # until we can ping a host on the network.
+        "while true; do ping -c 3 -q %s && break; sudo service networking stop; sleep 5; sudo service networking start; done" % PING_HOST,
         "sudo service cron start || true",
         "sudo service atd start || true",
         "sudo service postfix start || true",
@@ -153,9 +158,11 @@ elif sys.platform.startswith("openbsd"):
         "sudo /etc/rc.d/cron stop",
         "sudo /etc/rc.d/smtpd stop",
         "sudo /etc/rc.d/pflogd stop",
+        "for intf in `ifconfig  | grep -e '^[a-z]' | cut -f 1 -d ':' | grep -v '^lo0$'`; do sudo ifconfig $intf down; done",
     ]
 
     POST_EXECUTION_CMDS = [
+        "sudo sh /etc/netstart",
         "sudo /etc/rc.d/cron start || true",
         "sudo /etc/rc.d/smtpd start || true",
         "sudo /etc/rc.d/pflogd start || true",
@@ -166,12 +173,20 @@ else:
 
 # Copy off results after each execution -- soft-dev specific!
 #
+# This assumes a no-password SSH key named 'id_rsa' is present in this
+# directory, and that the corresponding public key is installed on the correct
+# user on the remote machine.
+#
 # We allow failure, otherwise Krun will halt the experiment if (e.g.) the
 # SSH server hostname is temporarily unavailable.
 HOSTNAME = platform.node().split(".")[0]
-SCP_CMD = ("tar czf - ${KRUN_RESULTS_FILE} ${KRUN_LOG_FILE} | "
-           "ssh -i id_rsa " "vext01@bencher2.soft-dev.org "
-           "'cat > research/krun_results/%s.tgz'" % HOSTNAME)
+REMOTE_LOGIN = "vext01@bencher2.soft-dev.org"
+REMOTE_DIR = "research/krun_results/"
+
+SCP_CMD = ("tar czf - ${KRUN_RESULTS_FILE} ${KRUN_LOG_FILE} krun.manifest | "
+           "ssh -i id_rsa %s 'cat > %s/%s.tgz'" %
+           (REMOTE_LOGIN, REMOTE_DIR, HOSTNAME))
 POST_EXECUTION_CMDS.append(
-    "%s || ( sleep 2; %s ) || true " % (SCP_CMD, SCP_CMD)
-)
+    "%s || ( sleep 2; %s ) || true " % (SCP_CMD, SCP_CMD))
+POST_EXECUTION_CMDS.append("ssh -i id_rsa %s 'test ! -e %s/%s.stop'" %
+                           (REMOTE_LOGIN, REMOTE_DIR, HOSTNAME))
