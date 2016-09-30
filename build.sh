@@ -505,6 +505,14 @@ build_hhvm() {
 }
 
 
+fetch_dacapo_jar() {
+    echo "\n===> Download DaCapo .jar file\n"
+
+    if [ -f "${HERE}/extbench/dacapo-9.12-bach.jar" ]; then return; fi
+
+    wget "http://downloads.sourceforge.net/project/dacapobench/9.12-bach/dacapo-9.12-bach.jar?r=https%3A%2F%2Fsourceforge.net%2Fprojects%2Fdacapobench%2Ffiles%2F&ts=1474888492&use_mirror=freefr" -O ${HERE}/extbench/dacapo-9.12-bach.jar  || exit $?
+}
+
 fetch_external_benchmarks() {
     echo "\n===> Download and build misc benchmarks\n"
 
@@ -554,6 +562,7 @@ case `uname` in
     Linux)
     build_initial_krun
     fetch_external_benchmarks
+    fetch_dacapo_jar
     build_gcc
     apply_gcc_lib_path
     fetch_libkalibera
@@ -572,6 +581,7 @@ case `uname` in
 OpenBSD)
     build_initial_krun
     fetch_external_benchmarks
+    fetch_dacapo_jar
     build_gcc
     apply_gcc_lib_path
     fetch_libkalibera
