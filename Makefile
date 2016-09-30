@@ -64,6 +64,9 @@ bench-da-capo:
 	PYTHONPATH=krun/ JAVA_HOME=${JAVA_HOME} ${PYTHON} extbench/rundacapo.py | tee dacapo.csv
 	bin/csv_to_krun_json dacapo.csv
 
+bench-octane:
+	cd ${PWD}/extbench/octane && LD_LIBRARY_PATH=${PWD}/krun/libkrun ${PWD}/work/v8/out/native/d8 run.js
+
 # XXX target to format results.
 
 clean: clean-benchmarks clean-krun

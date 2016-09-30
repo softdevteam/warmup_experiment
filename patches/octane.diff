@@ -1,0 +1,112 @@
+diff --git a/base.js b/base.js
+index 9d6e3de..ce04d1b 100644
+--- a/base.js
++++ b/base.js
+@@ -296,39 +296,16 @@ BenchmarkSuite.prototype.RunSingleBenchmark = function(benchmark, data) {
+                         ? config.doDeterministic 
+                         : benchmark.doDeterministic;
+ 
+-  function Measure(data) {
+-    var elapsed = 0;
++  assert(doDeterministic);
++
++  print(benchmark.name);
++  for (var i = 0; i < 2000; i++) {
+     var start = new Date();
+-  
+-  // Run either for 1 second or for the number of iterations specified
+-  // by minIterations, depending on the config flag doDeterministic.
+-    for (var i = 0; (doDeterministic ? 
+-      i<benchmark.deterministicIterations : elapsed < 1000); i++) {
++    for (var j = 0; j < benchmark.deterministicIterations; j++) {
+       benchmark.run();
+-      elapsed = new Date() - start;
+-    }
+-    if (data != null) {
+-      data.runs += i;
+-      data.elapsed += elapsed;
+     }
+-  }
+-
+-  // Sets up data in order to skip or not the warmup phase.
+-  if (!doWarmup && data == null) {
+-    data = { runs: 0, elapsed: 0 };
+-  }
+-
+-  if (data == null) {
+-    Measure(null);
+-    return { runs: 0, elapsed: 0 };
+-  } else {
+-    Measure(data);
+-    // If we've run too few iterations, we continue for another second.
+-    if (data.runs < benchmark.minIterations) return data;
+-    var usec = (data.elapsed * 1000) / data.runs;
+-    var rms = (benchmark.rmsResult != null) ? benchmark.rmsResult() : 0;
+-    this.NotifyStep(new BenchmarkResult(benchmark, usec, rms));
+-    return null;
++    var end = new Date();
++    print(end - start);
+   }
+ }
+ 
+diff --git a/pdfjs.js b/pdfjs.js
+index 7953754..2d5584d 100644
+--- a/pdfjs.js
++++ b/pdfjs.js
+@@ -65,6 +65,7 @@ function runPdfJS() {
+ 
+   // Wait for everything to complete.
+   PdfJS_window.flushTimeouts();
++  canvas_logs.length = 0;
+ }
+ 
+ function tearDownPdfJS() {
+diff --git a/run.js b/run.js
+index d06a6be..395ad56 100644
+--- a/run.js
++++ b/run.js
+@@ -40,37 +40,33 @@ load(base_dir + 'pdfjs.js');
+ load(base_dir + 'mandreel.js');
+ load(base_dir + 'gbemu-part1.js');
+ load(base_dir + 'gbemu-part2.js');
+-load(base_dir + 'code-load.js');
++//load(base_dir + 'code-load.js');
+ load(base_dir + 'box2d.js');
+-load(base_dir + 'zlib.js');
+-load(base_dir + 'zlib-data.js');
++//load(base_dir + 'zlib.js');
++//load(base_dir + 'zlib-data.js');
+ load(base_dir + 'typescript.js');
+ load(base_dir + 'typescript-input.js');
+ load(base_dir + 'typescript-compiler.js');
+ 
++
+ var success = true;
+ 
+ function PrintResult(name, result) {
+-  print(name + ': ' + result);
+ }
+ 
+ 
+ function PrintError(name, error) {
+-  PrintResult(name, error);
+-  success = false;
++  print("Error: " + name + " " + error);
++  assert(false);
+ }
+ 
+ 
+ function PrintScore(score) {
+-  if (success) {
+-    print('----');
+-    print('Score (version ' + BenchmarkSuite.version + '): ' + score);
+-  }
+ }
+ 
+ 
+ BenchmarkSuite.config.doWarmup = undefined;
+-BenchmarkSuite.config.doDeterministic = undefined;
++BenchmarkSuite.config.doDeterministic = true;
+ 
+ BenchmarkSuite.RunSuites({ NotifyResult: PrintResult,
+                            NotifyError: PrintError,

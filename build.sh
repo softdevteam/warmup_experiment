@@ -516,6 +516,21 @@ fetch_dacapo_jar() {
     wget "http://downloads.sourceforge.net/project/dacapobench/9.12-bach/dacapo-9.12-bach.jar?r=https%3A%2F%2Fsourceforge.net%2Fprojects%2Fdacapobench%2Ffiles%2F&ts=1474888492&use_mirror=freefr" -O ${HERE}/extbench/dacapo-9.12-bach.jar  || exit $?
 }
 
+
+OCTANE_V=4852334f
+fetch_octane() {
+    echo "\n===> Download Octane\n"
+
+    if [ -d "${HERE}/extbench/octane" ]; then return; fi
+
+    cd ${HERE}/extbench
+    git clone https://github.com/chromium/octane || exit $?
+    cd octane
+    git checkout ${OCTANE_V} || exit $?
+    patch < ${PATCH_DIR}/octane.diff || exit $?
+}
+
+
 fetch_external_benchmarks() {
     echo "\n===> Download and build misc benchmarks\n"
 
@@ -566,6 +581,7 @@ case `uname` in
     build_initial_krun
     fetch_external_benchmarks
     fetch_dacapo_jar
+    fetch_octane
     build_gcc
     apply_gcc_lib_path
     fetch_libkalibera
