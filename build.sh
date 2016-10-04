@@ -221,14 +221,17 @@ build_pypy() {
 }
 
 V8_V=5.1.281.65
+DEPOT_TOOLS_V=26f3e4eecb09d2608b1ac304de9d5d3c68de67ce
 build_v8() {
     cd ${wrkdir} || exit $?
     echo "\n===> Download and build V8\n"
 
     if [ -f ${wrkdir}/v8/out/native/d8 ]; then return; fi
 
-    git clone "https://chromium.googlesource.com/chromium/tools/depot_tools.git" || exit $?
-    cd depot_tools || exit $?
+    if [ ! -d ${wrkdir}/depot_tools ]; then
+        git clone "https://chromium.googlesource.com/chromium/tools/depot_tools.git" || exit $?
+    fi
+    cd depot_tools && git checkout ${DEPOT_TOOLS_V} || exit $?
 
     # The build actually requires that you clone using this git wrapper tool
     cd ${wrkdir}
