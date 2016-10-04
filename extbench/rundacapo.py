@@ -1,6 +1,6 @@
-import csv
-import sys
-import os
+#! /usr/bin/env python
+
+import csv, os, sys, time
 from krun.platform import detect_platform
 from krun.util import run_shell_cmd_bench
 
@@ -11,31 +11,46 @@ PROCESSES = 10
 WORKING_BENCHS = ['avrora', 'fop', 'h2', 'jython', 'luindex', 'lusearch',
                   'pmd', 'sunflow', 'tradebeans', 'tradesoap', 'xalan']
 
+JAVA_VMS = {"hotspot" : "$JAVA_HOME/bin/java"}
+
 JAR = os.path.join(os.path.dirname(__file__), "dacapo-9.12-bach.jar")
 
 def main():
     platform = detect_platform(None, None)
-    writer = csv.writer(sys.stdout)
-    writer.writerow(['processnum', 'benchmark'] + range(ITERATIONS))
-    for benchmark in WORKING_BENCHS:
-        for process in range(PROCESSES):
-            stdout, stderr, rc = run_shell_cmd_bench(
-                    "$JAVA_HOME/bin/java -jar %s %s -n %s" % (
-                        JAR, benchmark, ITERATIONS + 1),
-                    platform)
-            output = []
-            for line in stderr.splitlines():
-                if not line.startswith("====="):
-                    continue
-                if "completed warmup" not in line:
-                    continue
-                assert benchmark in line
-                line = line.split()
-                index = line.index("in")
-                assert line[index + 2] == "msec"
-                output.append(float(line[index + 1]))
-            assert len(output) == ITERATIONS
-            writer.writerow([process, benchmark] + output)
+    for jvm_name, jvm_cmd in JAVA_VMS.items():
+        with open("dacapo.%s.results" % jvm_name, 'wb') as csvf:
+            sys.stdout.write("%s:\n" % jvm_name)
+            writer = csv.writer(csvf)
+            writer.writerow(['processnum', 'benchmark'] + range(ITERATIONS))
+            for benchmark in WORKING_BENCHS:
+                sys.stdout.write("  %s:" % benchmark)
+                for process in range(PROCESSES):
+                    sys.stdout.write(" %s" % str(process))
+                    sys.stdout.flush()
+                    # Flush the CSV writing, and then give the OS some time
+                    # to write stuff out to disk before running the next process
+                    # execution.
+                    csvf.flush()
+                    os.fsync(csvf.fileno())
+                    time.sleep(3)
+
+                    stdout, stderr, rc = run_shell_cmd_bench(
+                        "%s -jar %s %s -n %s" % (jvm_cmd, JAR, benchmark,
+                                                 ITERATIONS + 1), platform)
+                    output = []
+                    for line in stderr.splitlines():
+                        if not line.startswith("====="):
+                            continue
+                        if "completed warmup" not in line:
+                            continue
+                        assert benchmark in line
+                        line = line.split()
+                        index = line.index("in")
+                        assert line[index + 2] == "msec"
+                        output.append(float(line[index + 1]))
+                    assert len(output) == ITERATIONS
+                    writer.writerow([process, benchmark] + output)
+                sys.stdout.write("\n")
 
 
 if __name__ == '__main__':
