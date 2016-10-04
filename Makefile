@@ -64,9 +64,6 @@ bench-da-capo:
 	PYTHONPATH=krun/ JAVA_HOME=${JAVA_HOME} ${PYTHON} extbench/rundacapo.py | tee dacapo.csv
 	bin/csv_to_krun_json dacapo.csv
 
-export-graphs:
-	${PYTHON} export_all_graphs.py
-
 # XXX target to format results.
 
 clean: clean-benchmarks clean-krun
