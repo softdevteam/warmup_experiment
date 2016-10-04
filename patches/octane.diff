@@ -45,7 +45,7 @@ index 9d6e3de..ce04d1b 100644
 -    this.NotifyStep(new BenchmarkResult(benchmark, usec, rms));
 -    return null;
 +    var end = new Date();
-+    print(end - start);
++    print("  " + (end - start));
    }
  }
  

@@ -15,7 +15,8 @@ benchmarks/binarytrees/c/bench.so
 benchmarks/fannkuch_redux/c/bench.so
 benchmarks/fasta/c/bench.so
 benchmarks/nbody/c/bench.so
-benchmarks/richards/c/bench.so                  
+benchmarks/richards/c/bench.so
 startup_runners/outer_startup_runner_c
 startup_runners/startup_runner_c
+*.results
 

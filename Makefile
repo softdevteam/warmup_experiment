@@ -65,7 +65,8 @@ bench-da-capo:
 	bin/csv_to_krun_json dacapo.csv
 
 bench-octane:
-	cd ${PWD}/extbench/octane && LD_LIBRARY_PATH=${PWD}/krun/libkrun ${PWD}/work/v8/out/native/d8 run.js
+	PYTHONPATH=krun/ ${PYTHON} extbench/runoctane.py
+	bin/csv_to_krun_json octane.v8.results
 
 # XXX target to format results.
 
