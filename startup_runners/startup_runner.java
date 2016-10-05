@@ -12,8 +12,8 @@ class startup_runner {
     }
 
     public static void main(String args[]) {
-
-        double startTime = IterationsRunner.JNI_clock_gettime_monotonic();
+        IterationsRunner.JNI_krun_measure(1);
+        double startTime = IterationsRunner.JNI_krun_get_wallclock(1);
         System.out.print(startTime);
         System.out.println("], [-1.0, -1.0]]");
     }
