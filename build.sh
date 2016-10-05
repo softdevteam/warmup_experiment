@@ -28,9 +28,13 @@ check_for java
 check_for javac
 check_for xzdec
 check_for wget
+check_for virtualenv
 
 case `uname` in
-    Linux*) PATCH_ARGS=--backup
+    Linux*)
+        PATCH_ARGS=--backup;;
+    OpenBSD*)
+        check_for gm4;;
 esac
 
 which pypy > /dev/null 2> /dev/null
@@ -508,6 +512,40 @@ build_hhvm() {
 }
 
 
+# autoconf-2.13 is needed to build spidermonkey
+build_autoconf() {
+    echo "\n===> Download and build autoconf-2.13\n"
+    if [ -d ${wrkdir}/autoconf-2.13 ]; then return; fi
+    cd ${wrkdir} || exit $?
+    wget http://ftp.gnu.org/gnu/autoconf/autoconf-2.13.tar.gz || exit $?
+    tar xfz autoconf-2.13.tar.gz || exit $?
+    cd autoconf-2.13
+    ./configure --prefix=${wrkdir}/autoconf-inst || exit $?
+    make install || exit $?
+    cd ${wrkdir}/autoconf-inst/bin
+    ln -s autoconf autoconf-2.13 || exit $?
+    cd ${HERE}
+}
+
+
+SPIDERMONKEY_VERSION=465d150bc8be # FIREFOX_AURORA_50_BASE
+build_spidermonkey() {
+    echo "\n===> Download and build SpiderMonkey\n"
+    if [ -d ${wrkdir}/spidermonkey ]; then return; fi
+    cd ${wrkdir} || exit $?
+    wget -O spidermonkey.tar.bz2 http://hg.mozilla.org/mozilla-central/archive/${SPIDERMONKEY_VERSION}.tar.bz2 || exit $?
+    bunzip2 -c - spidermonkey.tar.bz2 | tar xfp - || exit $?
+    mv mozilla-central-${SPIDERMONKEY_VERSION} spidermonkey || exit $?
+    cd spidermonkey
+    cd js/src
+    ${wrkdir}/autoconf-inst/bin/autoconf || exit $?
+    mkdir build_OPT.OBJ
+    cd build_OPT.OBJ
+    AUTOCONF=${wrkdir}/autoconf-inst/bin/autoconf-2.13 MOZ_JEMALLOC4=1 CC=${OUR_CC} CXX=${OUR_CXX} ../configure --disable-tests || exit $?
+    LD_LIBRARY_PATH=${wrkdir}/gcc-inst/lib/ ${GMAKE} || exit $?
+}
+
+
 fetch_dacapo_jar() {
     echo "\n===> Download DaCapo .jar file\n"
 
@@ -595,12 +633,15 @@ case `uname` in
     fetch_maven
     build_jruby_truffle
     build_hhvm
+    build_autoconf
+    build_spidermonkey
     clean_krun
     ;;
 OpenBSD)
     build_initial_krun
     fetch_external_benchmarks
     fetch_dacapo_jar
+    fetch_octane
     build_gcc
     apply_gcc_lib_path
     fetch_libkalibera
@@ -610,6 +651,8 @@ OpenBSD)
     build_v8
     build_gmake
     build_jdk
+    # Although SpiderMonkey builds on OpenBSD, it gets into an infinite spin
+    # loop before doing any meaningful computation.
     clean_krun
     ;;
     *) unknown_platform;;
