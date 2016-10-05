@@ -13,19 +13,20 @@
 #include <errno.h>
 #include <dlfcn.h>
 #include <err.h>
+#include <stdint.h>
 #include <unistd.h>
 
-#define BENCH_FUNC_NAME "run_iter"
+#include "libkruntime.h"
 
-/* from libkruntime */
-double clock_gettime_monotonic();
+#define BENCH_FUNC_NAME "run_iter"
 
 int
 main(void)
 {
     double    start_time = -1;
 
-    start_time = clock_gettime_monotonic();
+    krun_measure(1);
+    start_time = krun_get_wallclock(1);
     fprintf(stdout, "%f], [-1.0, -1.0]]\n", start_time);
     return (EXIT_SUCCESS);
 }

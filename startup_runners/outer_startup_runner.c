@@ -7,12 +7,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <stdint.h>
 #include <unistd.h>
 
-#define BENCH_FUNC_NAME "run_iter"
+#include "libkruntime.h"
 
-/* from libkruntime */
-double clock_gettime_monotonic();
+#define BENCH_FUNC_NAME "run_iter"
 
 int
 main(int argc, char **argv)
@@ -24,7 +24,8 @@ main(int argc, char **argv)
     argc = argc;
     argv = argv;
 
-    start_time = clock_gettime_monotonic();
+    krun_measure(1);
+    start_time = krun_get_wallclock(1);
     fprintf(stdout, "[[%f,\n", start_time);
     fflush(stdout);
     result = execv(argv[1], argv + 1);
