@@ -64,6 +64,10 @@ bench-da-capo:
 	PYTHONPATH=krun/ JAVA_HOME=${JAVA_HOME} ${PYTHON} extbench/rundacapo.py | tee dacapo.csv
 	bin/csv_to_krun_json dacapo.csv
 
+bench-octane:
+	PYTHONPATH=krun/ ${PYTHON} extbench/runoctane.py
+	bin/csv_to_krun_json octane.v8.results
+
 # XXX target to format results.
 
 clean: clean-benchmarks clean-krun
