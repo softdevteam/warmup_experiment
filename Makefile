@@ -60,9 +60,9 @@ bench-startup-no-reboots: build-startup build-benchmarks
 bench-startup-with-reboots: build-startup build-benchmarks
 	${PYTHON} krun/krun.py --reboot startup.krun
 
-bench-da-capo:
-	PYTHONPATH=krun/ JAVA_HOME=${JAVA_HOME} ${PYTHON} extbench/rundacapo.py | tee dacapo.csv
-	bin/csv_to_krun_json dacapo.csv
+bench-dacapo:
+	PYTHONPATH=krun/ JAVA_HOME=${JAVA_HOME} ${PYTHON} extbench/rundacapo.py
+	bin/csv_to_krun_json dacapo.hotspot.results
 
 bench-octane:
 	PYTHONPATH=krun/ ${PYTHON} extbench/runoctane.py
