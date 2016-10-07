@@ -73,9 +73,11 @@ bench-octane: build-krun build-vms
 # XXX target to format results.
 
 clean: clean-benchmarks clean-krun
+	rm -rf work
 
 clean-benchmarks:
 	cd benchmarks && ${MAKE} clean
+	rm -rf extbench/octane/dacapo*.jar extbench/octane
 
 clean-krun:
 	cd krun && ${MAKE} clean
