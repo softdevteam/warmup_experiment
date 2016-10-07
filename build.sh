@@ -616,8 +616,8 @@ fetch_libkalibera() {
 
 case `uname` in
     Linux)
-    build_initial_krun
     fetch_external_benchmarks
+    build_initial_krun
     fetch_dacapo_jar
     fetch_octane
     build_gcc
@@ -638,8 +638,8 @@ case `uname` in
     clean_krun
     ;;
 OpenBSD)
-    build_initial_krun
     fetch_external_benchmarks
+    build_initial_krun
     fetch_dacapo_jar
     fetch_octane
     build_gcc
