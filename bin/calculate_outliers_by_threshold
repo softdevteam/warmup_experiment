@@ -38,8 +38,8 @@ def main(in_files):
         print('Loading: %s' % filename)
         krun_data[filename] = read_krun_results_file(filename)
     # Get number of executions per benchmark, must be the same for all files!
-    bench_1 = krun_data[filename]['data'].keys()[0]  # Name of first benchmark.
-    n_execs = len(krun_data[filename]['data'][bench_1])
+    bench_1 = krun_data[filename]['wallclock_times'].keys()[0]  # Name of first benchmark.
+    n_execs = len(krun_data[filename]['wallclock_times'][bench_1])
     print ('ASSUMING %d process executions per vm:benchmark:variant '
            'in ALL files.' % n_execs)
     # Scaffold results dictionary.
@@ -55,9 +55,9 @@ def main(in_files):
             for thresh in outliers_per_thresh[window]:
                 print 'Window %d, threshold %d, file %s' % (window, thresh, filename)
                 outliers_per_key = dict()  # All executions for a vm:bench:variant
-                for key in krun_data[filename]['data']:
+                for key in krun_data[filename]['wallclock_times']:
                     outliers_per_key[key] = list()  # Outliers for each execution
-                    for p_exec in krun_data[filename]['data'][key]:
+                    for p_exec in krun_data[filename]['wallclock_times'][key]:
                         outliers_per_key[key].append(get_all_outliers(p_exec, window))
                     common, unique = get_outliers(outliers_per_key[key], window, thresh)
                     outliers_per_thresh[window][thresh]['all_outliers'] += sum_outliers(outliers_per_key[key])
