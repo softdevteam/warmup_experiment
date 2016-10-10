@@ -596,7 +596,7 @@ EOF
     mv Richards.java richards.java || exit $?
     cp *.java ${HERE}/benchmarks/richards/java || exit $?
     cd ${HERE}/benchmarks/richards/java || exit $?
-    patch ${PATCH_ARGS} < ${PATCH_DIR}/java_richards.patch || exit $?
+    patch ${PATCH_ARGS} < ${PATCH_DIR}/java_richards.diff || exit $?
     rm -fr $t
 }
 
