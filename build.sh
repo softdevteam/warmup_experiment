@@ -614,46 +614,27 @@ fetch_libkalibera() {
 }
 
 
+fetch_external_benchmarks
+build_initial_krun
+fetch_dacapo_jar
+fetch_octane
+build_gcc
+apply_gcc_lib_path
+fetch_libkalibera
+build_cpython
+build_luajit
+build_pypy
+build_v8
+build_gmake
+build_jdk
 case `uname` in
     Linux)
-    build_initial_krun
-    fetch_external_benchmarks
-    fetch_dacapo_jar
-    fetch_octane
-    build_gcc
-    apply_gcc_lib_path
-    fetch_libkalibera
-    build_cpython
-    build_luajit
-    build_pypy
-    build_v8
-    build_gmake
-    build_jdk
-    build_graal
-    fetch_maven
-    build_jruby_truffle
-    build_hhvm
-    build_autoconf
-    build_spidermonkey
-    clean_krun
+        build_graal
+        fetch_maven
+        build_jruby_truffle
+        build_hhvm
+        build_autoconf
+        build_spidermonkey
     ;;
-OpenBSD)
-    build_initial_krun
-    fetch_external_benchmarks
-    fetch_dacapo_jar
-    fetch_octane
-    build_gcc
-    apply_gcc_lib_path
-    fetch_libkalibera
-    build_cpython
-    build_luajit
-    build_pypy
-    build_v8
-    build_gmake
-    build_jdk
-    # Although SpiderMonkey builds on OpenBSD, it gets into an infinite spin
-    # loop before doing any meaningful computation.
-    clean_krun
-    ;;
-    *) unknown_platform;;
 esac
+clean_krun
