@@ -52,6 +52,20 @@ case `uname` in
 esac
 check_for ${GMAKE}
 
+# How many cores does this machine have (so we can pass a sensible number to
+# gmake -j)?
+num_cores=1
+case `uname` in
+    OpenBSD) num_cores=`sysctl hw.ncpu|cut -d "=" -f 2`;;
+    Linux) num_cores=`nproc`;;
+esac
+# Keep num_cores to safe limits for pretty much any machine out there.
+if [ $num_cores -le 0 ]; then
+    num_cores=1
+elif [ $num_cores -gt 8 ]; then
+    num_cores=8
+fi
+
 if [ $missing -eq 1 ]; then
     exit 1
 fi
@@ -134,7 +148,7 @@ build_gcc() {
         --enable-cpp \
         --enable-shared \
       || exit $?
-    ${GMAKE} || exit $?
+    ${GMAKE} -j $num_cores || exit $?
     ${GMAKE} install || exit $?
 }
 
@@ -162,7 +176,7 @@ build_cpython() {
     mv Python-${CPYTHONV} cpython
     cd cpython
     CC=${OUR_CC} ./configure --prefix=${wrkdir}/cpython-inst || exit $?
-    ${GMAKE} || exit $?
+    ${GMAKE} -j $num_cores || exit $?
     ${GMAKE} install || exit $?
 
     # Install packages.
@@ -218,7 +232,7 @@ build_pypy() {
         usession=`mktemp -d`
 
         env CC=${OUR_CC} PYPY_USESSION_DIR=$usession $PYTHON \
-            ../../rpython/bin/rpython -Ojit || exit $?
+            ../../rpython/bin/rpython -Ojit --make-jobs=$num_cores || exit $?
 
         rm -rf $usession
     fi
@@ -280,7 +294,7 @@ build_gmake() {
     tar zxvf make-${GMAKE_V}.tar.gz || exit $?
     cd make-${GMAKE_V} || exit $?
     CC=${OUR_CC} ./configure || exit $?
-    ${GMAKE} || exit $?
+    ${GMAKE} JOBS=$num_cores || exit $?
     cp make gmake
 }
 
@@ -310,7 +324,6 @@ build_jdk() {
             env CC=zgcc CXX=zg++ PATH=${JDK_BUILD_PATH} bash configure \
                 --disable-option-checking \
                 --with-cups-include=/usr/local/include \
-                --with-jobs=8 \
                 --with-debug-level=release \
                 --with-debug-level=release \
                 --disable-ccache \
@@ -320,6 +333,7 @@ build_jdk() {
                 --enable-static-libjli \
                 --with-zlib=system \
                 --with-milestone=fcs \
+                --with-jobs=$num_cores \
                 || exit $?
             PATH=${JDK_BUILD_PATH} ../make-${GMAKE_V}/make all || exit $?
             ;;
@@ -329,7 +343,6 @@ build_jdk() {
               CC=zgcc CXX=zg++ PATH=${JDK_BUILD_PATH} ac_cv_path_NAWK=awk bash configure \
               --disable-option-checking \
               --with-cups-include=/usr/local/include \
-              --with-jobs=8 \
               --with-debug-level=release \
               --with-debug-level=release \
               --disable-ccache \
@@ -340,6 +353,7 @@ build_jdk() {
               --with-zlib=system \
               --with-giflib=system \
               --with-milestone=fcs \
+              --with-jobs=$num_cores \
               || exit $?
             PATH=${JDK_BUILD_PATH} \
                 COMPILER_WARNINGS_FATAL=false \
@@ -505,7 +519,7 @@ build_hhvm() {
         CXX=${OUR_CXX} sh -c \
         "cmake -DMYSQL_UNIX_SOCK_ADDR=/dev/null -DBOOST_LIBRARYDIR=/usr/lib/x86_64-linux-gnu/ -DCMAKE_CXX_FLAGS=-I${HERE}/krun/libkrun . " \
         || exit $?
-    ${GMAKE} VERBOSE=1 || exit $?
+    ${GMAKE} -j $num_cores VERBOSE=1 || exit $?
 
     # remove the symlinks
     rm `dirname ${OUR_CC}`/gcc `dirname ${OUR_CC}`/g++ || exit $?
@@ -542,7 +556,7 @@ build_spidermonkey() {
     mkdir build_OPT.OBJ
     cd build_OPT.OBJ
     AUTOCONF=${wrkdir}/autoconf-inst/bin/autoconf-2.13 MOZ_JEMALLOC4=1 CC=${OUR_CC} CXX=${OUR_CXX} ../configure --disable-tests || exit $?
-    LD_LIBRARY_PATH=${wrkdir}/gcc-inst/lib/ ${GMAKE} || exit $?
+    LD_LIBRARY_PATH=${wrkdir}/gcc-inst/lib/ ${GMAKE} -j $num_cores || exit $?
 }
 
 
