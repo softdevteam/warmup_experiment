@@ -62,7 +62,8 @@ bench-startup-with-reboots: build-startup build-benchmarks
 
 bench-dacapo:
 	PYTHONPATH=krun/ JAVA_HOME=${JAVA_HOME} ${PYTHON} extbench/rundacapo.py
-	bin/csv_to_krun_json dacapo.hotspot.results
+	bin/csv_to_krun_json -u "`uname -a`" -v Graal -l Java dacapo.graal.results
+	bin/csv_to_krun_json -u "`uname -a`" -v HotSpot -l Java dacapo.hotspot.results
 
 bench-octane:
 	PYTHONPATH=krun/ ${PYTHON} extbench/runoctane.py
