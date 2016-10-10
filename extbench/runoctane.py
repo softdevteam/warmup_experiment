@@ -9,7 +9,9 @@ WARMUP_DIR = os.path.realpath(os.path.dirname(os.path.dirname(__file__)))
 
 JAVASCRIPT_VMS = {
     "v8": "sh -c 'cd %s/extbench/octane && LD_LIBRARY_PATH=%s/krun/libkrun %s/work/v8/out/native/d8 run.js'"
-          % (WARMUP_DIR, WARMUP_DIR, WARMUP_DIR)
+          % (WARMUP_DIR, WARMUP_DIR, WARMUP_DIR),
+    "spidermonkey": "sh -c 'cd %s/extbench/octane && %s/work/spidermonkey/js/src/build_OPT.OBJ/dist/bin/js run.js'"
+          % (WARMUP_DIR, WARMUP_DIR)
 }
 
 ITERATIONS = 2000

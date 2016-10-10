@@ -66,7 +66,8 @@ bench-dacapo:
 
 bench-octane:
 	PYTHONPATH=krun/ ${PYTHON} extbench/runoctane.py
-	bin/csv_to_krun_json octane.v8.results
+	bin/csv_to_krun_json -u "`uname -a`" -v V8 -l JavaScript octane.v8.results
+	bin/csv_to_krun_json -u "`uname -a`" -v SpiderMonkey -l JavaScript octane.spidermonkey.results
 
 # XXX target to format results.
 
