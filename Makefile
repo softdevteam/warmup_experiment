@@ -58,13 +58,13 @@ bench-no-reboots: build-krun build-benchmarks
 	${PYTHON} krun/krun.py warmup.krun
 
 bench-with-reboots: build-krun build-benchmarks
-	${PYTHON} krun/krun.py --reboot warmup.krun
+	${PYTHON} krun/krun.py --hardware-reboots warmup.krun
 
 bench-startup-no-reboots: build-startup build-benchmarks
 	${PYTHON} krun/krun.py startup.krun
 
 bench-startup-with-reboots: build-startup build-benchmarks
-	${PYTHON} krun/krun.py --reboot startup.krun
+	${PYTHON} krun/krun.py --hardware-reboots startup.krun
 
 bench-dacapo: build-krun build-vms
 	PYTHONPATH=krun/ JAVA_HOME=${JAVA_HOME} ${PYTHON} extbench/rundacapo.py
