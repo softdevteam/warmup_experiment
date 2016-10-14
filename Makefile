@@ -1,6 +1,10 @@
 PYTHON ?= python2.7
 PWD != pwd
 UNAME != uname
+WINDOW_SIZE ?= 200
+OUTLIER_THRESHOLD ?= 8
+PLOTS_NO_CPTS = plots_w${WINDOW_SIZE}.pdf
+PLOTS_WITH_CPTS = plots_w${WINDOW_SIZE}_changepoints.pdf
 ifeq (${UNAME}, Linux)
 	JAVA_HOME = ${PWD}/work/openjdk/build/linux-x86_64-normal-server-release/images/j2sdk-image
 	JAVAC = ${PWD}/work/openjdk/build/linux-x86_64-normal-server-release/jdk/bin/javac
@@ -24,7 +28,8 @@ all: build-benchmarks build-startup
 	@echo "============================================================"
 
 .PHONY: build-vms build-benchmarks build-krun build-startup bench clean
-.PHONY: clean-benchmarks clean-krun
+.PHONY: plot-warmup-results plot-warmup-outliers-by-threshold
+.PHONY: clean-benchmarks clean-krun clean-plots
 
 build-vms:
 	./build.sh
@@ -70,9 +75,18 @@ bench-octane: build-krun build-vms
 	bin/csv_to_krun_json -u "`uname -a`" -v V8 -l JavaScript octane.v8.results
 	bin/csv_to_krun_json -u "`uname -a`" -v SpiderMonkey -l JavaScript octane.spidermonkey.results
 
-# XXX target to format results.
+plot-warmup-results:
+	bin/mark_outliers_in_json -w ${WINDOW_SIZE} -t ${OUTLIER_THRESHOLD} warmup_results.json.bz2
+	bin/mark_changepoints_in_json -w ${WINDOW_SIZE} warmup_results_outliers_w${WINDOW_SIZE}.json.bz2
+	bin/plot_krun_results -w ${WINDOW_SIZE} -m -t --with-outliers -o warmup_${PLOTS_NO_CPTS} warmup_results_outliers_w${WINDOW_SIZE}.json.bz2
+	bin/plot_krun_results -w ${WINDOW_SIZE} -m -t --with-outliers --with-changepoints -o warmup_${PLOTS_WITH_CPTS} warmup_results_outliers_w${WINDOW_SIZE}_changepoints.json.bz2
 
-clean: clean-benchmarks clean-krun
+plot-warmup-outliers-by-threshold:
+	bin/calculate_outliers_by_threshold warmup_results.json.bz2
+	mv outliers_per_threshold.json.bz2 warmup_outliers_per_threshold.json.bz2
+	bin/plot_outliers_per_threshold warmup_outliers_per_threshold.json.bz2
+
+clean: clean-benchmarks clean-krun clean-plots
 	rm -rf work
 
 clean-benchmarks:
@@ -81,3 +95,8 @@ clean-benchmarks:
 
 clean-krun:
 	cd krun && ${MAKE} clean
+
+clean-plots:
+	rm -f warmup_*.pdf
+	rm -f warmup_outliers_per_threshold.json.bz2
+	rm -f warmup_results_outliers_w${WINDOW_SIZE}.json.bz2 warmup_results_outliers_w${WINDOW_SIZE}_changepoints.json.bz2
