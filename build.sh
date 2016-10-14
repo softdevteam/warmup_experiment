@@ -83,7 +83,7 @@ PATCH_DIR=`pwd`/patches/
 build_initial_krun() {
     echo "\n===> Download and build krun\n"
     if ! [ -d "${HERE}/krun" ]; then
-        cd ${HERE} && git clone https://github.com/softdevteam/krun.git || exit $?
+        cd ${HERE} && git clone --recursive https://github.com/softdevteam/krun.git || exit $?
     fi
 
     # We do a quick build now so that VMs which link libkruntime can find it.
