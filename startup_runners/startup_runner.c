@@ -23,10 +23,8 @@
 int
 main(void)
 {
-    double    start_time = -1;
-
-    krun_measure(1);
-    start_time = krun_get_wallclock(1);
-    fprintf(stdout, "%f], [-1.0, -1.0]]\n", start_time);
+    double start_time = -1;
+    start_time = krun_clock_gettime_monotonic();
+    fprintf(stdout, "%f ] }\n", start_time);
     return (EXIT_SUCCESS);
 }
