@@ -1,5 +1,5 @@
 diff --git a/src/d8.cc b/src/d8.cc
-index 0688380..2b1af6c 100644
+index 0688380..728e6ca 100644
 --- a/src/d8.cc
 +++ b/src/d8.cc
 @@ -2,6 +2,9 @@
@@ -37,7 +37,7 @@ index 0688380..2b1af6c 100644
  namespace v8 {
  
  namespace {
-@@ -627,6 +648,56 @@ void Shell::Print(const v8::FunctionCallbackInfo<v8::Value>& args) {
+@@ -627,6 +648,60 @@ void Shell::Print(const v8::FunctionCallbackInfo<v8::Value>& args) {
    fflush(stdout);
  }
  
@@ -64,6 +64,10 @@ index 0688380..2b1af6c 100644
 +    CHECK_NUM_ARGS(args, 1);
 +    DOUBLE_ARG_TO_CINT_CHECKED(0, mdata_index);
 +    krun_measure(mdata_index);
++}
++
++void Shell::KrunClockGettimeMonotonic(const v8::FunctionCallbackInfo<v8::Value>& args) {
++    args.GetReturnValue().Set(krun_clock_gettime_monotonic());
 +}
 +
 +void Shell::KrunGetNumCores(const v8::FunctionCallbackInfo<v8::Value>& args) {
@@ -94,7 +98,7 @@ index 0688380..2b1af6c 100644
  
  void Shell::Write(const v8::FunctionCallbackInfo<v8::Value>& args) {
    for (int i = 0; i < args.Length(); i++) {
-@@ -658,6 +729,33 @@ void Shell::Write(const v8::FunctionCallbackInfo<v8::Value>& args) {
+@@ -658,6 +733,33 @@ void Shell::Write(const v8::FunctionCallbackInfo<v8::Value>& args) {
    }
  }
  
@@ -128,7 +132,7 @@ index 0688380..2b1af6c 100644
  
  void Shell::Read(const v8::FunctionCallbackInfo<v8::Value>& args) {
    String::Utf8Value file(args[0]);
-@@ -1082,10 +1180,50 @@ Local<ObjectTemplate> Shell::CreateGlobalTemplate(Isolate* isolate) {
+@@ -1082,10 +1184,54 @@ Local<ObjectTemplate> Shell::CreateGlobalTemplate(Isolate* isolate) {
            .ToLocalChecked(),
        FunctionTemplate::New(isolate, Print));
    global_template->Set(
@@ -163,6 +167,10 @@ index 0688380..2b1af6c 100644
 +      String::NewFromUtf8(isolate, "krun_measure", NewStringType::kNormal)
 +          .ToLocalChecked(),
 +      FunctionTemplate::New(isolate, KrunMeasure));
++  global_template->Set(
++      String::NewFromUtf8(isolate, "krun_clock_gettime_monotonic", NewStringType::kNormal)
++          .ToLocalChecked(),
++      FunctionTemplate::New(isolate, KrunClockGettimeMonotonic));
 +  global_template->Set(
 +      String::NewFromUtf8(isolate, "krun_get_num_cores", NewStringType::kNormal)
 +          .ToLocalChecked(),
@@ -202,10 +210,10 @@ index f249a78..38a5003 100644
          'd8.h',
          'd8.cc',
 diff --git a/src/d8.h b/src/d8.h
-index 321d9c1..626149f 100644
+index 321d9c1..c63d183 100644
 --- a/src/d8.h
 +++ b/src/d8.h
-@@ -385,7 +385,17 @@ class Shell : public i::AllStatic {
+@@ -385,7 +385,18 @@ class Shell : public i::AllStatic {
                               const  PropertyCallbackInfo<void>& info);
  
    static void Print(const v8::FunctionCallbackInfo<v8::Value>& args);
@@ -217,6 +225,7 @@ index 321d9c1..626149f 100644
 +  static void KrunInit(const v8::FunctionCallbackInfo<v8::Value>& args);
 +  static void KrunDone(const v8::FunctionCallbackInfo<v8::Value>& args);
 +  static void KrunMeasure(const v8::FunctionCallbackInfo<v8::Value>& args);
++  static void KrunClockGettimeMonotonic(const v8::FunctionCallbackInfo<v8::Value>& args);
 +  static void KrunGetNumCores(const v8::FunctionCallbackInfo<v8::Value>& args);
    static void Write(const v8::FunctionCallbackInfo<v8::Value>& args);
 +  static void WriteErr(const v8::FunctionCallbackInfo<v8::Value>& args);
