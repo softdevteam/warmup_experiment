@@ -23,7 +23,7 @@ index 1d0822d..ad3e69b 100644
  # See https://github.com/facebook/hhvm/issues/5217
  INCLUDE(CheckCXXSourceCompiles)
 diff --git a/hphp/runtime/ext/std/ext_std_misc.cpp b/hphp/runtime/ext/std/ext_std_misc.cpp
-index 8b08cec..3347fbf 100644
+index 8b08cec..dcfc57b 100644
 --- a/hphp/runtime/ext/std/ext_std_misc.cpp
 +++ b/hphp/runtime/ext/std/ext_std_misc.cpp
 @@ -44,10 +44,14 @@
@@ -41,13 +41,14 @@ index 8b08cec..3347fbf 100644
  namespace HPHP {
  
  IMPLEMENT_THREAD_LOCAL(std::string, s_misc_highlight_default_string);
-@@ -192,6 +196,14 @@ void StandardExtension::initMisc() {
+@@ -192,6 +196,15 @@ void StandardExtension::initMisc() {
      HHVM_FE(sys_getloadavg);
      HHVM_FE(token_get_all);
      HHVM_FE(token_name);
 +    HHVM_FE(krun_init);
 +    HHVM_FE(krun_done);
 +    HHVM_FE(krun_measure);
++    HHVM_FE(krun_clock_gettime_monotonic);
 +    HHVM_FE(krun_get_num_cores);
 +    HHVM_FE(krun_get_wallclock);
 +    HHVM_FE(krun_get_core_cycles_double);
@@ -56,7 +57,7 @@ index 8b08cec..3347fbf 100644
      HHVM_FE(hphp_to_string);
      HHVM_FALIAS(__SystemLib\\max2, SystemLib_max2);
      HHVM_FALIAS(__SystemLib\\min2, SystemLib_min2);
-@@ -966,5 +978,37 @@ Variant HHVM_FUNCTION(SystemLib_min2, const Variant& value1,
+@@ -966,5 +979,41 @@ Variant HHVM_FUNCTION(SystemLib_min2, const Variant& value1,
  #undef YYTOKEN_MAP
  #undef YYTOKEN
  
@@ -70,6 +71,10 @@ index 8b08cec..3347fbf 100644
 +
 +void HHVM_FUNCTION(krun_measure, int mdata_index) {
 +    krun_measure(mdata_index);
++}
++
++double HHVM_FUNCTION(krun_clock_gettime_monotonic) {
++    return krun_clock_gettime_monotonic();
 +}
 +
 +int HHVM_FUNCTION(krun_get_num_cores) {
@@ -95,16 +100,17 @@ index 8b08cec..3347fbf 100644
  ///////////////////////////////////////////////////////////////////////////////
  }
 diff --git a/hphp/runtime/ext/std/ext_std_misc.h b/hphp/runtime/ext/std/ext_std_misc.h
-index 49db8a5..c0277ea 100644
+index 49db8a5..b3e4d12 100644
 --- a/hphp/runtime/ext/std/ext_std_misc.h
 +++ b/hphp/runtime/ext/std/ext_std_misc.h
-@@ -48,6 +48,14 @@ Variant HHVM_FUNCTION(unpack, const String& format, const String& data);
+@@ -48,6 +48,15 @@ Variant HHVM_FUNCTION(unpack, const String& format, const String& data);
  Array HHVM_FUNCTION(sys_getloadavg);
  Array HHVM_FUNCTION(token_get_all, const String& source);
  String HHVM_FUNCTION(token_name, int64_t token);
 +void HHVM_FUNCTION(krun_init);
 +void HHVM_FUNCTION(krun_done);
 +void HHVM_FUNCTION(krun_measure, int mdata_index);
++double HHVM_FUNCTION(krun_clock_gettime_monotonic);
 +int HHVM_FUNCTION(krun_get_num_cores);
 +double HHVM_FUNCTION(krun_get_wallclock, int mdata_index);
 +double HHVM_FUNCTION(krun_get_core_cycles_double, int mdata_index, int core);
@@ -114,10 +120,10 @@ index 49db8a5..c0277ea 100644
  Variant HHVM_FUNCTION(SystemLib_max2, const Variant& arg1, const Variant& arg2);
  Variant HHVM_FUNCTION(SystemLib_min2, const Variant& arg1, const Variant& arg2);
 diff --git a/hphp/runtime/ext/std/ext_std_misc.php b/hphp/runtime/ext/std/ext_std_misc.php
-index da36140..7b3e11f 100644
+index da36140..461e6e3 100644
 --- a/hphp/runtime/ext/std/ext_std_misc.php
 +++ b/hphp/runtime/ext/std/ext_std_misc.php
-@@ -214,6 +214,30 @@ function token_get_all(string $source): array;
+@@ -214,6 +214,32 @@ function token_get_all(string $source): array;
  <<__ParamCoerceModeFalse, __Native>>
  function token_name(int $token): string;
  
@@ -130,6 +136,8 @@ index da36140..7b3e11f 100644
 +/* Take measurements */
 +<<__Native>>
 +function krun_measure(int $mdata_index): void;
++<<__Native>>
++function krun_clock_gettime_monotonic(): double;
 +
 +/* How many per-core measurements? */
 +<<__Native>>

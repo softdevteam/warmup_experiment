@@ -42,6 +42,7 @@ def patch_runner(vm_def):
         assert "iterations_runner." in vm_def.iterations_runner
         _, suffix = vm_def.iterations_runner.rsplit(".", 1)
         vm_def.iterations_runner = os.path.join(STARTUP_RUNNER_DIR, "startup_runner." + suffix)
+    vm_def.instrument = False
     return vm_def
 
 
