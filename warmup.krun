@@ -121,7 +121,7 @@ SKIP = [
     # Uncomment to skip whole VMs
     #
     #"*:PyPy:*",
-    #"*:CPython:*",
+    "*:CPython:*",
     #"*:Hotspot:*",
     #"*:Graal:*",
     #"*:LuaJIT:*",
