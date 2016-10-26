@@ -183,7 +183,7 @@ HOSTNAME = platform.node().split(".")[0]
 REMOTE_LOGIN = "vext01@bencher2.soft-dev.org"
 REMOTE_DIR = "research/krun_results/"
 
-SCP_CMD = ("tar czf - ${KRUN_RESULTS_FILE} ${KRUN_LOG_FILE} krun.manifest | "
+SCP_CMD = ("tar czf - ${KRUN_RESULTS_FILE} ${KRUN_LOG_FILE} ${KRUN_MANIFEST_FILE} | "
            "ssh -i id_rsa %s 'cat > %s/%s.tgz'" %
            (REMOTE_LOGIN, REMOTE_DIR, HOSTNAME))
 POST_EXECUTION_CMDS.append(
