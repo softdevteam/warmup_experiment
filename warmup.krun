@@ -130,8 +130,11 @@ SKIP = [
     #"*:V8:*",
     #"*:C:*",
 
-    # XXX: This benchmark is slow *and* crashes
+    # This benchmark is slow *and* crashes
     "fasta:JRubyTruffle:default-ruby",
+
+    # Really very slow.
+    "richards:HHVM:default-php",
 ]
 
 N_EXECUTIONS = 10  # Number of fresh processes.
