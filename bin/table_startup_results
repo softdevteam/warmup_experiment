@@ -1,0 +1,142 @@
+#!/usr/bin/env python2.7
+
+"""Create a LaTeX summary of a Krun results file from the startup experiment."""
+
+import argparse
+import os
+import os.path
+import sys
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+from warmup.krun_results import read_krun_results_file
+from warmup.statistics import bootstrap_confidence_interval
+
+TITLE = 'Startup Experiment Results'
+
+__LATEX_HEADER = """
+\documentclass[12pt]{article}
+\usepackage{booktabs}
+\\title{%s}
+\\begin{document}
+\maketitle
+""" % TITLE
+
+__LATEX_SECTION = lambda section: """
+\\section*{%s}
+""" % section
+
+__LATEX_START_TABLE = """
+\\begin{tabular}{lr}
+\\toprule
+VM & Time (secs) \\\\
+\\midrule
+"""
+
+__LATEX_END_TABLE = """
+\\bottomrule
+\\end{tabular}
+"""
+
+__LATEX_FOOTER = """
+\\end{document}
+"""
+
+
+def main(data_dcts, latex_file):
+    summary_data = {'vms':dict()}
+    for machine in data_dcts:
+        keys = sorted(data_dcts[machine]['wallclock_times'].keys())
+        for key in keys:
+            wallclock_times = data_dcts[machine]['wallclock_times'][key]
+            if len(wallclock_times) == 0:
+                print ('WARNING: Skipping: %s from %s (no executions)' %
+                       (key, machine))
+            elif len(wallclock_times[0]) == 0:
+                print('WARNING: Skipping: %s from %s (benchmark crashed)' %
+                      (key, machine))
+            else:
+                # Scaffold summary dictionary.
+                vm = key.split(':')[1]
+                if vm not in summary_data['vms']:
+                    summary_data['vms'][vm] = list()
+                # Add data from this key to the summary data.
+                startup_times = list()
+                for result in wallclock_times:
+                    startup_times.append(result[1] - result[0])
+                # Average startup times for this process exec.
+                summary_data['vms'][vm] = startup_times
+    # Average the summary data.
+    summary = {'vms':dict(), 'variants':dict()}
+    for vm in summary_data['vms']:
+        median, error = bootstrap_confidence_interval(summary_data['vms'][vm], confidence=0.99)
+        summary['vms'][vm] = '$%.5f\\scriptstyle{\\pm%.6f}$' % (median, error)
+    # Write out results.
+    write_results_as_latex(summary, latex_file)
+    return
+
+
+def _tex_escape(word):
+    return word.replace('_', '\\_')
+
+
+def write_results_as_latex(summary, tex_filename):
+    """Write a results file.
+    """
+    print('Writing data to %s.' % tex_filename)
+    with open(tex_filename, 'w') as fp:
+        sections = (('Startup-times', summary)),
+        # Preamble.
+        fp.write(__LATEX_HEADER)
+        # Write out all sections.
+        for section_heading, summary in sections:
+            # Section heading.
+            fp.write(__LATEX_SECTION(section_heading))
+            # Startup-times per VM.
+            fp.write(__LATEX_START_TABLE)
+            for vm in summary['vms']:
+                fp.write('%s & %s \\\\ \n' %
+                         (_tex_escape(vm), summary['vms'][vm]))
+            fp.write(__LATEX_END_TABLE)
+        # End document.
+        fp.write(__LATEX_FOOTER)
+    return
+
+
+def get_data_dictionaries(json_files):
+    """Read a list of BZipped JSON files and return their contents as a
+    dictionaries of machine name -> JSON values.
+    """
+    data_dictionary = dict()
+    for filename in json_files:
+        assert os.path.exists(filename), 'File %s does not exist.' % filename
+        print('Loading: %s' % filename)
+        data = read_krun_results_file(filename)
+        machine_name = data['audit']['uname'].split(' ')[1]
+        if '.' in machine_name:  # Remove domain, if there is one.
+            machine_name = machine_name.split('.')[0]
+        data_dictionary[machine_name] = data
+    return data_dictionary
+
+
+def create_cli_parser():
+    """Create a parser to deal with command line switches.
+    """
+    script = os.path.basename(__file__)
+    description = (('Summarise information from a startup experiment.\n' +
+                    'See startup.krun for details.' +
+                    '\n\nExample usage:\n\n' +
+                    '\t$ python %s -l startup.tex results.json.bz2') % script)
+    parser = argparse.ArgumentParser(description=description,
+                                     formatter_class=argparse.RawTextHelpFormatter)
+    parser.add_argument('json_files', action='append', nargs='+', default=[],
+                        type=str, help='One or more Krun result files.')
+    parser.add_argument('--outfile', '-o', action='store', dest='latex_file',
+                        type=str, help='Name of the LaTeX file to write to.')
+    return parser
+
+
+if __name__ == '__main__':
+    parser = create_cli_parser()
+    options = parser.parse_args()
+    data_dcts = get_data_dictionaries(options.json_files[0])
+    main(data_dcts, options.latex_file)
