@@ -141,6 +141,7 @@ N_EXECUTIONS = 10  # Number of fresh processes.
 
 if sys.platform.startswith("linux"):
     # Assumes systemd is used for init.
+    PING_HOST = "bencher2.soft-dev.org"
     PRE_EXECUTION_CMDS = [
         # Stop network first. If an interface accepts a DHCP lease during one
         # of the later commands below, it can cause the command to be
@@ -152,7 +153,6 @@ if sys.platform.startswith("linux"):
         "sudo systemctl stop postfix",
     ]
 
-    PING_HOST = "bencher2.soft-dev.org"
     POST_EXECUTION_CMDS = [
         # The network doesn't always come up properly on debian. We keep trying
         # until we can ping a host on the network.
