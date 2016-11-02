@@ -9,37 +9,13 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from warmup.krun_results import read_krun_results_file
+from warmup.latex import preamble, end_document, end_table, escape
+from warmup.latex import format_median_error, section, start_table
 from warmup.statistics import bootstrap_confidence_interval
 
 TITLE = 'Startup Experiment Results'
-
-__LATEX_HEADER = """
-\documentclass[12pt]{article}
-\usepackage{booktabs}
-\\title{%s}
-\\begin{document}
-\maketitle
-""" % TITLE
-
-__LATEX_SECTION = lambda section: """
-\\section*{%s}
-""" % section
-
-__LATEX_START_TABLE = """
-\\begin{tabular}{lr}
-\\toprule
-VM & Time (secs) \\\\
-\\midrule
-"""
-
-__LATEX_END_TABLE = """
-\\bottomrule
-\\end{tabular}
-"""
-
-__LATEX_FOOTER = """
-\\end{document}
-"""
+TABLE_FORMAT = 'lr'
+TABLE_HEADINGS = 'VM & Time (secs)'
 
 
 def main(data_dcts, latex_file):
@@ -69,14 +45,10 @@ def main(data_dcts, latex_file):
     summary = {'vms':dict(), 'variants':dict()}
     for vm in summary_data['vms']:
         median, error = bootstrap_confidence_interval(summary_data['vms'][vm], confidence=0.99)
-        summary['vms'][vm] = '$%.5f\\scriptstyle{\\pm%.6f}$' % (median, error)
+        summary['vms'][vm] = format_median_error(median, error)
     # Write out results.
     write_results_as_latex(summary, latex_file)
     return
-
-
-def _tex_escape(word):
-    return word.replace('_', '\\_')
 
 
 def write_results_as_latex(summary, tex_filename):
@@ -85,20 +57,14 @@ def write_results_as_latex(summary, tex_filename):
     print('Writing data to %s.' % tex_filename)
     with open(tex_filename, 'w') as fp:
         sections = (('Startup-times', summary)),
-        # Preamble.
-        fp.write(__LATEX_HEADER)
-        # Write out all sections.
+        fp.write(preamble(TITLE))
         for section_heading, summary in sections:
-            # Section heading.
-            fp.write(__LATEX_SECTION(section_heading))
-            # Startup-times per VM.
-            fp.write(__LATEX_START_TABLE)
-            for vm in summary['vms']:
-                fp.write('%s & %s \\\\ \n' %
-                         (_tex_escape(vm), summary['vms'][vm]))
-            fp.write(__LATEX_END_TABLE)
-        # End document.
-        fp.write(__LATEX_FOOTER)
+            fp.write(section(section_heading))
+            fp.write(start_table(TABLE_FORMAT, TABLE_HEADINGS))
+            for vm in sorted(summary['vms']):
+                fp.write('%s & %s \\\\ \n' % (escape(vm), summary['vms'][vm]))
+            fp.write(end_table())
+        fp.write(end_document())
     return
 
 
