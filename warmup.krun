@@ -140,21 +140,26 @@ SKIP = [
 N_EXECUTIONS = 10  # Number of fresh processes.
 
 if sys.platform.startswith("linux"):
+    # Assumes systemd is used for init.
     PRE_EXECUTION_CMDS = [
-        "sudo service cron stop",
-        "sudo service atd stop",
-        "sudo service postfix stop",
-        "sudo service networking stop",
+        # Stop network first. If an interface accepts a DHCP lease during one
+        # of the later commands below, it can cause the command to be
+        # "cancelled" by systemd. Bringing the network itself down can fail in
+        # the same way, so keep trying (with sleeps between).
+        "while true; do sudo systemctl stop networking; sleep 5; ping -q -c %s || break; done" % PING_HOST
+        "sudo systemctl stop cron",
+        "sudo systemctl stop atd",
+        "sudo systemctl stop postfix",
     ]
 
     PING_HOST = "bencher2.soft-dev.org"
     POST_EXECUTION_CMDS = [
         # The network doesn't always come up properly on debian. We keep trying
         # until we can ping a host on the network.
-        "while true; do ping -c 3 -q %s && break; sudo service networking stop; sleep 5; sudo service networking start; done" % PING_HOST,
-        "sudo service cron start || true",
-        "sudo service atd start || true",
-        "sudo service postfix start || true",
+        "while true; do ping -c 3 -q %s && break; sudo systemctl stop networking; sleep 5; sudo systemctl start networking; done" % PING_HOST,
+        "sudo systemctl start cron || true",
+        "sudo systemctl start atd || true",
+        "sudo systemctl start postfix || true",
     ]
 elif sys.platform.startswith("openbsd"):
     PRE_EXECUTION_CMDS = [
