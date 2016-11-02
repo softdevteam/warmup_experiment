@@ -147,7 +147,7 @@ if sys.platform.startswith("linux"):
         # of the later commands below, it can cause the command to be
         # "cancelled" by systemd. Bringing the network itself down can fail in
         # the same way, so keep trying (with sleeps between).
-        "while true; do sudo systemctl stop networking; sleep 5; ping -q -c 10 %s || break; done" % PING_HOST
+        "while true; do sudo systemctl stop networking; sleep 5; ping -q -c 10 %s || break; done" % PING_HOST,
         "sudo systemctl stop cron",
         "sudo systemctl stop atd",
         "sudo systemctl stop postfix",
