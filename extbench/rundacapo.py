@@ -12,7 +12,7 @@ PROCESSES = 10
 
 # broken: batik, eclipse, tomcat
 WORKING_BENCHS = ['avrora', 'fop', 'h2', 'jython', 'luindex', 'lusearch',
-                  'pmd', 'sunflow', 'tradebeans', 'tradesoap', 'xalan']
+                  'pmd', 'sunflow', 'tradebeans', 'xalan']
 
 JAR = os.path.join(os.path.dirname(__file__), "dacapo-9.12-bach.jar")
 
