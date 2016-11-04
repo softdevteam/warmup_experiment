@@ -596,6 +596,7 @@ fetch_octane() {
     cd octane
     git checkout ${OCTANE_V} || exit $?
     patch < ${PATCH_DIR}/octane.diff || exit $?
+    cp ${PATCH_DIR}/octane_run_we.js run_we.js || exit $?
 }
 
 
