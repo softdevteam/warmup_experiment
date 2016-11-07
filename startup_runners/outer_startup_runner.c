@@ -13,44 +13,47 @@
 
 #include "libkruntime.h"
 
-#define BENCH_FUNC_NAME "run_iter"
+void emit_dummy_per_core_data(char *, int);
+
+void
+emit_dummy_per_core_data(char *name, int num_per_core_data)
+{
+    int i;
+
+    printf("\"%s\": [", name);
+    for (i = 0; i < num_per_core_data; i++) {
+        printf("[0, 0]");
+        if (i < num_per_core_data - 1) {
+            printf(", ");
+        }
+    }
+    printf("], ");
+}
 
 int
 main(int argc, char **argv)
 {
-    double start_time = -1;
-    int result;
-    char fake_datum[] = "[0, 0], ";
-    char end_datum[] = "[0, 0] ";
-    int datum_size = (int)strlen(fake_datum);
+    int result, num_per_core_data;
+
+    if (argc != 2) {
+        printf("usage: ./outer_startup_runner_c <inner-runner>\n");
+        exit(EXIT_FAILURE);
+    }
+
     krun_init();
-    char* fake_data = malloc(1);
+    num_per_core_data = krun_get_num_cores();
 
-    if (krun_get_num_cores() > 1) {
-        memcpy(fake_data, fake_datum, datum_size);
-    }
-    if (krun_get_num_cores() > 2) {
-        for(int i=0; i < krun_get_num_cores() - 2; i++) {
-            memcpy(fake_data + datum_size * (i + 1), fake_datum, datum_size);
-        }
-    }
-    memcpy(fake_data + datum_size * (krun_get_num_cores() - 1), end_datum, datum_size - 1);
-    fake_data[datum_size * krun_get_num_cores() - 1] = '\0';
-
-    /* silence gcc */
-    argc = argc;
-    argv = argv;
-
-    start_time = krun_clock_gettime_monotonic();
-    fprintf(stdout, "{ \"core_cycle_counts\": [ %s ],", fake_data);
-    fprintf(stdout, " \"mperf_counts\" : [ %s ],", fake_data);
-    fprintf(stdout, " \"aperf_counts\" : [ %s ],", fake_data);
-    fprintf(stdout, " \"wallclock_times\" : [ %f, ", start_time);
+    printf("{");
+    emit_dummy_per_core_data("core_cycle_counts", num_per_core_data);
+    emit_dummy_per_core_data("aperf_counts", num_per_core_data);
+    emit_dummy_per_core_data("mperf_counts", num_per_core_data);
+    printf("\"wallclock_times\" : [ %f, ", krun_clock_gettime_monotonic());
     fflush(stdout);
+
     result = execv(argv[1], argv + 1);
     if (result) {
         perror("Starting subprocess failed:");
+        exit(EXIT_FAILURE);
     }
-    free(fake_data);
     return (EXIT_SUCCESS);
 }

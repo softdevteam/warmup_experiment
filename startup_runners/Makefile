@@ -1,6 +1,7 @@
 PWD != pwd
 C_ITER_RUNNER_CFLAGS = -fPIC -Wall -Wextra -pedantic
 C_ITER_RUNNER_LDFLAGS =
+LIBKRUN_DIR=${PWD}/../krun/libkrun
 
 
 OS != uname -s
@@ -19,16 +20,16 @@ startup_runner.class: startup_runner.java
 
 
 outer_startup_runner_c: outer_startup_runner.c
-	${CC} --std=c99 ${C_ITER_RUNNER_CFLAGS} ${CFLAGS} -L${PWD}/../krun/libkrun \
+	${CC} --std=c99 ${C_ITER_RUNNER_CFLAGS} ${CFLAGS} -L${LIBKRUN_DIR} \
 		${CPPFLAGS} outer_startup_runner.c -I${PWD}/../krun/libkrun \
 		-o outer_startup_runner_c -lkruntime ${C_ITER_RUNNER_LDFLAGS} \
-		${LDFLAGS}
+		${LDFLAGS} -Wl,-rpath=${LIBKRUN_DIR}
 
 startup_runner_c: startup_runner.c
 	${CC} --std=c99 ${C_ITER_RUNNER_CFLAGS} ${CFLAGS} -L${PWD}/../krun/libkrun \
 		${CPPFLAGS} startup_runner.c -I${PWD}/../krun/libkrun \
 		-o startup_runner_c -lkruntime ${C_ITER_RUNNER_LDFLAGS} \
-		${LDFLAGS}
+		${LDFLAGS} -Wl,-rpath=${LIBKRUN_DIR}
 
 clean:
 	rm -f startup_runner_c outer_startup_runner_c startup_runner.class
