@@ -35,7 +35,11 @@ main(int argc, char **argv)
 {
     int result, num_per_core_data;
 
-    if (argc != 2) {
+    /*
+     * This startup runner needs one argument. Under normal operation, krun
+     * passes some other flags, which can safely be ignored.
+     */
+    if (argc < 2) {
         printf("usage: ./outer_startup_runner_c <inner-runner>\n");
         exit(EXIT_FAILURE);
     }
