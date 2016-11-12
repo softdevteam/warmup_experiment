@@ -2,6 +2,7 @@ PYTHON ?= python2.7
 PWD != pwd
 UNAME != uname
 WINDOW_SIZE ?= 200
+STEADY_STATE_EXPECTED ?= 500
 OUTLIER_THRESHOLD ?= 8
 PLOTS_NO_CPTS = plots_w${WINDOW_SIZE}.pdf
 PLOTS_WITH_CPTS = plots_w${WINDOW_SIZE}_changepoints.pdf
@@ -78,7 +79,7 @@ bench-octane: build-krun build-vms
 
 plot-warmup-results:
 	bin/mark_outliers_in_json -w ${WINDOW_SIZE} -t ${OUTLIER_THRESHOLD} warmup_results.json.bz2
-	bin/mark_changepoints_in_json -w ${WINDOW_SIZE} warmup_results_outliers_w${WINDOW_SIZE}.json.bz2
+	bin/mark_changepoints_in_json -s ${STEADY_STATE_EXPECTED} warmup_results_outliers_w${WINDOW_SIZE}.json.bz2
 	bin/plot_krun_results -w ${WINDOW_SIZE} -m -t --with-outliers -o warmup_${PLOTS_NO_CPTS} warmup_results_outliers_w${WINDOW_SIZE}.json.bz2
 	bin/plot_krun_results -w ${WINDOW_SIZE} -m -t --with-outliers --with-changepoints -o warmup_${PLOTS_WITH_CPTS} warmup_results_outliers_w${WINDOW_SIZE}_changepoints.json.bz2
 
@@ -89,21 +90,21 @@ plot-warmup-outliers-by-threshold:
 
 plot-dacapo-results:
 	bin/mark_outliers_in_json -w ${WINDOW_SIZE} -t ${OUTLIER_THRESHOLD} dacapo.graal.json.bz2
-	bin/mark_changepoints_in_json -w ${WINDOW_SIZE} dacapo.graal_outliers_w${WINDOW_SIZE}.json.bz2
+	bin/mark_changepoints_in_json -s ${STEADY_STATE_EXPECTED} -p dacapo.graal_outliers_w${WINDOW_SIZE}.json.bz2
 	bin/plot_krun_results --wallclock-only -w ${WINDOW_SIZE} -m -t --with-outliers -o dacapo.graal_${PLOTS_NO_CPTS} dacapo.graal_outliers_w${WINDOW_SIZE}.json.bz2
 	bin/plot_krun_results --wallclock-only -w ${WINDOW_SIZE} -m -t --with-outliers --with-changepoints -o dacapo.graal_${PLOTS_WITH_CPTS} dacapo.graal_outliers_w${WINDOW_SIZE}_changepoints.json.bz2
 	bin/mark_outliers_in_json -w ${WINDOW_SIZE} -t ${OUTLIER_THRESHOLD} dacapo.hotspot.json.bz2
-	bin/mark_changepoints_in_json -w ${WINDOW_SIZE} dacapo.hotspot_outliers_w${WINDOW_SIZE}.json.bz2
+	bin/mark_changepoints_in_json -s ${STEADY_STATE_EXPECTED} -p dacapo.hotspot_outliers_w${WINDOW_SIZE}.json.bz2
 	bin/plot_krun_results --wallclock-only -w ${WINDOW_SIZE} -m -t --with-outliers -o dacapo.hotspot_${PLOTS_NO_CPTS} dacapo.graal_outliers_w${WINDOW_SIZE}.json.bz2
 	bin/plot_krun_results --wallclock-only -w ${WINDOW_SIZE} -m -t --with-outliers --with-changepoints -o dacapo.hotspot_${PLOTS_WITH_CPTS} dacapo.graal_outliers_w${WINDOW_SIZE}_changepoints.json.bz2
 
 plot-octane-results:
 	bin/mark_outliers_in_json -w ${WINDOW_SIZE} -t ${OUTLIER_THRESHOLD} octane.v8.json.bz2
-	bin/mark_changepoints_in_json -w ${WINDOW_SIZE} octane.v8_outliers_w${WINDOW_SIZE}.json.bz2
+	bin/mark_changepoints_in_json -s ${STEADY_STATE_EXPECTED} -p octane.v8_outliers_w${WINDOW_SIZE}.json.bz2
 	bin/plot_krun_results --wallclock-only -w ${WINDOW_SIZE} -m -t --with-outliers -o octane.v8_${PLOTS_NO_CPTS} octane.v8_outliers_w${WINDOW_SIZE}.json.bz2
 	bin/plot_krun_results --wallclock-only -w ${WINDOW_SIZE} -m -t --with-outliers --with-changepoints -o octane.v8_${PLOTS_WITH_CPTS} octane.v8_outliers_w${WINDOW_SIZE}_changepoints.json.bz2
 	bin/mark_outliers_in_json -w ${WINDOW_SIZE} -t ${OUTLIER_THRESHOLD} octane.spidermonkey.json.bz2
-	bin/mark_changepoints_in_json -w ${WINDOW_SIZE} octane.spidermonkey_outliers_w${WINDOW_SIZE}.json.bz2
+	bin/mark_changepoints_in_json -s ${STEADY_STATE_EXPECTED} -p octane.spidermonkey_outliers_w${WINDOW_SIZE}.json.bz2
 	bin/plot_krun_results --wallclock-only -w ${WINDOW_SIZE} -m -t --with-outliers -o octane.spidermonkey_${PLOTS_NO_CPTS} octane.spidermonkey_outliers_w${WINDOW_SIZE}.json.bz2
 	bin/plot_krun_results --wallclock-only -w ${WINDOW_SIZE} -m -t --with-outliers --with-changepoints -o octane.spidermonkey_${PLOTS_WITH_CPTS} octane.spidermonkey_outliers_w${WINDOW_SIZE}_changepoints.json.bz2
 
