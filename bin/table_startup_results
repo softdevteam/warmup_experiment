@@ -6,6 +6,7 @@ import argparse
 import os
 import os.path
 import sys
+from collections import OrderedDict
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from warmup.krun_results import read_krun_results_file
@@ -14,12 +15,12 @@ from warmup.latex import format_median_error, section, start_table
 from warmup.statistics import bootstrap_confidence_interval
 
 TITLE = 'Startup Experiment Results'
-TABLE_FORMAT = 'lr'
-TABLE_HEADINGS = 'VM & Time (secs)'
 
 
-def main(data_dcts, latex_file):
-    summary_data = {'vms':dict()}
+def main(data_dcts, latex_file, machine_map):
+    # machine -> vm -> times
+    summary_data = {machine: {} for machine in data_dcts.keys()}
+    all_vms = set()
     for machine in data_dcts:
         keys = sorted(data_dcts[machine]['wallclock_times'].keys())
         for key in keys:
@@ -33,25 +34,37 @@ def main(data_dcts, latex_file):
             else:
                 # Scaffold summary dictionary.
                 vm = key.split(':')[1]
-                if vm not in summary_data['vms']:
-                    summary_data['vms'][vm] = list()
+                all_vms |= set([vm])
+                if vm not in summary_data[machine]:
+                    summary_data[machine][vm] = list()
                 # Add data from this key to the summary data.
                 startup_times = list()
                 for result in wallclock_times:
                     startup_times.append(result[1] - result[0])
                 # Average startup times for this process exec.
-                summary_data['vms'][vm] = startup_times
+                summary_data[machine][vm] = startup_times
     # Average the summary data.
-    summary = {'vms':dict(), 'variants':dict()}
-    for vm in summary_data['vms']:
-        median, error = bootstrap_confidence_interval(summary_data['vms'][vm], confidence=0.99)
-        summary['vms'][vm] = format_median_error(median, error)
+    # vm -> machine -> summary
+    summary = {vm: {} for vm in all_vms}
+    for machine in machine_map.iterkeys():
+        for vm in all_vms:
+            try:
+                data = summary_data[machine][vm]
+            except KeyError:
+                summary[vm][machine] = ''
+            else:
+                median, error = bootstrap_confidence_interval(
+                    data, confidence=0.99)
+                sys.stdout.write('.')
+                sys.stdout.flush()
+                summary[vm][machine] = format_median_error(median, error)
+
     # Write out results.
-    write_results_as_latex(summary, latex_file)
+    write_results_as_latex(summary, machine_map, latex_file)
     return
 
 
-def write_results_as_latex(summary, tex_filename):
+def write_results_as_latex(summary, machines_map, tex_filename):
     """Write a results file.
     """
     print('Writing data to %s.' % tex_filename)
@@ -60,9 +73,19 @@ def write_results_as_latex(summary, tex_filename):
         fp.write(preamble(TITLE))
         for section_heading, summary in sections:
             fp.write(section(section_heading))
-            fp.write(start_table(TABLE_FORMAT, TABLE_HEADINGS))
-            for vm in sorted(summary['vms']):
-                fp.write('%s & %s \\\\ \n' % (escape(vm), summary['vms'][vm]))
+            table_format = 'l' + ('r' * len(machine_map))
+            table_headings1 = '&'.join(
+                ['\multicolumn{1}{c}{\multirow{2}{*}{VM}}'] +
+                ['\multicolumn{%s}{c}{Machine}' % len(machines_map)])
+            table_headings2 = '&'.join(
+                [''] + ['\\multicolumn{1}{c}{\\footnotesize %s}' %
+                          x for x in  machine_map.itervalues()])
+            table_headings = '\\\\'.join([table_headings1, table_headings2])
+            fp.write(start_table(table_format, table_headings))
+            for vm in sorted(summary.keys()):
+                row = [escape(vm)] + \
+                    [summary[vm][machine] for machine in machine_map.iterkeys()]
+                fp.write('%s\\\\ \n' % '&'.join(row))
             fp.write(end_table())
         fp.write(end_document())
     return
@@ -73,15 +96,21 @@ def get_data_dictionaries(json_files):
     dictionaries of machine name -> JSON values.
     """
     data_dictionary = dict()
-    for filename in json_files:
+    machine_map = OrderedDict()
+    for arg in json_files:
+        machine_name, filename = arg.split(':')
+        # machine name prevents ~ expanding
+        filename = os.path.expanduser(filename)
         assert os.path.exists(filename), 'File %s does not exist.' % filename
         print('Loading: %s' % filename)
         data = read_krun_results_file(filename)
-        machine_name = data['audit']['uname'].split(' ')[1]
-        if '.' in machine_name:  # Remove domain, if there is one.
-            machine_name = machine_name.split('.')[0]
-        data_dictionary[machine_name] = data
-    return data_dictionary
+        machine = data['audit']['uname'].split(' ')[1]
+        if '.' in machine:  # Remove domain, if there is one.
+            machine = machine_name.split('.')[0]
+        data_dictionary[machine] = data
+        machine_map[machine] = machine_name
+
+    return data_dictionary, machine_map
 
 
 def create_cli_parser():
@@ -95,14 +124,16 @@ def create_cli_parser():
     parser = argparse.ArgumentParser(description=description,
                                      formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('json_files', action='append', nargs='+', default=[],
-                        type=str, help='One or more Krun result files.')
+                        type=str,
+                        help='One or more \'machine_name:results_filename\' pairs.')
     parser.add_argument('--outfile', '-o', action='store', dest='latex_file',
-                        type=str, help='Name of the LaTeX file to write to.')
+                        type=str, help='Name of the LaTeX file to write to.',
+                        required=True)
     return parser
 
 
 if __name__ == '__main__':
     parser = create_cli_parser()
     options = parser.parse_args()
-    data_dcts = get_data_dictionaries(options.json_files[0])
-    main(data_dcts, options.latex_file)
+    data_dcts, machine_map = get_data_dictionaries(options.json_files[0])
+    main(data_dcts, options.latex_file, machine_map)
