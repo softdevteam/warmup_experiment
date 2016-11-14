@@ -87,7 +87,7 @@ def main(data_dcts, window_size, latex_file, num_splits):
                 cat_counts = list()
                 for category, occurences in Counter(categories).most_common():
                     cat_counts.append('$%d$%s' % (occurences, STYLE_SYMBOLS[category]))
-                reported_category += ' (%s)' % ', '.join(cat_counts)
+                reported_category += ' \\scriptsize(%s)' % ', '.join(cat_counts)
 
             if (reported_category == STYLE_SYMBOLS['no steady state'] or
                 reported_category.startswith(STYLE_SYMBOLS['inconsistent'])):
