@@ -189,8 +189,14 @@ def write_results_as_latex(machine, all_benchs, summary, steady_state, tex_file,
                         last_mean = BLANK_CELL
 
                     if vm_idx == 0:
+                        if num_vms == 8:
+                            fudge = 2
+                        elif num_vms == 5:
+                            fudge = 1
+                        else:
+                            fudge = 0
                         bench_cell = '\\multirow{%s}{*}{\\rotatebox[origin=c]{90}{%s}}' \
-                            % (num_vms + 2, escape(bench))
+                            % (num_vms + fudge, escape(bench))
                     else:
                         bench_cell = ''
                     if 'inconsistent' in classification:
