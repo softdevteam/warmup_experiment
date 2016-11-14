@@ -192,6 +192,10 @@ def write_results_as_latex(machine, all_benchs, summary, steady_state, tex_file,
                             last_cpt = this_summary['last_cpt']
                             time_steady = this_summary['time_to_steady_state']
                             last_mean = this_summary['last_mean']
+
+                            if 'flat' in raw_class:
+                                last_cpt = BLANK_CELL
+                                time_steady = BLANK_CELL
                         except KeyError:
                             print 'Unknown classification style: %s' % raw_class
                             sys.exit(1)
