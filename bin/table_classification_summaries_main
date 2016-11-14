@@ -169,7 +169,7 @@ def write_results_as_latex(machine, all_benchs, summary, steady_state, tex_file,
         split_row_idx = 0
         for row_benchs in zip(*splits):
             vm_idx = 0
-            for vm in summary.keys():
+            for vm in sorted(summary.keys()):
                 row = []
                 for bench in row_benchs:
                     if bench is None:
