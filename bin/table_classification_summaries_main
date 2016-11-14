@@ -103,12 +103,12 @@ def main(data_dcts, window_size, latex_file, num_splits):
                 mean_last_cpt = ''
                 time_to_steady = ''
             else:
-                median, error = bootstrap_confidence_interval(last_segment_means, iterations=1)
+                median, error = bootstrap_confidence_interval(last_segment_means)
                 mean_last_segment = format_median_error(median, error)
                 if last_changepoints:
-                    median, error = bootstrap_confidence_interval(last_changepoints, iterations=1)
+                    median, error = bootstrap_confidence_interval(last_changepoints)
                     mean_last_cpt = format_median_error(median, error, as_integer=True)
-                    median_t, error_t = bootstrap_confidence_interval(time_to_steadys, iterations=1)
+                    median_t, error_t = bootstrap_confidence_interval(time_to_steadys)
                     time_to_steady = format_median_error(median_t, error_t, brief=True)
                 else:  # No changepoints in any process executions.
                     mean_last_cpt = format_median_error(median, 0, as_integer=True)
