@@ -220,7 +220,6 @@ def write_results_as_latex(machine, all_benchs, summary, steady_state, tex_file,
                     bench_idx += 1
                 fp.write('&'.join(row))
                 # Only -ve space row if not next to a midrule
-                print(vm_idx, num_vms - 1)
                 if vm_idx < num_vms - 1:
                     fp.write('\\\\[-3pt] \n')
                 else:
