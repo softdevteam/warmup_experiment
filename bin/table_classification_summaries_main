@@ -14,7 +14,7 @@ from collections import Counter
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from warmup.krun_results import read_krun_results_file
 from warmup.latex import STYLE_SYMBOLS, preamble, end_document, end_table, escape
-from warmup.latex import format_median_error, get_latex_symbol_map, start_table
+from warmup.latex import format_median_error, get_latex_symbol_map
 from warmup.statistics import bootstrap_confidence_interval
 
 
@@ -25,16 +25,6 @@ TABLE_HEADINGS_START1 = '\\multicolumn{1}{c}{\\multirow{2}{*}{}}&'
 TABLE_HEADINGS_START2 = '&'
 TABLE_HEADINGS1 = '&&\\multicolumn{1}{c}{} &\\multicolumn{1}{c}{Steady}&\\multicolumn{1}{c}{Steady}&\\multicolumn{1}{c}{Steady}'
 TABLE_HEADINGS2 = '&&\\multicolumn{1}{c}{Class.} &\\multicolumn{1}{c}{iter (\#)} &\\multicolumn{1}{c}{iter (s)}&\\multicolumn{1}{c}{perf (s)}'
-
-GET_CELL_HEIGHT = '''
-\\newlength{\\blankheight}
-\\settototalheight{\\blankheight}{
-$\\begin{array}{rr}
-\\scriptstyle{0.16} \\\\[-6pt]
-\\scriptscriptstyle{\\pm0.000}
-\\end{array}$
-}
-'''
 
 BLANK_CELL = '\\begin{minipage}[c][\\blankheight]{0pt}\\end{minipage}'
 
@@ -97,7 +87,7 @@ def main(data_dcts, window_size, latex_file, num_splits):
                 cat_counts = list()
                 for category, occurences in Counter(categories).most_common():
                     cat_counts.append('$%d$%s' % (occurences, STYLE_SYMBOLS[category]))
-                reported_category += ' (%s)' % ', '.join(cat_counts)
+                reported_category += ' \\scriptsize(%s)' % ', '.join(cat_counts)
 
             if (reported_category == STYLE_SYMBOLS['no steady state'] or
                 reported_category.startswith(STYLE_SYMBOLS['inconsistent'])):
@@ -149,27 +139,24 @@ def write_results_as_latex(machine, all_benchs, summary, steady_state, tex_file,
 
     print('Writing data to %s.' % tex_file)
     with open(tex_file, 'w') as fp:
-        fp.write(preamble(TITLE, doc_opts='landscape'))
-        fp.write(get_latex_symbol_map() + '\n')
-        fp.write('\\textbf{Note:} steady state expected within the last \\textbf{%d} iterations.'
-                 % steady_state)
-        fp.write('\n\n')
-
-        # Compute the height of a cell with a confidence interval.
-        # Empty cells are padded this high.
-        fp.write(GET_CELL_HEIGHT)
-
         # emit table header
         heads1 = TABLE_HEADINGS_START1 + '&'.join([TABLE_HEADINGS1] * num_splits)
         heads2 = TABLE_HEADINGS_START2 + '&'.join([TABLE_HEADINGS2] * num_splits)
         heads = '%s\\\\%s' % (heads1, heads2)
         fmt = TABLE_FORMAT_START + TABLE_FORMAT_PER_SPLIT * num_splits
-        fp.write(start_table(fmt, heads))
+        fp.write(\
+"""
+{
+\\begin{tabular}{%s}
+\\toprule
+%s \\\\
+\\midrule
+""" % (fmt, heads))
 
         split_row_idx = 0
         for row_benchs in zip(*splits):
             vm_idx = 0
-            for vm in summary.keys():
+            for vm in sorted(summary.keys()):
                 row = []
                 for bench in row_benchs:
                     if bench is None:
@@ -202,14 +189,20 @@ def write_results_as_latex(machine, all_benchs, summary, steady_state, tex_file,
                         last_mean = BLANK_CELL
 
                     if vm_idx == 0:
+                        if num_vms == 8:
+                            fudge = 2
+                        elif num_vms == 5:
+                            fudge = 1
+                        else:
+                            fudge = 0
                         bench_cell = '\\multirow{%s}{*}{\\rotatebox[origin=c]{90}{%s}}' \
-                            % (num_vms + 2, escape(bench))
+                            % (num_vms + fudge, escape(bench))
                     else:
                         bench_cell = ''
                     if 'inconsistent' in classification:
-                        row_add = ['', bench_cell, classification]
+                        row_add = [BLANK_CELL, bench_cell, classification]
                     else:
-                        row_add = ['', bench_cell, classification, last_cpt,
+                        row_add = [BLANK_CELL, bench_cell, classification, last_cpt,
                                    time_steady, last_mean]
                     if not row:  # first vm in this row, needs the vm column
                         row.insert(0, vm)
@@ -226,8 +219,6 @@ def write_results_as_latex(machine, all_benchs, summary, steady_state, tex_file,
                 fp.write('\midrule\n')
             split_row_idx += 1
         fp.write(end_table())
-        fp.write('\\newpage{}')
-        fp.write(end_document())
     return
 
 
