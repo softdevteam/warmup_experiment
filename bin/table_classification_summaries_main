@@ -194,9 +194,9 @@ def write_results_as_latex(machine, all_benchs, summary, steady_state, tex_file,
                     else:
                         bench_cell = ''
                     if 'inconsistent' in classification:
-                        row_add = ['', bench_cell, classification]
+                        row_add = [BLANK_CELL, bench_cell, classification]
                     else:
-                        row_add = ['', bench_cell, classification, last_cpt,
+                        row_add = [BLANK_CELL, bench_cell, classification, last_cpt,
                                    time_steady, last_mean]
                     if not row:  # first vm in this row, needs the vm column
                         row.insert(0, vm)
