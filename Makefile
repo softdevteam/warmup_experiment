@@ -108,6 +108,11 @@ plot-octane-results:
 	bin/plot_krun_results --wallclock-only -w ${WINDOW_SIZE} -m -t --with-outliers -o octane.spidermonkey_${PLOTS_NO_CPTS} octane.spidermonkey_outliers_w${WINDOW_SIZE}.json.bz2
 	bin/plot_krun_results --wallclock-only -w ${WINDOW_SIZE} -m -t --with-outliers --with-changepoints -o octane.spidermonkey_${PLOTS_WITH_CPTS} octane.spidermonkey_outliers_w${WINDOW_SIZE}_changepoints.json.bz2
 
+tables-all:
+	bin/table_classification_summaries_main -s 2 -o bencher3.table warmup_results_0_7_linux1_i7_4790k_outliers_w200_changepoints.json.bz2
+	bin/table_classification_summaries_main -s 2 -o bencher5.table warmup_results_0_7_linux2_i7_4790_outliers_w200_changepoints.json.bz2
+	bin/table_classification_summaries_main -s 2 -o bencher6.table warmup_results_0_7_openbsd1_i7_4790_outliers_w200_changepoints.json.bz2
+
 clean: clean-benchmarks clean-krun clean-plots
 	rm -rf work
 
