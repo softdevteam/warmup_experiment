@@ -18,6 +18,10 @@ from warmup.latex import format_median_error, get_latex_symbol_map
 from warmup.statistics import bootstrap_confidence_interval
 
 
+VM_NAMES_MAP = {
+    "JRubyTruffle": "JRuby+Truffle",
+    "Hotspot": "HotSpot"
+}
 TITLE = 'Summary of benchmark classifications'
 TABLE_FORMAT_START = 'l'
 TABLE_FORMAT_PER_SPLIT = 'p{.5em}p{5pt}crrr'
@@ -205,6 +209,8 @@ def write_results_as_latex(machine, all_benchs, summary, steady_state, tex_file,
                         row_add = [BLANK_CELL, bench_cell, classification, last_cpt,
                                    time_steady, last_mean]
                     if not row:  # first vm in this row, needs the vm column
+                        if VM_NAMES_MAP.has_key(vm):
+                            vm = VM_NAMES_MAP[vm]
                         row.insert(0, vm)
                     row.extend(row_add)
                     bench_idx += 1
