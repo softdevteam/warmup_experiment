@@ -22,6 +22,16 @@ VM_NAMES_MAP = {
     "JRubyTruffle": "JRuby+Truffle",
     "Hotspot": "HotSpot"
 }
+
+BENCHMARK_NAMES_MAP = {
+    "binarytrees": "\\binarytrees",
+    "nbody": "\\nbody",
+    "fannkuch_redux": "\\fannkuch",
+    "richards": "\\richards",
+    "fasta": "\\fasta",
+    "spectralnorm": "\\spectralnorm",
+}
+
 TITLE = 'Summary of benchmark classifications'
 TABLE_FORMAT_START = 'l'
 TABLE_FORMAT_PER_SPLIT = 'p{.5em}p{5pt}crrr'
@@ -200,7 +210,7 @@ def write_results_as_latex(machine, all_benchs, summary, steady_state, tex_file,
                         else:
                             fudge = 0
                         bench_cell = '\\multirow{%s}{*}{\\rotatebox[origin=c]{90}{%s}}' \
-                            % (num_vms + fudge, escape(bench))
+                            % (num_vms + fudge, BENCHMARK_NAMES_MAP[bench])
                     else:
                         bench_cell = ''
                     if 'inconsistent' in classification:
