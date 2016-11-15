@@ -1,0 +1,367 @@
+#!/usr/bin/env python2.7
+"""Summarise benchmark classifications as LaTeX macros.
+Must be run after mark_changepoints_in_json.
+"""
+
+import argparse
+import copy
+import math
+import os
+import os.path
+import sys
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+from warmup.krun_results import read_krun_results_file
+
+NUMBERS = {0:'zero', 1:'one', 2:'two', 3:'three', 4:'four', 5:'five',
+           6:'six', 7:'seven', 8:'eight', 9:'nine'}
+BLANK_CLASSES = {'flat': 0, 'warmup': 0, 'slowdown': 0, 'no steady state': 0}
+BLANK_CONSISTENT = {'consistent': 0, 'inconsistent': 0}
+BLANK_CLASSES_PLUS_INCONSISTENT = {'flat': 0, 'warmup': 0, 'slowdown': 0,
+                                   'no steady state': 0, 'inconsistent': 0}
+
+
+def main(data, latex_file):
+    summary = {'total_pexecs': 0, 'total_iterations': 0,
+               'total': copy.deepcopy(BLANK_CLASSES),
+               'total_percentages': copy.deepcopy(BLANK_CLASSES),
+               'total_consistent': copy.deepcopy(BLANK_CONSISTENT),
+               'total_consistent_percentages': copy.deepcopy(BLANK_CONSISTENT),
+               # Per-machine summaries.
+               'machines': dict(), 'machine_percentages': dict(),
+               'machine_consistent': dict(),
+               'machine_consistent_percentages': dict(),
+               'machine_vm_bench_classes': dict(),
+               'machine_vm_bench_classes_percentages': dict(),
+               # Per vm/bench pair summaries.
+               'vm_benches': dict(), 'vm_bench_percentages': dict(),
+               'vm_bench_consistent': dict(),
+               'vm_bench_consistent_percentages': dict(),}
+    for machine in data:
+        summary['machines'][machine] = copy.deepcopy(BLANK_CLASSES)
+        summary['machine_percentages'][machine] = copy.deepcopy(BLANK_CLASSES)
+        summary['machine_consistent'][machine] = copy.deepcopy(BLANK_CONSISTENT)
+        summary['machine_consistent_percentages'][machine] = copy.deepcopy(BLANK_CONSISTENT)
+        summary['machine_vm_bench_classes'][machine] = copy.deepcopy(BLANK_CLASSES_PLUS_INCONSISTENT)
+        summary['machine_vm_bench_classes_percentages'][machine] = copy.deepcopy(BLANK_CLASSES_PLUS_INCONSISTENT)
+    # Collect summary statistics.
+    for machine in data:
+        keys = sorted(data[machine]['wallclock_times'].keys())
+        for key in keys:
+            bench, vm, variant = key.split(':')
+            if bench == 'empty': continue
+            if len(data[machine]['wallclock_times'][key]) == 0:
+                print('WARNING: Skipping: %s from %s (no executions)' %
+                      (key, machine))
+            elif len(data[machine]['wallclock_times'][key][0]) == 0:
+                print('WARNING: Skipping: %s from %s (benchmark crashed)' %
+                      (key, machine))
+            else:
+                for p_exec in data_dicts[machine]['wallclock_times'][key]:
+                    summary['total_pexecs'] += 1
+                    summary['total_iterations'] += len(p_exec)
+                vm_bench = ' '.join((vm, bench))
+                if vm_bench not in summary['vm_benches']:
+                    summary['vm_benches'][vm_bench] = copy.deepcopy(BLANK_CLASSES)
+                if vm_bench not in summary['vm_bench_percentages']:
+                    summary['vm_bench_percentages'][vm_bench] = copy.deepcopy(BLANK_CLASSES)
+                if vm_bench not in summary['vm_bench_consistent']:
+                    summary['vm_bench_consistent'][vm_bench] = copy.deepcopy(BLANK_CONSISTENT)
+                if vm_bench not in summary['vm_bench_consistent_percentages']:
+                    summary['vm_bench_consistent_percentages'][vm_bench] = copy.deepcopy(BLANK_CONSISTENT)
+                for style in data_dicts[machine]['classifications'][key]:
+                    summary['machines'][machine][style] += 1
+                    summary['total'][style] += 1
+                    summary['vm_benches'][vm_bench][style] += 1
+                if _identical(data_dicts[machine]['classifications'][key]):
+                    # Machine / vm / benchmark is consistent.
+                    summary['total_consistent']['consistent'] += 1
+                    summary['machine_consistent'][machine]['consistent'] += 1
+                    summary['vm_bench_consistent'][vm_bench]['consistent'] += 1
+                    classification = data_dicts[machine]['classifications'][key][0]
+                    summary['machine_vm_bench_classes'][machine][classification] += 1
+                else:
+                    summary['total_consistent']['inconsistent'] += 1
+                    summary['machine_consistent'][machine]['inconsistent'] += 1
+                    summary['vm_bench_consistent'][vm_bench]['inconsistent'] += 1
+                    summary['machine_vm_bench_classes'][machine]['inconsistent'] += 1
+    # Calculate total percentages.
+    for machine in summary['total']:
+        totals = list()
+        for classification in summary['total']:
+            totals.append(summary['total'][classification])
+        total = math.fsum(totals)
+        for classification in summary['total_percentages']:
+            summary['total_percentages'][classification] = \
+                    summary['total'][classification] / total * 100.0
+    # Calculate machine / classification percentages.
+    for machine in summary['machines']:
+        totals = list()
+        for classification in summary['machines'][machine]:
+            totals.append(summary['machines'][machine][classification])
+        total = math.fsum(totals)
+        for classification in summary['machine_percentages'][machine]:
+            summary['machine_percentages'][machine][classification] = \
+                    summary['machines'][machine][classification] / total * 100.0
+    # Calculate machine / vm-bench classification percentages.
+    for machine in summary['machines']:
+        totals = list()
+        for classification in summary['machine_vm_bench_classes'][machine]:
+            totals.append(summary['machine_vm_bench_classes'][machine][classification])
+        total = math.fsum(totals)
+        for classification in summary['machine_vm_bench_classes_percentages'][machine]:
+            summary['machine_vm_bench_classes_percentages'][machine][classification] = \
+                    summary['machine_vm_bench_classes'][machine][classification] / total * 100.0
+    # Calculate vm-bench / classification percentages.
+    for vm_bench in summary['vm_benches']:
+        vm_bench_pexecs = list()
+        for classification in summary['vm_benches'][vm_bench]:
+            vm_bench_pexecs.append(summary['vm_benches'][vm_bench][classification])
+        total = math.fsum(vm_bench_pexecs)
+        for classification in summary['vm_bench_percentages'][vm_bench]:
+            summary['vm_bench_percentages'][vm_bench][classification] = \
+                    summary['vm_benches'][vm_bench][classification] / total * 100.0
+    # Calculate total consistent / inconsistent percentages.
+    total = math.fsum((summary['total_consistent']['consistent'],
+                       summary['total_consistent']['inconsistent']))
+    summary['total_consistent_percentages']['consistent'] = \
+        summary['total_consistent']['consistent'] / total * 100.0
+    summary['total_consistent_percentages']['inconsistent'] = \
+        summary['total_consistent']['inconsistent'] / total * 100.0
+    # Calculate machine consistent / inconsistent percentages.
+    for machine in summary['machine_consistent']:
+        total = math.fsum((summary['machine_consistent'][machine]['consistent'],
+                           summary['machine_consistent'][machine]['inconsistent']))
+        summary['machine_consistent_percentages'][machine]['consistent'] = \
+            summary['machine_consistent'][machine]['consistent'] / total * 100.0
+        summary['machine_consistent_percentages'][machine]['inconsistent'] = \
+            summary['machine_consistent'][machine]['inconsistent'] / total * 100.0
+    # Calculate vm/bench consistent / inconsistent percentages.
+    for vm_bench in summary['vm_bench_consistent']:
+        total = math.fsum((summary['vm_bench_consistent'][vm_bench]['consistent'],
+                           summary['vm_bench_consistent'][vm_bench]['inconsistent']))
+        summary['vm_bench_consistent_percentages'][vm_bench]['consistent'] = \
+            summary['vm_bench_consistent'][vm_bench]['consistent'] / total * 100.0
+        summary['vm_bench_consistent_percentages'][vm_bench]['inconsistent'] = \
+            summary['vm_bench_consistent'][vm_bench]['inconsistent'] / total * 100.0
+    write_latex_summary(summary, latex_file)
+
+
+def _identical(list_elements):
+    """Check all elements in a list are the same.
+    This only works for hashable types, but we are passing in lists of strings.
+    """
+    return len(set(list_elements)) == 1
+
+
+def _reformat(word):
+    """Reformat as a LaTeX macro name.
+    Removes spaces and underscores. Translates numbers to words. Lower cases.
+    """
+    for number in NUMBERS:
+        word = word.replace(str(number), NUMBERS[number])
+    word = word.replace(' ', '')
+    word = word.replace('_', '')
+    return word.lower()
+
+
+def write_latex_summary(summary, tex_file):
+    print('Writing data to %s.' % tex_file)
+    with open(tex_file, 'w') as fd:
+        fd.write('%%%\n')
+        fd.write('%%% Total executions and iterations.\n')
+        fd.write('%%%\n')
+        fd.write('\\newcommand{\\totalpexecs}{%d}\n' % summary['total_pexecs'])
+        fd.write('\\newcommand{\\totaliterations}{%d}\n' % summary['total_iterations'])
+        fd.write('%%%\n')
+        fd.write('%%% Total classifications over all executions.\n')
+        fd.write('%%%\n')
+        for key in sorted(summary['total']):
+            fd.write('\\newcommand{\\%s}{%d}\n' %
+                     ('total' + _reformat(key), summary['total'][key]))
+        fd.write('%%%\n')
+        fd.write('%%% Percentage classifications over all executions.\n')
+        fd.write('%%%\n')
+        for key in sorted(summary['total_percentages']):
+            fd.write('\\newcommand{\\%s}{%.1f}\n' %
+                     ('total' + _reformat(key) + 'percentage', summary['total_percentages'][key]))
+        fd.write('%%%\n')
+        fd.write('%%% Total consistent classifications over all executions.\n')
+        fd.write('%%%\n')
+        fd.write('\\newcommand{\\%s}{%d}\n' %
+                 ('totalconsistent', summary['total_consistent']['consistent']))
+        fd.write('\\newcommand{\\%s}{%d}\n' %
+                 ('totalinconsistent', summary['total_consistent']['inconsistent']))
+        fd.write('%%%\n')
+        fd.write('%%% Percentage consistent classifications over all executions.\n')
+        fd.write('%%%\n')
+        fd.write('\\newcommand{\\%s}{%.1f}\n' %
+                 ('totalconsistentpercentage', summary['total_consistent_percentages']['consistent']))
+        fd.write('\\newcommand{\\%s}{%.1f}\n' %
+                 ('totalinconsistentpercentage', summary['total_consistent_percentages']['inconsistent']))
+        fd.write('%%%\n')
+        fd.write('%%% Classifications per machine (machine category).\n')
+        fd.write('%%%\n')
+        for machine in summary['machines']:
+            fd.write('%%% ' + machine + '.\n')
+            mc_name = _reformat(machine)
+            for key in sorted(summary['machines'][machine]):
+                fd.write('\\newcommand{\\%s}{%d}\n' %
+                         (mc_name + _reformat(key), summary['machines'][machine][key]))
+        fd.write('%%%\n')
+        fd.write('%%% Machine / classification percentages (machine category percentage).\n')
+        fd.write('%%%\n')
+        for machine in summary['machine_percentages']:
+            fd.write('%%% ' + machine + '.\n')
+            mc_name = _reformat(machine)
+            for key in sorted(summary['machine_percentages'][machine]):
+                fd.write('\\newcommand{\\%s}{%.1f}\n' %
+                         (mc_name + _reformat(key) + 'percentage',
+                          summary['machine_percentages'][machine][key]))
+        fd.write('%%%\n')
+        fd.write('%%% Classifications per machine / vm/bench pair (machine vmbench category).\n')
+        fd.write('%%%\n')
+        for machine in summary['machine_vm_bench_classes']:
+            fd.write('%%% ' + machine + '.\n')
+            mc_name = _reformat(machine)
+            for key in sorted(summary['machine_vm_bench_classes'][machine]):
+                fd.write('\\newcommand{\\%s}{%d}\n' %
+                         (mc_name + 'vmbenchpairs' + _reformat(key),
+                          summary['machine_vm_bench_classes'][machine][key]))
+        fd.write('%%%\n')
+        fd.write('%%% Machine / vm/bench classification percentages (machine vmbench category percentage).\n')
+        fd.write('%%%\n')
+        for machine in summary['machine_vm_bench_classes_percentages']:
+            fd.write('%%% ' + machine + '.\n')
+            mc_name = _reformat(machine)
+            for key in sorted(summary['machine_vm_bench_classes_percentages'][machine]):
+                fd.write('\\newcommand{\\%s}{%.1f}\n' %
+                         (mc_name + 'vmbenchpairs' + _reformat(key) + 'percentage',
+                          summary['machine_vm_bench_classes_percentages'][machine][key]))
+        fd.write('%%%\n')
+        fd.write('%%% Consistent classifications per machine (machine consistent).\n')
+        fd.write('%%%\n')
+        for machine in summary['machine_consistent']:
+            fd.write('%%% ' + machine + '.\n')
+            mc_name = _reformat(machine)
+            fd.write('\\newcommand{\\%s}{%d}\n' %
+                     (mc_name + 'consistent', summary['machine_consistent'][machine]['consistent']))
+            fd.write('\\newcommand{\\%s}{%d}\n' %
+                     (mc_name + 'inconsistent', summary['machine_consistent'][machine]['inconsistent']))
+        fd.write('%%%\n')
+        fd.write('%%% Consistent machine percentages (machine consistent percentage).\n')
+        fd.write('%%%\n')
+        for machine in summary['machine_consistent_percentages']:
+            fd.write('%%% ' + machine + '.\n')
+            mc_name = _reformat(machine)
+            fd.write('\\newcommand{\\%s}{%.1f}\n' %
+                     (mc_name + 'consistentpercentage',
+                      summary['machine_consistent_percentages'][machine]['consistent']))
+            fd.write('\\newcommand{\\%s}{%.1f}\n' %
+                     (mc_name + 'inconsistentpercentage',
+                      summary['machine_consistent_percentages'][machine]['inconsistent']))
+        fd.write('%%%\n')
+        fd.write('%%% Classifications per vm/benchmark pair (VM bmark category).\n')
+        fd.write('%%%\n')
+        for vm_bench in summary['vm_benches']:
+            fd.write('%%% ' + vm_bench + '.\n')
+            name = _reformat(vm_bench)
+            for key in sorted(summary['vm_benches'][vm_bench]):
+                fd.write('\\newcommand{\\%s}{%d}\n' %
+                         (name + _reformat(key), summary['vm_benches'][vm_bench][key]))
+        fd.write('%%%\n')
+        fd.write('%%% Classifications vm/benchmark pair percentages (VM bmark category percentage).\n')
+        fd.write('%%%\n')
+        for vm_bench in summary['vm_bench_percentages']:
+            fd.write('%%% ' + vm_bench + '.\n')
+            name = _reformat(vm_bench)
+            for key in sorted(summary['vm_bench_percentages'][vm_bench]):
+                fd.write('\\newcommand{\\%s}{%.1f}\n' %
+                         (name + _reformat(key) + 'percentage',
+                          summary['vm_bench_percentages'][vm_bench][key]))
+        fd.write('%%%\n')
+        fd.write('%%% Consistent classifications per vm/bmark (vm bench consistent).\n')
+        fd.write('%%%\n')
+        for vm_bench in summary['vm_bench_consistent']:
+            fd.write('%%% ' + vm_bench + '.\n')
+            name = _reformat(vm_bench)
+            fd.write('\\newcommand{\\%s}{%d}\n' %
+                     (name + 'consistent', summary['vm_bench_consistent'][vm_bench]['consistent']))
+            fd.write('\\newcommand{\\%s}{%d}\n' %
+                     (name + 'inconsistent', summary['vm_bench_consistent'][vm_bench]['inconsistent']))
+        fd.write('%%%\n')
+        fd.write('%%% Consistent vm/bench percentages (vm bench consistent percentage).\n')
+        fd.write('%%%\n')
+        for vm_bench in summary['vm_bench_consistent_percentages']:
+            fd.write('%%% ' + vm_bench + '.\n')
+            name = _reformat(vm_bench)
+            fd.write('\\newcommand{\\%s}{%.1f}\n' %
+                     (name + 'consistentpercentage',
+                      summary['vm_bench_consistent_percentages'][vm_bench]['consistent']))
+            fd.write('\\newcommand{\\%s}{%.1f}\n' %
+                     (name + 'inconsistentpercentage',
+                      summary['vm_bench_consistent_percentages'][vm_bench]['inconsistent']))
+
+
+def get_data_dictionaries(json_files):
+    """Read a list of BZipped JSON files and return their contents as a
+    dictionaries of machine name -> JSON values.
+    """
+    data_dictionary = dict()
+    steady_state = None
+    for filename in json_files:
+        assert os.path.exists(filename), 'File %s does not exist.' % filename
+        print 'Loading: %s' % filename
+        data = read_krun_results_file(filename)
+        if 'classifications' not in data:
+            print 'Please run mark_changepoints_in_json before re-running this script.'
+            sys.exit(1)
+        machine_name = data['audit']['uname'].split(' ')[1]
+        if '.' in machine_name:  # Remove domain, if there is one.
+            machine_name = machine_name.split('.')[0]
+        if machine_name not in data_dictionary:
+            data_dictionary[machine_name] = data
+        else:  # We may have two datasets from the same machine.
+            for outer_key in data:
+                if outer_key == 'audit' or outer_key == 'reboots':
+                    continue
+                elif outer_key == 'steady_state_expected':
+                    assert data_dictionary[machine_name][outer_key] == data[outer_key]
+                    continue
+                for key in data[outer_key]:
+                    assert key not in data_dictionary[machine_name][outer_key]
+                    if key not in data_dictionary[machine_name][outer_key]:
+                        data_dictionary[machine_name][outer_key][key] = dict()
+                    data_dictionary[machine_name][outer_key][key] = data[outer_key][key]
+        if steady_state is None:
+            steady_state = data['steady_state_expected']
+        else:
+            assert steady_state == data['steady_state_expected'], \
+                   ('Cannot summarise categories generated with different' +
+                    ' steady-state-expected values.')
+    return data_dictionary
+
+
+def create_cli_parser():
+    """Create a parser to deal with command line switches.
+    """
+    script = os.path.basename(__file__)
+    description = (('Summarise benchmark classifications stored within a Krun ' +
+                    'results file. Writes out a LaTeX file. Must be run after ' +
+                    'mark_changepoints_in_json. \n\nExample usage:\n\n' +
+                    '\t$ python %s -o summary.tex results.json.bz2') % script)
+    parser = argparse.ArgumentParser(description=description,
+                                     formatter_class=argparse.RawTextHelpFormatter)
+    parser.add_argument('json_files', action='append', nargs='+', default=[],
+                        type=str, help='One or more Krun result files.')
+    parser.add_argument('--outfile', '-o', action='store', dest='latex_file',
+                        type=str, help=('Name of the LaTeX file to write to.'),
+                        required=True)
+    return parser
+
+
+if __name__ == '__main__':
+    parser = create_cli_parser()
+    options = parser.parse_args()
+    data_dicts = get_data_dictionaries(options.json_files[0])
+    main(data_dicts, options.latex_file)
