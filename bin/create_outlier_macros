@@ -1,0 +1,197 @@
+#!/usr/bin/env python2.7
+"""Summarise benchmark classifications as LaTeX macros.
+Must be run after mark_changepoints_in_json.
+"""
+
+import argparse
+import math
+import os
+import os.path
+import sys
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+from warmup.krun_results import read_krun_results_file
+
+NUMBERS = {0:'zero', 1:'one', 2:'two', 3:'three', 4:'four', 5:'five',
+           6:'six', 7:'seven', 8:'eight', 9:'nine'}
+
+
+def main(data, latex_file):
+    total_iterations = 0
+    machine_iterations = dict()
+    vm_bench_iterations = dict()
+    summary = {'total_outliers': 0, 'total_percentage': .0,
+               'maximum_outliers': 0,
+               # Per-machine summaries.
+               'machines': dict(), 'machine_percentages': dict(),
+               # Per vm/bench pair summaries.
+               'vm_benches': dict(), 'vm_bench_percentages': dict()}
+    for machine in data:
+        summary['machines'][machine] = .0
+        summary['machine_percentages'][machine] = .0
+        machine_iterations[machine] = .0
+    # Collect summary statistics.
+    for machine in data:
+        keys = sorted(data[machine]['wallclock_times'].keys())
+        for key in keys:
+            bench, vm, variant = key.split(':')
+            if bench == 'empty': continue
+            if len(data[machine]['wallclock_times'][key]) == 0:
+                print('WARNING: Skipping: %s from %s (no executions)' %
+                      (key, machine))
+            elif len(data[machine]['wallclock_times'][key][0]) == 0:
+                print('WARNING: Skipping: %s from %s (benchmark crashed)' %
+                      (key, machine))
+            else:
+                vm_bench = ' '.join((vm, bench))
+                if vm_bench not in vm_bench_iterations:
+                    vm_bench_iterations[vm_bench] = 0
+                if vm_bench not in summary['vm_benches']:
+                    summary['vm_benches'][vm_bench] = 0
+                if vm_bench not in summary['vm_bench_percentages']:
+                    summary['vm_bench_percentages'][vm_bench] = .0
+                for p_exec in xrange(len(data_dicts[machine]['all_outliers'][key])):
+                    number_iterations = len(data_dicts[machine]['wallclock_times'][key][p_exec])
+                    number_outliers = len(data_dicts[machine]['all_outliers'][key][p_exec])
+                    if number_outliers > summary['maximum_outliers']:
+                        summary['maximum_outliers'] = number_outliers
+                    total_iterations += number_iterations
+                    machine_iterations[machine] += number_iterations
+                    vm_bench_iterations[vm_bench] += number_iterations
+                    summary['machines'][machine] += number_outliers
+                    summary['total_outliers'] += number_outliers
+                    summary['vm_benches'][vm_bench] += number_outliers
+    # Calculate total percentages.
+    summary['total_percentage'] = _pc(summary['total_outliers'], total_iterations)
+    # Calculate machine percentages.
+    for machine in summary['machines']:
+        summary['machine_percentages'][machine] = \
+            _pc(summary['machines'][machine], machine_iterations[machine])
+    # Calculate vm-bench percentages.
+    for vm_bench in summary['vm_benches']:
+        summary['vm_bench_percentages'][vm_bench] = \
+            _pc(summary['vm_benches'][vm_bench], vm_bench_iterations[vm_bench])
+    write_latex_summary(summary, latex_file)
+
+
+def _pc(number, total):
+    """Calculate percentage."""
+    return float(number) / float(total) * 100.0
+
+
+def _identical(list_elements):
+    """Check all elements in a list are the same.
+    This only works for hashable types, but we are passing in lists of strings.
+    """
+    return len(set(list_elements)) == 1
+
+
+def _reformat(word):
+    """Reformat as a LaTeX macro name.
+    Removes spaces and underscores. Translates numbers to words. Lower cases.
+    """
+    for number in NUMBERS:
+        word = word.replace(str(number), NUMBERS[number])
+    word = word.replace(' ', '')
+    word = word.replace('_', '')
+    return word.lower()
+
+
+def write_latex_summary(summary, tex_file):
+    print('Writing data to %s.' % tex_file)
+    with open(tex_file, 'w') as fd:
+        fd.write('%%%\n')
+        fd.write('%%% Total outliers and percentages over all executions.\n')
+        fd.write('%%%\n')
+        fd.write('\\newcommand{\\totaloutliers}{%d}\n' % summary['total_outliers'])
+        fd.write('\\newcommand{\\totaloutlierspercentage}{%.1f}\n' % summary['total_percentage'])
+        fd.write('%%%\n')
+        fd.write('%%% Maximum outliers for one process execution.\n')
+        fd.write('%%%\n')
+        fd.write('\\newcommand{\\maximumoutliers}{%d}\n' % summary['maximum_outliers'])
+        fd.write('%%%\n')
+        fd.write('%%% Outliers per machine.\n')
+        fd.write('%%%\n')
+        for machine in summary['machines']:
+            fd.write('%%% ' + machine + '.\n')
+            mc_name = _reformat(machine)
+            fd.write('\\newcommand{\\%s}{%d}\n' %
+                     (mc_name + 'outliers', summary['machines'][machine]))
+            fd.write('\\newcommand{\\%s}{%.1f}\n' %
+                     (mc_name + 'outlierspercentage',
+                      summary['machine_percentages'][machine]))
+        fd.write('%%%\n')
+        fd.write('%%% Classifications per vm/benchmark pair.\n')
+        fd.write('%%%\n')
+        for vm_bench in summary['vm_benches']:
+            fd.write('%%% ' + vm_bench + '.\n')
+            name = _reformat(vm_bench)
+            fd.write('\\newcommand{\\%s}{%d}\n' %
+                     (name + 'outliers', summary['vm_benches'][vm_bench]))
+            fd.write('\\newcommand{\\%s}{%.1f}\n' %
+                     (name + 'outlierspercentage',
+                      summary['vm_bench_percentages'][vm_bench]))
+
+
+def get_data_dictionaries(json_files):
+    """Read a list of BZipped JSON files and return their contents as a
+    dictionaries of machine name -> JSON values.
+    """
+    data_dictionary = dict()
+    window_size = None
+    for filename in json_files:
+        assert os.path.exists(filename), 'File %s does not exist.' % filename
+        print 'Loading: %s' % filename
+        data = read_krun_results_file(filename)
+        if 'all_outliers' not in data:
+            print 'Please run mark_outliers_in_json before re-running this script.'
+            sys.exit(1)
+        machine_name = data['audit']['uname'].split(' ')[1]
+        if '.' in machine_name:  # Remove domain, if there is one.
+            machine_name = machine_name.split('.')[0]
+        if machine_name not in data_dictionary:
+            data_dictionary[machine_name] = data
+        else:  # We may have two datasets from the same machine.
+            for outer_key in data:
+                if outer_key == 'audit' or outer_key == 'reboots':
+                    continue
+                elif outer_key == 'window_size':
+                    assert data_dictionary[machine_name][outer_key] == data[outer_key]
+                    continue
+                for key in data[outer_key]:
+                    assert key not in data_dictionary[machine_name][outer_key]
+                    if key not in data_dictionary[machine_name][outer_key]:
+                        data_dictionary[machine_name][outer_key][key] = dict()
+                    data_dictionary[machine_name][outer_key][key] = data[outer_key][key]
+        if window_size is None:
+            window_size = data['window_size']
+        else:
+            assert window_size == data['window_size'], \
+                   ('Cannot summarise outliers generated with different' +
+                    ' window_size values.')
+    return data_dictionary
+
+
+def create_cli_parser():
+    """Create a parser to deal with command line switches.
+    """
+    script = os.path.basename(__file__)
+    description = (('Summarise numbers of outliers stored within a Krun ' +
+                    'results file. Writes out a LaTeX file. Must be run after ' +
+                    'mark_outliers_in_json. \n\nExample usage:\n\n' +
+                    '\t$ python %s -o summary.tex results.json.bz2') % script)
+    parser = argparse.ArgumentParser(description=description,
+                                     formatter_class=argparse.RawTextHelpFormatter)
+    parser.add_argument('json_files', action='append', nargs='+', default=[],
+                        type=str, help='One or more Krun result files.')
+    parser.add_argument('--outfile', '-o', action='store', dest='latex_file',
+                        type=str, help=('Name of the LaTeX file to write to.'),
+                        required=True)
+    return parser
+
+
+if __name__ == '__main__':
+    parser = create_cli_parser()
+    options = parser.parse_args()
+    data_dicts = get_data_dictionaries(options.json_files[0])
+    main(data_dicts, options.latex_file)
