@@ -220,8 +220,9 @@ def write_results_as_latex(machine, all_benchs, summary, steady_state, tex_file,
                                    time_steady, last_mean]
                     if not row:  # first vm in this row, needs the vm column
                         if VM_NAMES_MAP.has_key(vm):
-                            vm = VM_NAMES_MAP[vm]
-                        row.insert(0, vm)
+                            row.insert(0, VM_NAMES_MAP[vm])
+                        else:
+                            row.insert(0, vm)
                     row.extend(row_add)
                     bench_idx += 1
                 fp.write('&'.join(row))
