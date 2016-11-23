@@ -35,7 +35,6 @@ def main(data, latex_file):
         keys = sorted(data[machine]['wallclock_times'].keys())
         for key in keys:
             bench, vm, variant = key.split(':')
-            if bench == 'empty': continue
             if len(data[machine]['wallclock_times'][key]) == 0:
                 print('WARNING: Skipping: %s from %s (no executions)' %
                       (key, machine))

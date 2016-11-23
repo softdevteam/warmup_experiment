@@ -11,8 +11,7 @@ BENCHMARKS = 		binarytrees \
 			spectralnorm \
 			nbody \
 			fasta \
-			fannkuch_redux \
-			empty
+			fannkuch_redux
 
 # Extra linker flags for C benchmarks
 C_EXTRA_LDFLAGS_binarytrees = -lm
