@@ -81,8 +81,8 @@ VMS = {
 }
 
 if not sys.platform.startswith("openbsd"):
-    JVMCI_JAVA_HOME = find_internal_jvmci_java_home('work/jvmci/')
-    JVMCI_JAVA_BIN = find_internal_jvmci_java_bin('work/jvmci/')
+    JVMCI_JAVA_HOME = find_internal_jvmci_java_home('work/graal-jvmci-8/')
+    JVMCI_JAVA_BIN = find_internal_jvmci_java_bin('work/graal-jvmci-8/')
 
     # The following VMs do not run on OpenBSD.
     VMS.update({
@@ -98,8 +98,11 @@ if not sys.platform.startswith("openbsd"):
             'n_iterations': ITERATIONS_ALL_VMS,
         },
         'JRubyTruffle': {
-            'vm_def': JRubyTruffleVMDef('work/jruby/bin/jruby',
-                                        java_path=JVMCI_JAVA_BIN, env=GCC_ENV),
+            'vm_def': JRubyTruffleVMDef(jruby_dir='work/jruby',
+                                        graal_home='work/graal',
+                                        mx_dir='work/mx',
+                                        jvmci_home='work/graal-jvmci-8/jdk1.8.0/product',
+                                        env=GCC_ENV),
             'variants': ['default-ruby'],
             'n_iterations': ITERATIONS_ALL_VMS,
         },

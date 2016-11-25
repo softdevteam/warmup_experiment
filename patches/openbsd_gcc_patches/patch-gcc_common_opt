@@ -1,6 +1,7 @@
---- gcc/common.opt.orig	Thu Feb 11 14:05:25 2016
-+++ gcc/common.opt	Thu Feb 11 14:06:13 2016
-@@ -1648,7 +1648,7 @@
+$OpenBSD: patch-gcc_common_opt,v 1.2 2015/07/19 21:22:49 pascal Exp $
+--- gcc/common.opt.orig	Thu Feb 26 03:43:52 2015
++++ gcc/common.opt	Sat Jun 27 11:26:32 2015
+@@ -1648,7 +1656,7 @@ Common Report Var(flag_pic,2) Negative(fPIE)
  Generate position-independent code if possible (large mode)
  
  fPIE
@@ -9,3 +10,13 @@
  Generate position-independent code for executables if possible (large mode)
  
  fpic
+@@ -2530,6 +2538,9 @@ no-canonical-prefixes
+ Driver
+ 
+ nodefaultlibs
++Driver
++
++nopie
+ Driver
+ 
+ nostartfiles
