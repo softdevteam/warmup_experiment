@@ -1,6 +1,7 @@
 #! /usr/bin/env python
 
 import csv, os, sys, time
+from decimal import Decimal
 from krun.platform import detect_platform
 from krun.util import run_shell_cmd_bench
 from krun.vm_defs import find_internal_jvmci_java_home
@@ -54,7 +55,7 @@ def main():
                         line = line.split()
                         index = line.index("in")
                         assert line[index + 2] == "msec"
-                        output.append(float(line[index + 1]))
+                        output.append(str(Decimal(line[index + 1]) / 1000))
                     assert len(output) == ITERATIONS
                     writer.writerow([process, benchmark] + output)
                 sys.stdout.write("\n")
