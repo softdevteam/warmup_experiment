@@ -558,7 +558,7 @@ build_autoconf() {
 }
 
 
-SPIDERMONKEY_VERSION=465d150bc8be # FIREFOX_AURORA_50_BASE
+SPIDERMONKEY_VERSION=1196bf3032e1 # FIREFOX_AURORA_52_BASE
 build_spidermonkey() {
     echo "\n===> Download and build SpiderMonkey\n"
     if [ -d ${wrkdir}/spidermonkey ]; then return; fi
