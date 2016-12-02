@@ -99,8 +99,7 @@ def main(data_dcts, window_size, latex_file, num_splits, with_preamble=False):
                     cat_counts.append('$%d$%s' % (occurences, STYLE_SYMBOLS[category]))
                 reported_category += ' \\scriptsize(%s)' % ', '.join(cat_counts)
 
-            if (reported_category == STYLE_SYMBOLS['no steady state'] or
-                reported_category.startswith(STYLE_SYMBOLS['inconsistent'])):
+            if STYLE_SYMBOLS['no steady state'] in reported_category:
                 mean_last_segment = ''
                 mean_last_cpt = ''
                 time_to_steady = ''
@@ -189,13 +188,10 @@ def write_results_as_latex(machine, all_benchs, summary, steady_state, tex_file,
                         time_steady = this_summary['time_to_steady_state']
                         last_mean = this_summary['last_mean']
 
-                        if 'inconsistent' in classification:
-                            classification = '\\multicolumn{4}{l}{%s}' % classification
-                        else:
-                            classification = '\\multicolumn{1}{l}{%s}' % classification
-                            if 'flatc' in classification:
-                                last_cpt = BLANK_CELL
-                                time_steady = BLANK_CELL
+                        classification = '\\multicolumn{1}{l}{%s}' % classification
+                        if classification == STYLE_SYMBOLS['flat']:
+                            last_cpt = BLANK_CELL
+                            time_steady = BLANK_CELL
                     if last_cpt == '':
                         last_cpt = BLANK_CELL
                     if time_steady == '':
@@ -218,11 +214,8 @@ def write_results_as_latex(machine, all_benchs, summary, steady_state, tex_file,
                                 % (num_vms + fudge, bench)
                     else:
                         bench_cell = ''
-                    if 'inconsistent' in classification:
-                        row_add = [BLANK_CELL, bench_cell, classification]
-                    else:
-                        row_add = [BLANK_CELL, bench_cell, classification, last_cpt,
-                                   time_steady, last_mean]
+                    row_add = [BLANK_CELL, bench_cell, classification, last_cpt,
+                               time_steady, last_mean]
                     if not row:  # first vm in this row, needs the vm column
                         if VM_NAMES_MAP.has_key(vm):
                             row.insert(0, VM_NAMES_MAP[vm])
