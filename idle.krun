@@ -1,0 +1,14 @@
+# Krunified config file aimed to help measure the system idle cycles counts
+
+execfile("warmup.krun", globals()) # inherit settings from the main experiment
+
+VMS = {"C": VMS["C"]}
+VMS["C"]["n_iterations"] = 1
+
+BENCHMARKS = {
+    "idle": 10  # 10 second sleep per exec
+}
+
+# This is just to get a rough idea, so 10 execs is enough.
+# (The benchmark ignores in-process iterations).
+N_EXECUTIONS = 10
