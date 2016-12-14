@@ -95,6 +95,14 @@ echo "===> Working in $wrkdir"
 
 PATCH_DIR=`pwd`/patches/
 
+# System (from OS packages) Java 7, for making a JDK8. We must not use a JDK8
+# to build a JDK8. See README-builds.html in JDK8 src tarball.
+case `uname` in
+    Linux)      SYS_JDK7_HOME=/usr/lib/jvm/java-7-openjdk-amd64;;
+    OpenBSD)    SYS_JDK7_HOME=/usr/local/jdk-1.7.0;;
+    *)          unknown_platform;;
+esac
+
 # XXX when we stabilise, fix the krun revision.
 build_initial_krun() {
     echo "\n===> Download and build krun\n"
@@ -178,9 +186,8 @@ apply_gcc_lib_path() {
     esac
 }
 
-CPYTHONV=2.7.11
-CFFI_V=1.5.0
-SETUPTOOLS_V=20.1.1
+# CPython is used to build V8. Debian 8 package is too old.
+CPYTHONV=2.7.12
 CPYTHON=${wrkdir}/cpython-inst/bin/python
 build_cpython() {
     cd ${wrkdir} || exit $?
@@ -191,21 +198,18 @@ build_cpython() {
     tar xfz Python-${CPYTHONV}.tgz || exit $?
     mv Python-${CPYTHONV} cpython
     cd cpython
-    CC=${OUR_CC} ./configure --prefix=${wrkdir}/cpython-inst || exit $?
+
+    case `uname` in
+        OpenBSD)
+            CC=${OUR_CC} LDFLAGS=-Wl,-z,wxneeded ./configure \
+                --prefix=${wrkdir}/cpython-inst || exit $?;;
+        *)
+            CC=${OUR_CC} ./configure \
+                --prefix=${wrkdir}/cpython-inst || exit $?;;
+    esac
+
     ${GMAKE} -j $num_jobs || exit $?
     ${GMAKE} install || exit $?
-
-    # Install packages.
-    # I would liked to have used virtualenv, but cffi fails to install using our manually
-    # built CPython. I suspect a bug in setuptools/virtualenv in debian8.
-    # Instead, install stuff manually.
-    cd ${wrkdir} && wget https://pypi.python.org/packages/source/s/setuptools/setuptools-${SETUPTOOLS_V}.tar.gz || exit $?
-    tar zxvf setuptools-${SETUPTOOLS_V}.tar.gz || exit $?
-    cd setuptools-${SETUPTOOLS_V} && ${CPYTHON} setup.py install || exit $?
-
-    cd ${wrkdir} && wget https://pypi.python.org/packages/source/c/cffi/cffi-${CFFI_V}.tar.gz || exit $?
-    tar zxvf cffi-${CFFI_V}.tar.gz || exit $?
-    cd cffi-${CFFI_V} && ${CPYTHON} setup.py install
 }
 
 LUAJITV=2.0.4
@@ -220,10 +224,11 @@ build_luajit() {
     CFLAGS=-DLUAJIT_ENABLE_LUA52COMPAT ${GMAKE} CC=${OUR_CC} || exit $?
 }
 
-PYPYV=5.3.0
+PYPYV=5.6.0
 build_pypy() {
     cd ${wrkdir} || exit $?
     echo "\n===> Download and build PyPy\n"
+    if [ -f ${wrkdir}/pypy/pypy/goal/pypy-c ]; then return; fi
 
     if ! [ -f "${wrkdir}/pypy2-v${PYPYV}-src.tar.bz2" ]; then
         url="https://bitbucket.org/pypy/pypy/downloads/pypy2-v${PYPYV}-src.tar.bz2"
@@ -237,64 +242,82 @@ build_pypy() {
         bunzip2 -c - pypy2-v${PYPYV}-src.tar.bz2 | tar xf - || exit $?
         mv pypy2-v${PYPYV}-src pypy || exit $?
         cd pypy
-        patch -p0 < ${PATCH_DIR}/pypy_fix_nesting.diff || exit $?
-        case `uname` in
-            OpenBSD) patch < ${PATCH_DIR}/pypy_openbsd.diff || exit $?;;
-        esac
+        patch -p1 < ${PATCH_DIR}/pypy.diff || exit $?
     fi
 
-    if ! [ -f ${wrkdir}/pypy/pypy/goal/pypy-c ]; then
-        cd ${wrkdir}/pypy/pypy/goal/ || exit $?
-        usession=`mktemp -d`
+    cd ${wrkdir}/pypy/pypy/goal/ || exit $?
+    usession=`mktemp -d`
 
-        env CC=${OUR_CC} PYPY_USESSION_DIR=$usession $PYTHON \
-            ../../rpython/bin/rpython -Ojit --make-jobs=$num_jobs || exit $?
+    # Separate translate/compile so we can tag on W^X flag.
+    env CC=${OUR_CC} PYPY_USESSION_DIR=${usession} \
+        ${PYTHON} ../../rpython/bin/rpython -Ojit --source --no-shared \
+        || exit $?
 
-        rm -rf $usession
-    fi
+    pypy_make_dir=${usession}/usession-release-pypy2.7-v${PYPYV}-0/testing_1
+    cd ${pypy_make_dir} || exit $?
+    case `uname` in
+        OpenBSD)
+            env CC=${OUR_CC} ${GMAKE} LDFLAGSEXTRA="-Wl,-z,wxneeded" || exit $?;;
+        *)
+            env CC=${OUR_CC} ${GMAKE} || exit $?;;
+    esac
+
+    cp ${pypy_make_dir}/pypy-c ${wrkdir}/pypy/pypy/goal/pypy-c || exit $?
+    rm -rf ${usession}
 }
 
-V8_V=5.1.281.65
-DEPOT_TOOLS_V=26f3e4eecb09d2608b1ac304de9d5d3c68de67ce
+# Look here to know which V8 branch is currently stable:
+# https://omahaproxy.appspot.com/
+#
+# Note that there is often a newer tag in git than is shown on that page.
+# Make sure you check the tags for the stable branch. Don't use the github
+# mirror to look for tags, as it doesn't have them all.
+V8_V=5.4.500.43
+
+# Just take the newest hash at the time of updating.
+DEPOT_TOOLS_V=b8c535f696faf93835aa1fe7b99e00cbdc6d5a79
+
 build_v8() {
     cd ${wrkdir} || exit $?
     echo "\n===> Download and build V8\n"
 
     if [ -f ${wrkdir}/v8/out/native/d8 ]; then return; fi
 
+    # The build actually requires that you clone using this git wrapper tool
     if [ ! -d ${wrkdir}/depot_tools ]; then
         git clone "https://chromium.googlesource.com/chromium/tools/depot_tools.git" || exit $?
     fi
     cd depot_tools && git checkout ${DEPOT_TOOLS_V} || exit $?
 
-    # The build actually requires that you clone using this git wrapper tool
     cd ${wrkdir}
     OLDPATH=${PATH}
-    # v8's build needs python 2.7.11; as we've already built that, we might
-    # as well use it rather than forcing the user to install their own.
     PATH=${wrkdir}/cpython-inst/bin:${wrkdir}/depot_tools:${PATH}
-    # XXX we should check for errors when fetching and syncing, but
-    # currently that causes problems because fetch runs a script which
-    # aborts on OpenBSD
-    fetch v8
-    cd v8 || exit $?
-    git checkout ${V8_V}
-    gclient sync
-    patch -Ep1 < ${PATCH_DIR}/v8.diff || exit $?
 
-    # The build fails for silly reasons near the very end, even though the main
-    # v8 binary has been built. So we simply check that the binary exists and
-    # suppress unrelated build errors.
-    # Bug report https://code.google.com/p/v8/issues/detail?id=4500
-    #
-    # This used to be only the case on OpenBSD, but since we started building
-    # our own gcc, the tests also fail in strange ways on linux.
-    #
-    # V8 also mistakes our compiler for clang for some reason, hence
-    # setting GYP_DEFINES.
+    # 'fetch' uses hooks to to sync heads, but the landmine script it would
+    # call is not OpenBSD aware. We do have a patch, but it is for the $V tag,
+    # not master. We use --nohooks now, then once we swich tag we apply our
+    # patch and sync the heads manually.
+    if [ ! -d ${wrkdir}/v8 ]; then
+        fetch --nohooks v8 || exit $?
+    fi
+    cd v8 || exit $?
+    git checkout ${V8_V} || exit $?
+    patch -Ep1 < ${PATCH_DIR}/v8.diff || exit $?
+    gclient sync || exit $?
+
+    # Test suite build doesn't listen to CC/CXX -- symlink/path hack ahoy
+    ln -sf ${OUR_CC} `dirname ${OUR_CC}`/gcc
+    ln -sf ${OUR_CXX} `dirname ${OUR_CXX}`/g++
+    PATH=`dirname ${OUR_CC}`:${PATH}
+
+    # V8 mistakes our compiler for clang for some reason, hence setting
+    # GYP_DEFINES. It probably isn't expecting a gcc to be called zgcc.
     env GYP_DEFINES="clang=0" CC=${OUR_CC} CXX=${OUR_CXX} \
-        LIBKRUN_DIR=${HERE}/krun/libkrun ${GMAKE} native V=1
+        LIBKRUN_DIR=${HERE}/krun/libkrun ${GMAKE} -j${num_jobs} native V=1 || exit $?
     test -f out/native/d8 || exit $?
+
+    # remove the gcc/g++ symlinks from earlier and restore path
+    rm `dirname ${OUR_CC}`/gcc `dirname ${OUR_CC}`/g++ || exit $?
     PATH=${OLDPATH}
 }
 
@@ -334,6 +357,7 @@ build_jdk() {
         mv ${JDK_TARBALL_BASE} openjdk
     fi
     cd openjdk || exit $?
+    patch -Ep0 < ${PATCH_DIR}/openjdk.diff || exit $?
     JDK_BUILD_PATH=`dirname ${OUR_CC}`:${PATH}
     case `uname` in
         Linux)
@@ -350,12 +374,12 @@ build_jdk() {
                 --with-zlib=system \
                 --with-milestone=fcs \
                 --with-jobs=$num_jobs \
+                --with-boot-jdk=${SYS_JDK7_HOME} \
                 || exit $?
             PATH=${JDK_BUILD_PATH} ../make-${GMAKE_V}/make all || exit $?
             ;;
         OpenBSD)
             env CPPFLAGS=-I/usr/local/include \
-              LDFLAGS=-L/usr/local/lib \
               CC=zgcc CXX=zg++ PATH=${JDK_BUILD_PATH} ac_cv_path_NAWK=awk bash configure \
               --disable-option-checking \
               --with-cups-include=/usr/local/include \
@@ -370,6 +394,8 @@ build_jdk() {
               --with-giflib=system \
               --with-milestone=fcs \
               --with-jobs=$num_jobs \
+              --with-extra-ldflags="-Wl,-z,wxneeded" \
+              --with-boot-jdk=${SYS_JDK7_HOME} \
               || exit $?
             PATH=${JDK_BUILD_PATH} \
                 COMPILER_WARNINGS_FATAL=false \
@@ -379,47 +405,101 @@ build_jdk() {
         *)
             unknown_platform;;
     esac
-    chmod -R 755 ${wrkdir}/openjdk/build || exit $?
+    # JDK installs some jar files unreadable to "other" users meaning that the
+    # benchmark user can't access them. This becomes a problem later for graal,
+    # which takes a copy of this JDK's jar files.
+    chmod -R 755 ${wrkdir}/openjdk/build/*-release/jdk/lib || exit $?
+}
+
+
+# This is a bootstrap JDK used only for Graal, which requiries a very specific
+# version of the JDK.
+BOOT_JAVA_HOME=${wrkdir}/jdk8u111-b14_fullsource/build/linux-x86_64-normal-server-release/images/j2sdk-image/
+BOOT_JDK_BASE=jdk8u111-b14
+BOOT_JDK_TAR=${BOOT_JDK_BASE}_fullsource.tgz
+build_bootstrap_jdk() {
+    echo "\n===> Download and build graal bootstrap JDK8\n"
+    if [ -f ${BOOT_JAVA_HOME}/bin/javac ]; then return; fi
+
+    cd ${wrkdir} || exit $?
+    # We fetch a hand-rolled tarball, as the JDK repo build downloads things
+    # and I am not sure that they are fixed versions. The tarball was rolled on
+    # 2016-12-02.
+    if [ ! -f ${wrkdir}/${BOOT_JDK_TAR} ]; then
+        wget https://archive.org/download/softdev_warmup_experiment_artefacts/distfiles/${BOOT_JDK_TAR}
+    fi
+    if [ ! -d ${BOOT_JDK_BASE}_fullsource ]; then
+        tar zxf ${BOOT_JDK_TAR} || exit $?
+    fi
+
+    cd  ${BOOT_JDK_BASE}_fullsource || exit $?
+    JDK_BUILD_PATH=`dirname ${OUR_CC}`:${PATH}
+    env CC=zgcc CXX=zg++ PATH=${JDK_BUILD_PATH} bash configure \
+        --disable-option-checking \
+        --with-cups-include=/usr/local/include \
+        --with-debug-level=release \
+        --with-debug-level=release \
+        --disable-ccache \
+        --disable-freetype-bundling \
+        --disable-zip-debug-info \
+        --disable-debug-symbols \
+        --enable-static-libjli \
+        --with-zlib=system \
+        --with-milestone=fcs \
+        --with-jobs=$num_jobs \
+        --with-boot-jdk=${SYS_JDK7_HOME} \
+        || exit $?
+    PATH=${JDK_BUILD_PATH} ../make-${GMAKE_V}/make all || exit $?
 }
 
 # The latest Graal and MX at the time of writing. Note that Graal will be part
 # of JDK9 soon, so the build steps you see here will be out of date soon. Also
 # note that MX doesn't have releases.
-MX_VERSION=9405be47481c8ce1ef14e2c04e9f8182c4a49cf1
-GRAAL_VERSION=graal-vm-0.12
-MX="env JAVA_HOME=${OUR_JAVA_HOME} python2.7 ${wrkdir}/mx/mx.py"
+JVMCI_VERSION=jvmci-0.23
+MX_VERSION=d9c7efa53f60e4ca493da08438af01f8ca985985
+GRAAL_VERSION=graal-vm-0.18
 build_graal() {
     echo "\n===> Download and build graal\n"
+
+    if [ -f ${wrkdir}/graal-jvmci-8/jdk1.8*/product/bin/javac ]; then return; fi
 
     if [ ! -d ${wrkdir}/mx ]; then
         cd ${wrkdir} && git clone https://github.com/graalvm/mx || exit $?
         cd mx && git checkout ${MX_VERSION} && cd .. || exit $?
     fi
 
-    if [ -f ${wrkdir}/jvmci/jdk1.8*/product/bin/javac ]; then return; fi
-
-    cd ${wrkdir}
-    if ! [ -d ${wrkdir}/graal ]; then
-        # Officially you are supposed to use mx to get the latest graal, but since
-        # we need a fixed version, we deviate.
-        git clone https://github.com/graalvm/graal-core graal || exit $?
-        cd graal && git checkout ${GRAAL_VERSION} || exit $?
-
-        if ! [ -d ${wrkdir}/jvmci ]; then
-            # Then graal has in mx.graal/suite.py specifies a fixed version
-            # of jvmci8 that is known to work with this version of graal.
-            # To fetch it we use the sforceimports feature of mx.
-            ${MX} sforceimports || exit $?
-        fi
-    fi
-
     # mx won't listen to CC/CXX
     ln -sf ${OUR_CC} `dirname ${OUR_CC}`/gcc
     ln -sf ${OUR_CXX} `dirname ${OUR_CXX}`/g++
     GRAAL_PATH=`dirname ${OUR_CC}`:${PATH}
+    MX="env PATH=${GRAAL_PATH} python2.7 ${wrkdir}/mx/mx.py --java-home ${BOOT_JAVA_HOME}"
 
-    # Then we can build as usual.
-    env PATH=${GRAAL_PATH} ${MX} build || exit $?
+    # Build a JVMCI-enabled JDK
+    if [ ! -d ${wrkdir}/graal-jvmci-8 ];then
+        hg clone http://hg.openjdk.java.net/graal/graal-jvmci-8
+    fi
+    cd graal-jvmci-8 || exit $?
+    hg up ${JVMCI_VERSION} || exit $?
+    if [ ! -d ${wrkdir}/graal-jvmci-8/jdk1.8.0 ]; then
+        ${MX} sforceimports || exit $?
+        ${MX} build
+    fi
+
+    # Make mx use the jvmci-enabled jdk
+    cd ${wrkdir}/graal-jvmci-8
+    JVMCI_JAVA_HOME=`${MX} jdkhome`
+    echo "jvmci JAVA_HOME is: ${JVMCI_JAVA_HOME}"
+    MX="env PATH=${GRAAL_PATH} python2.7 ${wrkdir}/mx/mx.py --java-home ${JVMCI_JAVA_HOME}"
+
+    # Build graal itself
+    cd ${wrkdir}
+    if ! [ -d ${wrkdir}/graal ]; then
+        git clone https://github.com/graalvm/graal-core graal || exit $?
+    fi
+    cd ${wrkdir}/graal && git checkout ${GRAAL_VERSION} || exit $?
+    ${MX} sforceimports || exit $?
+    ${MX} || exit $?  # fetches truffle
+    ${MX} build || exit $?
 
     # remove the symlinks
     rm `dirname ${OUR_CC}`/gcc `dirname ${OUR_CC}`/g++ || exit $?
@@ -453,10 +533,9 @@ fetch_maven() {
 
 
 # 9.1.2.0 with build system fixes for the buildkit.
-JRUBY_V=graal-vm-0.12-build-pack-compat
-JRUBY_BUILDPACK_V=graal-vm-0.12
+JRUBY_V=graal-vm-0.18
+JRUBY_BUILDPACK_V=graal-vm-0.18
 JRUBY_BUILDPACK_DIR=${wrkdir}/jruby-build-pack/maven
-
 build_jruby_truffle() {
     echo "\n===> Download and build truffle+jruby\n"
 
@@ -478,42 +557,24 @@ build_jruby_truffle() {
     cd ${wrkdir}/jruby-build-pack && git checkout ${JRUBY_BUILDPACK_V} || exit $?
     cd ${wrkdir}/jruby && git checkout ${JRUBY_V} || exit $?
 
-    # Install our truffle version into into the buildpack.  Apparently this
-    # should not be needed under normal circumstances, as truffle from the
-    # graal build is supposed to be picked up automatically. For some reason
-    # this doesn't work for us, but this explicit workaround does.
-    #
-    # Must be run from the truffle dir!
-    cd ${wrkdir}/truffle || exit $?
-    env JAVACMD=${OUR_JAVA_HOME}/bin/java \
-        MAVEN_OPTS=-Dmaven.repo.local=${JRUBY_BUILDPACK_DIR} \
-        ${MX} maven-install || exit $?
-
     # NOTE: At the time of writing, JRuby will only build Truffle support if
     # the build is initiated using JDK>=8.
     #
-    # Note the use of a specific truffle version (the same cloned by mx during
-    # the graal build). This means we force jruby to build against the truffle
-    # version we installed into the buildpack earlier.
+    # Note the use of a specific truffle version. This is required and needs to
+    # match the graal version we built earlier.
     cd ${wrkdir}/jruby || exit $?
     patch -Ep1 < ${PATCH_DIR}/jruby.diff || exit $?
-    JAVACMD=${OUR_JAVA_HOME}/bin/java \
-        mvn -Dtruffle.version=`cd ${wrkdir}/truffle && git rev-parse HEAD` \
-        -Dmaven.repo.local=${JRUBY_BUILDPACK_DIR} --offline || exit $?
+    JAVACMD=${BOOT_JAVA_HOME}/bin/java \
+        mvn -Dtruffle.version=0.18 \
+        -Dmaven.repo.local=${JRUBY_BUILDPACK_DIR} --offline package || exit $?
 
-    # Then to invoke the VM:
-    # JAVACMD=${wrkdir}/jvmci/jdk1.8.0/product/bin/java \
-    #     ./work/jruby/bin/jruby -J-Djvmci.Compiler=graal -X+T ...
-    #
-    # However, we found a commit where the meaning of -X+T is changed. This is
-    # currently not in-place in the tag we are using, but if you update JRuby,
-    # please investigate. Krun would also need a change.
-    #
-    # https://github.com/jruby/jruby/commit/47120e11b8c7a7be9beca90ffee988b8a4b1c3a9
+    # Then to invoke the VM (with mx and jruby bin dirs in $PATH):
+    # GRAAL_HOME=work/graal JAVA_HOME=${JVMCI_JAVA_HOME} \
+    #    work/jruby/tool/jt.rb ruby --graal <program-args>
 }
 
 
-HHVM_VERSION=HHVM-3.14.0
+HHVM_VERSION=HHVM-3.15.3
 build_hhvm() {
     echo "\n===> Download and build HHVM\n"
     if [ -f ${wrkdir}/hhvm/hphp/hhvm/php ]; then return; fi
@@ -644,7 +705,6 @@ fetch_libkalibera() {
     fi
 }
 
-
 fetch_external_benchmarks
 build_initial_krun
 fetch_dacapo_jar
@@ -660,6 +720,7 @@ build_gmake
 build_jdk
 case `uname` in
     Linux)
+        build_bootstrap_jdk
         build_graal
         fetch_maven
         build_jruby_truffle

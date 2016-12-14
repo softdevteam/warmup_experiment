@@ -1,5 +1,87 @@
+diff --git a/gypfiles/landmine_utils.py b/gypfiles/landmine_utils.py
+index cb34991..be0a70e 100644
+--- a/gypfiles/landmine_utils.py
++++ b/gypfiles/landmine_utils.py
+@@ -33,7 +33,7 @@ def IsWindows():
+ 
+ @memoize()
+ def IsLinux():
+-  return sys.platform.startswith(('linux', 'freebsd'))
++  return sys.platform.startswith(('linux', 'freebsd', 'openbsd'))
+ 
+ 
+ @memoize()
+diff --git a/src/base/debug/stack_trace_posix.cc b/src/base/debug/stack_trace_posix.cc
+index 87c0a73..2e1545e 100644
+--- a/src/base/debug/stack_trace_posix.cc
++++ b/src/base/debug/stack_trace_posix.cc
+@@ -29,6 +29,12 @@
+ #define HAVE_EXECINFO_H 1
+ #endif
+ 
++// backtrace support is broken in OpenBSD
++#if defined(__OpenBSD__)
++#undef HAVE_EXECINFO_H
++#define HAVE_EXECINFO_H 0
++#endif
++
+ #if HAVE_EXECINFO_H
+ #include <cxxabi.h>
+ #include <execinfo.h>
+@@ -77,11 +83,11 @@ const char kSymbolCharacters[] =
+ // "out/Debug/base_unittests(_ZN10StackTraceC1Ev+0x20) [0x817778c]"
+ // =>
+ // "out/Debug/base_unittests(StackTrace::StackTrace()+0x20) [0x817778c]"
++#if HAVE_EXECINFO_H
+ void DemangleSymbols(std::string* text) {
+   // Note: code in this function is NOT async-signal safe (std::string uses
+   // malloc internally).
+ 
+-#if HAVE_EXECINFO_H
+ 
+   std::string::size_type search_from = 0;
+   while (search_from < text->size()) {
+@@ -118,8 +124,8 @@ void DemangleSymbols(std::string* text) {
+     }
+   }
+ 
+-#endif  // HAVE_EXECINFO_H
+ }
++#endif  // HAVE_EXECINFO_H
+ 
+ class BacktraceOutputHandler {
+  public:
+@@ -129,6 +135,7 @@ class BacktraceOutputHandler {
+   virtual ~BacktraceOutputHandler() {}
+ };
+ 
++#if HAVE_EXECINFO_H
+ void OutputPointer(void* pointer, BacktraceOutputHandler* handler) {
+   // This should be more than enough to store a 64-bit number in hex:
+   // 16 hex digits + 1 for null-terminator.
+@@ -138,6 +145,7 @@ void OutputPointer(void* pointer, BacktraceOutputHandler* handler) {
+                    12);
+   handler->HandleOutput(buf);
+ }
++#endif  // HAVE_EXECINFO_H
+ 
+ #if HAVE_EXECINFO_H
+ void ProcessBacktrace(void* const* trace, size_t size,
+diff --git a/src/base/platform/platform-posix.cc b/src/base/platform/platform-posix.cc
+index 3f4165d..7d491a7 100644
+--- a/src/base/platform/platform-posix.cc
++++ b/src/base/platform/platform-posix.cc
+@@ -333,6 +333,8 @@ int OS::GetCurrentThreadId() {
+   return static_cast<int>(thread_self());
+ #elif V8_OS_SOLARIS
+   return static_cast<int>(pthread_self());
++#elif V8_OS_OPENBSD
++  return reinterpret_cast<uint64_t>(pthread_self());
+ #else
+   return static_cast<int>(reinterpret_cast<intptr_t>(pthread_self()));
+ #endif
 diff --git a/src/d8.cc b/src/d8.cc
-index 0688380..728e6ca 100644
+index a8af9de..6a5a425 100644
 --- a/src/d8.cc
 +++ b/src/d8.cc
 @@ -2,6 +2,9 @@
@@ -12,7 +94,7 @@ index 0688380..728e6ca 100644
  
  // Defined when linking against shared lib on Windows.
  #if defined(USING_V8_SHARED) && !defined(V8_SHARED)
-@@ -63,6 +66,24 @@
+@@ -67,6 +70,24 @@
  #define CHECK(condition) assert(condition)
  #endif
  
@@ -37,7 +119,7 @@ index 0688380..728e6ca 100644
  namespace v8 {
  
  namespace {
-@@ -627,6 +648,60 @@ void Shell::Print(const v8::FunctionCallbackInfo<v8::Value>& args) {
+@@ -770,6 +791,60 @@ void Shell::Print(const v8::FunctionCallbackInfo<v8::Value>& args) {
    fflush(stdout);
  }
  
@@ -98,7 +180,7 @@ index 0688380..728e6ca 100644
  
  void Shell::Write(const v8::FunctionCallbackInfo<v8::Value>& args) {
    for (int i = 0; i < args.Length(); i++) {
-@@ -658,6 +733,33 @@ void Shell::Write(const v8::FunctionCallbackInfo<v8::Value>& args) {
+@@ -801,6 +876,33 @@ void Shell::Write(const v8::FunctionCallbackInfo<v8::Value>& args) {
    }
  }
  
@@ -132,7 +214,7 @@ index 0688380..728e6ca 100644
  
  void Shell::Read(const v8::FunctionCallbackInfo<v8::Value>& args) {
    String::Utf8Value file(args[0]);
-@@ -1082,10 +1184,54 @@ Local<ObjectTemplate> Shell::CreateGlobalTemplate(Isolate* isolate) {
+@@ -1227,10 +1329,54 @@ Local<ObjectTemplate> Shell::CreateGlobalTemplate(Isolate* isolate) {
            .ToLocalChecked(),
        FunctionTemplate::New(isolate, Print));
    global_template->Set(
@@ -188,12 +270,12 @@ index 0688380..728e6ca 100644
            .ToLocalChecked(),
        FunctionTemplate::New(isolate, Read));
 diff --git a/src/d8.gyp b/src/d8.gyp
-index f249a78..38a5003 100644
+index cc65a5b..4099d76 100644
 --- a/src/d8.gyp
 +++ b/src/d8.gyp
 @@ -46,6 +46,17 @@
-       'include_dirs+': [
          '..',
+         '<(DEPTH)',
        ],
 +      'link_settings': {
 +        'libraries+': [
@@ -210,10 +292,10 @@ index f249a78..38a5003 100644
          'd8.h',
          'd8.cc',
 diff --git a/src/d8.h b/src/d8.h
-index 321d9c1..c63d183 100644
+index 0e365a5..9642f32 100644
 --- a/src/d8.h
 +++ b/src/d8.h
-@@ -385,7 +385,18 @@ class Shell : public i::AllStatic {
+@@ -391,7 +391,18 @@ class Shell : public i::AllStatic {
                               const  PropertyCallbackInfo<void>& info);
  
    static void Print(const v8::FunctionCallbackInfo<v8::Value>& args);
@@ -232,3 +314,18 @@ index 321d9c1..c63d183 100644
    static void QuitOnce(v8::FunctionCallbackInfo<v8::Value>* args);
    static void Quit(const v8::FunctionCallbackInfo<v8::Value>& args);
    static void Version(const v8::FunctionCallbackInfo<v8::Value>& args);
+diff --git a/src/v8.gyp b/src/v8.gyp
+index 1adb2fe..ba83ace 100644
+--- a/src/v8.gyp
++++ b/src/v8.gyp
+@@ -1920,8 +1920,10 @@
+             'link_settings': {
+               'libraries': [
+                 '-L/usr/local/lib -lexecinfo',
++                '-Wl,-z,wxneeded',
+             ]},
+             'sources': [
++              'base/debug/stack_trace_posix.cc',
+               'base/platform/platform-openbsd.cc',
+               'base/platform/platform-posix.cc'
+             ],

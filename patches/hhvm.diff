@@ -1,5 +1,5 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 2b1d70e..ccc22fe 100644
+index e215cac..b3148f9 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -1,4 +1,5 @@
@@ -9,10 +9,10 @@ index 2b1d70e..ccc22fe 100644
  # This needs to be done before any languages are enabled or
  # projects are created.
 diff --git a/hphp/hhvm/CMakeLists.txt b/hphp/hhvm/CMakeLists.txt
-index 1d0822d..ad3e69b 100644
+index 18ac401..e027065 100644
 --- a/hphp/hhvm/CMakeLists.txt
 +++ b/hphp/hhvm/CMakeLists.txt
-@@ -37,6 +37,9 @@ if(CYGWIN)
+@@ -45,6 +45,9 @@ if(CYGWIN)
    target_link_libraries(hhvm dbghelp)
  endif()
  
@@ -23,7 +23,7 @@ index 1d0822d..ad3e69b 100644
  # See https://github.com/facebook/hhvm/issues/5217
  INCLUDE(CheckCXXSourceCompiles)
 diff --git a/hphp/runtime/ext/std/ext_std_misc.cpp b/hphp/runtime/ext/std/ext_std_misc.cpp
-index 8b08cec..dcfc57b 100644
+index de7afa4..75e30c7 100644
 --- a/hphp/runtime/ext/std/ext_std_misc.cpp
 +++ b/hphp/runtime/ext/std/ext_std_misc.cpp
 @@ -44,10 +44,14 @@
@@ -41,7 +41,7 @@ index 8b08cec..dcfc57b 100644
  namespace HPHP {
  
  IMPLEMENT_THREAD_LOCAL(std::string, s_misc_highlight_default_string);
-@@ -192,6 +196,15 @@ void StandardExtension::initMisc() {
+@@ -191,6 +195,15 @@ void StandardExtension::initMisc() {
      HHVM_FE(sys_getloadavg);
      HHVM_FE(token_get_all);
      HHVM_FE(token_name);
@@ -57,7 +57,7 @@ index 8b08cec..dcfc57b 100644
      HHVM_FE(hphp_to_string);
      HHVM_FALIAS(__SystemLib\\max2, SystemLib_max2);
      HHVM_FALIAS(__SystemLib\\min2, SystemLib_min2);
-@@ -966,5 +979,41 @@ Variant HHVM_FUNCTION(SystemLib_min2, const Variant& value1,
+@@ -962,5 +975,41 @@ Variant HHVM_FUNCTION(SystemLib_min2, const Variant& value1,
  #undef YYTOKEN_MAP
  #undef YYTOKEN
  
