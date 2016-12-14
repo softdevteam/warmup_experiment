@@ -344,7 +344,7 @@ case `uname` in
     OpenBSD) OUR_JAVA_HOME=${wrkdir}/openjdk/build/bsd-x86_64-normal-server-release/images/j2sdk-image/;;
     *) unknown_platform;;
 esac
-JDK_TARBALL_BASE=openjdk-8u72b15-bsd-port-20160220
+JDK_TARBALL_BASE=openjdk-8u112b15-bsd-port-20161210
 build_jdk() {
     echo "\n===> Download and build JDK8\n"
     if [ -f ${OUR_JAVA_HOME}/bin/javac ]; then return; fi
@@ -357,7 +357,6 @@ build_jdk() {
         mv ${JDK_TARBALL_BASE} openjdk
     fi
     cd openjdk || exit $?
-    patch -Ep0 < ${PATCH_DIR}/openjdk.diff || exit $?
     JDK_BUILD_PATH=`dirname ${OUR_CC}`:${PATH}
     case `uname` in
         Linux)
