@@ -24,8 +24,6 @@ check_for svn
 check_for unzip
 check_for xml2-config
 check_for bash
-check_for java
-check_for javac
 check_for xzdec
 check_for wget
 check_for virtualenv
@@ -102,6 +100,11 @@ case `uname` in
     OpenBSD)    SYS_JDK7_HOME=/usr/local/jdk-1.7.0;;
     *)          unknown_platform;;
 esac
+
+if [ ! -d ${SYS_JDK7_HOME} ]; then
+    echo "Can't find system Java 7"
+    exit 1
+fi
 
 # XXX when we stabilise, fix the krun revision.
 build_initial_krun() {
