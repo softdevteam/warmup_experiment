@@ -139,7 +139,7 @@ SKIP = [
     "richards:HHVM:default-php",
 ]
 
-N_EXECUTIONS = 10  # Number of fresh processes.
+N_EXECUTIONS = 30  # Number of fresh processes.
 
 if sys.platform.startswith("linux"):
     # Assumes systemd is used for init.
