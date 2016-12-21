@@ -165,6 +165,7 @@ if sys.platform.startswith("linux"):
     ]
 elif sys.platform.startswith("openbsd"):
     PRE_EXECUTION_CMDS = [
+        "sudo /etc/rc.d/ntpd stop",
         "sudo /etc/rc.d/cron stop",
         "sudo /etc/rc.d/smtpd stop",
         "sudo /etc/rc.d/pflogd stop",
@@ -173,6 +174,7 @@ elif sys.platform.startswith("openbsd"):
 
     POST_EXECUTION_CMDS = [
         "sudo sh /etc/netstart",
+        "sudo /etc/rc.d/ntpd start || true",
         "sudo /etc/rc.d/cron start || true",
         "sudo /etc/rc.d/smtpd start || true",
         "sudo /etc/rc.d/pflogd start || true",
