@@ -423,25 +423,23 @@ def draw_process_exec(grid_cell, data, cycles_data,
                                zorder=ZORDER_CHANGEPOINTS,
                                linewidths=[LINE_WIDTH for _ in xrange(len(means))])
         axis1.add_collection(lines)
-        # If the classification is not 'flat' or 'no steady state', see if there
-        # are any 'interesting' segments to annotate with segment means.
-        if ((classification == 'warmup' or classification == 'slowdown')
-                and len(changepoints) > 1):
-            y_padding = (y_range[1] - y_range[0]) / 10.0
-            # Annotate penultimate segment mean.
-            if changepoints[-1] < 100:
-                x_coord = 0
-            else:
-                x_coord = changepoints[-1] - 100
-            y_coord = max(data_narray[x_coord:changepoints[-1] + 250]) + y_padding
-            axis1.text(x_coord, y_coord, '%.4f' % changepoint_means[-2],
-                    horizontalalignment='left', verticalalignment='center',
-                    fontsize=INSET_TICK_FONTSIZE)
-            # Annotate last segment mean.
-            x_coord = changepoints[-1] + 20  # Same y_coord for each annotation.
-            axis1.text(x_coord, y_coord, '%.4f' % changepoint_means[-1],
-                    horizontalalignment='left', verticalalignment='center',
-                    fontsize=INSET_TICK_FONTSIZE)
+        # If the classification is not 'flat', see if there are any
+        # 'interesting' segments to annotate with segment means.
+        if classification != 'flat':
+            y_padding = (y_range[1] - y_range[0]) * 0.01
+            for cpt in xrange(len(changepoint_means)):
+                if cpt == 0:
+                    x_coord = 0
+                    y_coord = max(data_narray[0:changepoints[0]]) + y_padding
+                elif cpt == len(changepoint_means) - 1:
+                    x_coord = changepoints[-1] + 20
+                    y_coord = max(data_narray[changepoints[-1]:-1]) + y_padding
+                else:
+                    x_coord = changepoints[cpt - 1] + 20
+                    y_coord = max(data_narray[changepoints[cpt - 1]:changepoints[cpt]]) + y_padding
+                axis1.text(x_coord, y_coord, '%.4f' % changepoint_means[cpt],
+                        horizontalalignment='left', verticalalignment='center',
+                        fontsize=INSET_TICK_FONTSIZE)
 
     # Draw changepoints as blobs, without changepoint means.
     if changepoints and not changepoint_means:
