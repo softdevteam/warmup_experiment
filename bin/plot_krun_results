@@ -671,7 +671,7 @@ def draw_page(is_interactive, executions, cycles_executions,
             if best_rect:
                 # Create and style the inset.
                 inset = add_inset_to_axis(fig, axis, best_rect)
-                inset.set_ylim([y_min, y_max])  # Same scale as larger subplot.
+                inset.set_ylim(axis.get_ylim())
                 inset.grid(False)
                 inset.set_yticks([y_min, y_min + ((y_max - y_min) / 2.0), y_max])
                 format_yticks_scientific(inset)
