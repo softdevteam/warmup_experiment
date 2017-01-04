@@ -171,6 +171,7 @@ def main(is_interactive, data_dcts, plot_titles, window_size, outfile,
     instr_pages = list()
     all_outliers, all_common, all_unique = list(), list(), list()
     all_changepoints, all_changepoint_means = list(), list()
+    all_classifications = list()
 
     # By default, each benchmark from each machine is placed on a separate
     # page. If the --one-page switch has been passed in, then we place
@@ -182,6 +183,7 @@ def main(is_interactive, data_dcts, plot_titles, window_size, outfile,
         instr_page = list()
         page_common, page_unique, page_outlier = list(), list(), list()
         page_changepoints, page_changepoint_means = list(), list()
+        page_classifications = list()
         for key in sorted(data_dcts['data']):
             for machine in sorted(data_dcts['data'][key]):
                 for index, run_seq in enumerate(data_dcts['data'][key][machine]):
@@ -208,12 +210,15 @@ def main(is_interactive, data_dcts, plot_titles, window_size, outfile,
                     if changepoints:
                         page_changepoints.append(data_dcts['changepoints'][key][machine][index])
                         page_changepoint_means.append(None)
+                        page_classifications.append(data_dcts['classifications'][key][machine][index])
                     if changepoint_means:
                         page_changepoints.append(data_dcts['changepoints'][key][machine][index])
                         page_changepoint_means.append(data_dcts['changepoint_means'][key][machine][index])
+                        page_classifications.append(data_dcts['classifications'][key][machine][index])
                     else:
                         page_changepoints.append(None)
                         page_changepoint_means.append(None)
+                        page_classifications.append(None)
         pages.append(page)
         cycles_pages.append(cycles_page)
         instr_pages.append(instr_page)
@@ -223,6 +228,7 @@ def main(is_interactive, data_dcts, plot_titles, window_size, outfile,
         all_unique.append(page_unique)
         all_changepoints.append(page_changepoints)
         all_changepoint_means.append(page_changepoint_means)
+        all_classifications.append(page_classifications)
     else:  # Create multiple pages.
         for key in sorted(data_dcts['data']):
             for machine in sorted(data_dcts['data'][key]):
@@ -243,12 +249,15 @@ def main(is_interactive, data_dcts, plot_titles, window_size, outfile,
                 if changepoints:
                     all_changepoints.append(data_dcts['changepoints'][key][machine])
                     all_changepoint_means.append(None)
+                    all_classifications.append(data_dcts['classifications'][key][machine])
                 elif changepoint_means:
                     all_changepoints.append(data_dcts['changepoints'][key][machine])
                     all_changepoint_means.append(data_dcts['changepoint_means'][key][machine])
+                    all_classifications.append(data_dcts['classifications'][key][machine])
                 else:
                     all_changepoints.append(None)
                     all_changepoint_means.append(None)
+                    all_classifications.append(None)
 
     # Draw each page and display (interactive mode) or save to disk.
     try:
@@ -280,14 +289,15 @@ def main(is_interactive, data_dcts, plot_titles, window_size, outfile,
             unique = only_uncrashed(all_unique[index])
             changepoints = only_uncrashed(all_changepoints[index])
             changepoint_means = only_uncrashed(all_changepoint_means[index])
+            classifications = only_uncrashed(all_classifications[index])
 
             fig = draw_page(is_interactive, wct_page, cycles_page,
                                          instr_page, subplot_titles,
                                          window_size, xlimits, outliers,
                                          unique, common, changepoints,
-                                         changepoint_means, median, tukey,
-                                         inset, legend_off, core_cycles,
-                                         cycles_ylimits)
+                                         changepoint_means, classifications,
+                                         median, tukey, inset, legend_off,
+                                         core_cycles, cycles_ylimits)
             if fig is not None:
                 if not is_interactive:
                     pdf.savefig(fig, dpi=fig.dpi, orientation='landscape',
@@ -315,7 +325,7 @@ def _get_scatter_points_within_bounds(scatter, x_bounds):
 def draw_process_exec(grid_cell, data, cycles_data,
                  instr_data, instr_y_ranges, title, x_bounds, y_range, window_size,
                  outliers, unique, common, changepoints, changepoint_means,
-                 median, tukey, core_cycles, cycles_ylimits):
+                 classification, median, tukey, core_cycles, cycles_ylimits):
     iterations = numpy.array(xrange(x_bounds[0], x_bounds[1]))
     # Marshal data into numpy arrays.
     data_narray = numpy.array(data[x_bounds[0]:x_bounds[1]])
@@ -538,8 +548,8 @@ def draw_process_exec(grid_cell, data, cycles_data,
 
 def draw_page(is_interactive, executions, cycles_executions,
               instr_executions, titles, window_size, xlimits,
-              outliers, unique, common, changepoints, changepoint_means, median,
-              tukey, inset=False, legend_off=True, core_cycles=(0,1,2,3),
+              outliers, unique, common, changepoints, changepoint_means, classifications,
+              median, tukey, inset=False, legend_off=True, core_cycles=(0,1,2,3),
               cycles_ylimits=None):
     """Plot a page of benchmarks.
     """
@@ -610,6 +620,7 @@ def draw_page(is_interactive, executions, cycles_executions,
     cycles_data, instr_data = None, None
     outliers_exec, unique_exec, common_exec = None, None, None
     changepoint_exec, changepoint_mean_exec = None, None
+    classification_exec = None
     while index < n_execs:
         data = executions[index]
         if cycles_executions:
@@ -624,8 +635,10 @@ def draw_page(is_interactive, executions, cycles_executions,
             common_exec = common[index]
         if changepoints:
             changepoint_exec = changepoints[index]
+            classification_exec = classifications[index]
         if changepoint_means:
             changepoint_mean_exec = changepoint_means[index]
+            classification_exec = classifications[index]
         # Get axis and draw plot.
         inner_grid = outer_grid[row, col]
         x_bounds = [xlimits_start, xlimits_stop]
@@ -633,8 +646,8 @@ def draw_page(is_interactive, executions, cycles_executions,
                               instr_data, instr_y_ranges,
                               titles[index], x_bounds, [y_min, y_max], window_size,
                               outliers_exec, unique_exec, common_exec, changepoint_exec,
-                              changepoint_mean_exec, median, tukey, core_cycles,
-                              cycles_ylimits)
+                              changepoint_mean_exec, classification_exec,
+                              median, tukey, core_cycles, cycles_ylimits)
         wallclock_axes.append(wc_axis)
         col += 1
         if col == MAX_SUBPLOTS_PER_ROW:
@@ -783,8 +796,8 @@ def get_data_dictionaries(json_files, benchmarks=[], wallclock_only=False,
     data_dictionary = {'data': dict(),  'cycles_counts': dict(),
                        'instr_data': dict(),  # Per-VM information.
                        'changepoints': dict(), 'changepoint_means': dict(),
-                       'all_outliers': dict(), 'common_outliers': dict(),
-                       'unique_outliers': dict(),
+                       'classifications': dict(), 'all_outliers': dict(),
+                       'common_outliers': dict(), 'unique_outliers': dict(),
                       }
 
     plot_titles = dict()  # All subplot titles.
@@ -868,6 +881,7 @@ def get_data_dictionaries(json_files, benchmarks=[], wallclock_only=False,
                         data_dictionary['instr_data'][key] = dict()
                         data_dictionary['changepoints'][key] = dict()
                         data_dictionary['changepoint_means'][key] = dict()
+                        data_dictionary['classifications'][key] = dict()
                         data_dictionary['all_outliers'][key] = dict()
                         data_dictionary['common_outliers'][key] = dict()
                         data_dictionary['unique_outliers'][key] = dict()
@@ -889,9 +903,11 @@ def get_data_dictionaries(json_files, benchmarks=[], wallclock_only=False,
                     if changepoints:
                         data_dictionary['changepoints'][key][machine] = data['changepoints'][key]
                         data_dictionary['changepoint_means'][key][machine] = data['changepoint_means'][key]
+                        data_dictionary['classifications'][key][machine] = data['classifications'][key]
                     else:
                         data_dictionary['changepoints'][key][machine] = None
                         data_dictionary['changepoint_means'][key][machine] = None
+                        data_dictionary['classifications'][key][machine] = None
                     if outliers or unique_outliers:
                         data_dictionary['all_outliers'][key][machine] = data['all_outliers'][key]
                         data_dictionary['common_outliers'][key][machine] = data['common_outliers'][key]
@@ -961,9 +977,11 @@ def get_data_dictionaries(json_files, benchmarks=[], wallclock_only=False,
                     if changepoints:
                         data_dictionary['changepoints'][key][machine] = list()
                         data_dictionary['changepoint_means'][key][machine] = list()
+                        data_dictionary['classifications'][key][machine] = list()
                     else:
                         data_dictionary['changepoints'][key][machine] = None
                         data_dictionary['changepoint_means'][key][machine] = None
+                        data_dictionary['classifications'][key][machine] = None
                     if outliers or unique_outliers:
                         data_dictionary['all_outliers'][key][machine] = list()
                         data_dictionary['common_outliers'][key][machine] = list()
@@ -1006,6 +1024,7 @@ def get_data_dictionaries(json_files, benchmarks=[], wallclock_only=False,
                             if changepoints:
                                 data_dictionary['changepoints'][key][machine].append(data['changepoints'][key][p_exec])
                                 data_dictionary['changepoint_means'][key][machine].append(data['changepoint_means'][key][p_exec])
+                                data_dictionary['classifications'][key][machine].append(data['classifications'][key][p_exec])
                             if outliers or unique_outliers:
                                 data_dictionary['all_outliers'][key][machine].append(data['all_outliers'][key][p_exec])
                                 data_dictionary['common_outliers'][key][machine].append(data['common_outliers'][key][p_exec])
