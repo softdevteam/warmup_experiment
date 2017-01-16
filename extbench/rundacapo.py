@@ -54,8 +54,8 @@ def main():
                         assert benchmark in line
                         line = line.split()
                         index = line.index("in")
-                        assert line[index + 2] == "msec"
-                        output.append(str(Decimal(line[index + 1]) / 1000))
+                        assert line[index + 2] == "nsec"
+                        output.append(str(Decimal(line[index + 1]) / 1000000000))
                     assert len(output) == ITERATIONS
                     writer.writerow([process, benchmark] + output)
                 sys.stdout.write("\n")
