@@ -9,7 +9,7 @@ from krun.vm_defs import find_internal_jvmci_java_home
 WARMUP_DIR = os.path.realpath(os.path.dirname(os.path.dirname(__file__)))
 
 ITERATIONS = 2000
-PROCESSES = 10
+PROCESSES = 30
 
 # broken: batik, eclipse, tomcat
 WORKING_BENCHS = ['avrora', 'fop', 'h2', 'jython', 'luindex', 'lusearch',
