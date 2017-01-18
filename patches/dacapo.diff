@@ -1,0 +1,29 @@
+--- Callback_old.java	Mon Jan 16 16:54:31 2017
++++ Callback.java	Mon Jan 16 16:54:52 2017
+@@ -168,7 +168,7 @@
+   };
+ 
+   protected void start(String benchmark, boolean warmup) {
+-    timer = System.currentTimeMillis();
++    timer = System.nanoTime();
+     System.err.print("===== DaCapo " + TestHarness.getBuildVersion() + " " + benchmark + " starting ");
+     System.err.println((warmup ? ("warmup " + (iterations + 1) + " ") : "") + "=====");
+     System.err.flush();
+@@ -185,7 +185,7 @@
+   }
+ 
+   public void stop(boolean warmup) {
+-    elapsed = System.currentTimeMillis() - timer;
++    elapsed = System.nanoTime() - timer;
+   }
+ 
+   /* Announce completion of the benchmark (pass or fail) */
+@@ -202,7 +202,7 @@
+     System.err.print("===== DaCapo " + TestHarness.getBuildVersion() + " " + benchmark);
+     if (valid) {
+       System.err.print(warmup ? (" completed warmup " + (iterations + 1) + " ") : " PASSED ");
+-      System.err.print("in " + elapsed + " msec ");
++      System.err.print("in " + elapsed + " nsec ");
+     } else {
+       System.err.print(" FAILED " + (warmup ? "warmup " : ""));
+     }

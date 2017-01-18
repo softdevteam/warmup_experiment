@@ -17,9 +17,9 @@ WORKING_BENCHS = ['avrora', 'fop', 'h2', 'jython', 'luindex', 'lusearch',
 
 JAR = os.path.join(os.path.dirname(__file__), "dacapo-9.12-bach.jar")
 
-JVMCI_JAVA_HOME = find_internal_jvmci_java_home('%s/work/jvmci/' % WARMUP_DIR)
+JVMCI_JAVA_HOME = find_internal_jvmci_java_home('%s/work/graal-jvmci-8/' % WARMUP_DIR)
 JAVA_VMS = {
-    "graal" : "%s/work/mx/mx --java-home=%s -p %s/work/graal/ -Mjit vm" % (WARMUP_DIR, JVMCI_JAVA_HOME, WARMUP_DIR),
+    "graal" : "%s/work/mx/mx --java-home=%s -p %s/work/graal/ vm -XX:+UseJVMCICompiler" % (WARMUP_DIR, JVMCI_JAVA_HOME, WARMUP_DIR),
     "hotspot" : "$JAVA_HOME/bin/java"
 }
 
@@ -54,8 +54,8 @@ def main():
                         assert benchmark in line
                         line = line.split()
                         index = line.index("in")
-                        assert line[index + 2] == "msec"
-                        output.append(str(Decimal(line[index + 1]) / 1000))
+                        assert line[index + 2] == "nsec"
+                        output.append(str(Decimal(line[index + 1]) / 1000000000))
                     assert len(output) == ITERATIONS
                     writer.writerow([process, benchmark] + output)
                 sys.stdout.write("\n")
