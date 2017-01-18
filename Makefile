@@ -68,7 +68,7 @@ bench-startup-with-reboots: build-startup build-benchmarks
 	${PYTHON} krun/krun.py --hardware-reboots startup.krun
 
 bench-dacapo: build-krun build-vms
-	PYTHONPATH=krun/ JAVA_HOME=${JAVA_HOME} ${PYTHON} extbench/rundacapo.py
+	PYTHONPATH=krun/ JAVA_HOME=${JAVA_HOME} LD_LIBRARY_PATH=${GCC_LIB_DIR} ${PYTHON} extbench/rundacapo.py
 	bin/csv_to_krun_json -u "`uname -a`" -v Graal -l Java dacapo.graal.results
 	bin/csv_to_krun_json -u "`uname -a`" -v HotSpot -l Java dacapo.hotspot.results
 
