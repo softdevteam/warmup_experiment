@@ -6,13 +6,18 @@ from krun.platform import detect_platform
 from krun.util import run_shell_cmd_bench
 
 WARMUP_DIR = os.path.realpath(os.path.dirname(os.path.dirname(__file__)))
+LD_LIBRARY_PATH=os.environ.get("LD_LIBRARY_PATH", "")
 
 JAVASCRIPT_VMS = {
-    "v8": "sh -c 'cd %s/extbench/octane && LD_LIBRARY_PATH=%s/krun/libkrun %s/work/v8/out/native/d8 run_we.js'"
-          % (WARMUP_DIR, WARMUP_DIR, WARMUP_DIR),
-    "spidermonkey": "sh -c 'cd %s/extbench/octane && %s/work/spidermonkey/js/src/build_OPT.OBJ/dist/bin/js run_we.js'"
-          % (WARMUP_DIR, WARMUP_DIR)
+    "v8": "sh -c 'cd %s/extbench/octane && LD_LIBRARY_PATH=%s %s/work/v8/out/native/d8 run_we.js'"
+          % (WARMUP_DIR, LD_LIBRARY_PATH, WARMUP_DIR),
 }
+
+if sys.platform.startswith("linux"):
+    JAVASCRIPT_VMS["spidermonkey"] = (
+	"sh -c 'cd %s/extbench/octane && LD_LIBRARY_PATH=%s "
+	"%s/work/spidermonkey/js/src/build_OPT.OBJ/dist/bin/js run_we.js'") % \
+	    (WARMUP_DIR, LD_LIBRARY_PATH, WARMUP_DIR)
 
 ITERATIONS = 2000
 PROCESSES = 30
