@@ -423,6 +423,9 @@ class ProcessExecChart(object):
         # Shared information for grid styles.
         self.major_xticks = compute_grid_offsets(self.x_bounds[0], self.x_bounds[1], GRID_MAJOR_X_DIVS)
         self.minor_xticks = compute_grid_offsets(self.x_bounds[0], self.x_bounds[1], GRID_MINOR_X_DIVS)
+        # Shared information for segment annotations.
+        self.annotations_x_padding = (x_bounds[1] - x_bounds[0]) * 0.01
+        self.annotations_y_padding = (y_range[1] - y_range[0]) * 0.02
         # Calculate the number of plots needed.
         self.n_rows = 1
         if cycles_data:
@@ -500,7 +503,7 @@ class ProcessExecChart(object):
                         color=LINE_COLOUR, zorder=ZORDER_DATA, linewidth=PLOT_LINE_WIDTH)
         self.wallclock_axis.autoscale(enable=False, axis='both')
         self._plot_changepoints(self.wallclock_axis, large_markers=True)
-        self._plot_segment_annotations(self.wallclock_axis, self.y_range)
+        self._plot_segment_annotations(self.wallclock_axis)
         self._plot_outliers(self.wallclock_axis, large_markers=True)
         if self.median:  # Plot the median.
             self.plot_median(self.wallclock_axis)
@@ -577,25 +580,23 @@ class ProcessExecChart(object):
                               c=LINE_COLOUR, marker=OUTLIER_MARKER, s=size,
                               zorder=ZORDER_CHANGEPOINTS)
 
-    def _plot_segment_annotations(self, axis, y_range):
-        # If the classification is not 'flat', annotate segments with their means.
-        if self.classification != 'flat' and self.changepoints:
-            y_padding = (y_range[1] - y_range[0]) * 0.01
+    def _plot_segment_annotations(self, axis):
+        """Annotate axis with segment means as text."""
+        if self.changepoints:
             for cpt in xrange(len(self.changepoint_means)):
                 if cpt == 0:
                     x_coord = self.x_bounds[0]
                     if len(self.wallclock_data[self.x_bounds[0]:self.changepoints[0]]) > 0:
-                        y_coord = (max(self.wallclock_data[self.x_bounds[0]:self.changepoints[0]])
-                                   + y_padding)
+                        y_slice = self.wallclock_data[self.x_bounds[0]:self.changepoints[0]]
                     else:
-                        y_coord = self.wallclock_data[self.x_bounds[0]] + y_padding
+                        y_slice = self.wallclock_data[self.x_bounds[0]]
                 elif cpt == len(self.changepoint_means) - 1:
-                    x_coord = self.changepoints[-1] + 20
-                    y_coord = max(self.wallclock_data[self.changepoints[-1]:]) + y_padding
+                    x_coord = self.changepoints[-1] + self.annotations_x_padding
+                    y_slice = self.wallclock_data[self.changepoints[-1] + 1:]
                 else:
-                    x_coord = self.changepoints[cpt - 1] + 20
-                    y_coord = (max(self.wallclock_data[self.changepoints[cpt - 1]:self.changepoints[cpt]])
-                               + y_padding)
+                    x_coord = self.changepoints[cpt - 1] + self.annotations_x_padding
+                    y_slice = self.wallclock_data[self.changepoints[cpt - 1] + 1:self.changepoints[cpt]]
+                y_coord = max(y_slice) + self.annotations_y_padding
                 axis.text(x_coord, y_coord, '%.4f' % self.changepoint_means[cpt],
                           horizontalalignment='left', verticalalignment='center',
                           fontsize=INSET_TICK_FONTSIZE)
