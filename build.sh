@@ -14,6 +14,7 @@ check_for () {
     fi
 }
 
+check_for ant
 check_for cc
 check_for g++
 check_for bunzip2
@@ -639,12 +640,37 @@ build_spidermonkey() {
 }
 
 
-fetch_dacapo_jar() {
-    echo "\n===> Download DaCapo .jar file\n"
+build_dacapo() {
+    echo "\n===> Build DaCapo\n"
 
     if [ -f "${HERE}/extbench/dacapo-9.12-bach.jar" ]; then return; fi
 
-    wget "http://downloads.sourceforge.net/project/dacapobench/9.12-bach/dacapo-9.12-bach.jar?r=https%3A%2F%2Fsourceforge.net%2Fprojects%2Fdacapobench%2Ffiles%2F&ts=1474888492&use_mirror=freefr" -O ${HERE}/extbench/dacapo-9.12-bach.jar  || exit $?
+    # DaCapo uses a millisecond timer by default, which isn't good enough for
+    # our purposes. To fix this, in as minimally intrusive a way as possible: we
+    # download the DaCapo binary and source distributions; unpack both; patch
+    # the source version and recompile only the benchmarking harness; copy the
+    # relevant recompiled .class files back into the binary distribution; and
+    # rezip it. Thus the DaCapo jar we end up running is only minimally changed.
+
+    cd ${wrkdir}
+    mkdir dacapo
+    cd dacapo
+    wget "https://sourceforge.net/projects/dacapobench/files/9.12-bach/dacapo-9.12-bach-src.zip/download" -O dacapo-9.12-bach.src.zip || exit $?
+    mkdir src
+    cd src
+    unzip ../dacapo-9.12-bach.src.zip || exit $?
+    cd benchmarks/harness/src/org/dacapo/harness/
+    patch -p0 < ${HERE}/patches/dacapo.diff || exit $?
+    cd ${wrkdir}/dacapo/src/benchmarks
+    ant harness || exit $?
+
+    cd ${wrkdir}/dacapo
+    wget "http://downloads.sourceforge.net/project/dacapobench/9.12-bach/dacapo-9.12-bach.jar?r=https%3A%2F%2Fsourceforge.net%2Fprojects%2Fdacapobench%2Ffiles%2F&ts=1474888492&use_mirror=freefr" -O dacapo-9.12-bach.jar  || exit $?
+    mkdir bin
+    cd bin
+    unzip ../dacapo-9.12-bach.jar || exit $?
+    cp ../src/benchmarks/harness/dist/org/dacapo/harness/Callback*.class org/dacapo/harness/ || exit $?
+    zip -r ${HERE}/extbench/dacapo-9.12-bach.jar ./*
 }
 
 
@@ -709,7 +735,7 @@ fetch_libkalibera() {
 
 fetch_external_benchmarks
 build_initial_krun
-fetch_dacapo_jar
+build_dacapo
 fetch_octane
 build_gcc
 apply_gcc_lib_path

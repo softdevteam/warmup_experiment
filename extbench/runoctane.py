@@ -15,7 +15,7 @@ JAVASCRIPT_VMS = {
 }
 
 ITERATIONS = 2000
-PROCESSES = 10
+PROCESSES = 30
 
 def main():
     platform = detect_platform(None, None)

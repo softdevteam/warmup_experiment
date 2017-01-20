@@ -1,11 +1,29 @@
 import math
+import numpy
 
 from matplotlib import pyplot
-from matplotlib.ticker import ScalarFormatter
+from matplotlib.ticker import ScalarFormatter, FormatStrFormatter
 
 SPINE_LINESTYLE = 'solid'
 SPINE_LINEWIDTH = 1
+
+ZOOM_PERCENTILE_MIN = 10.0
+ZOOM_PERCENTILE_MAX = 90.0
+
 ZORDER_GRID = 1
+
+def zoom_y_min(data, outliers, start_from=0):
+    array = numpy.array(data)
+    numpy.delete(array, outliers)
+    numpy.delete(array, range(0, start_from))
+    return numpy.percentile(array, ZOOM_PERCENTILE_MIN)
+
+
+def zoom_y_max(data, outliers, start_from=0):
+    array = numpy.array(data)
+    numpy.delete(array, outliers)
+    numpy.delete(array, range(0, start_from))
+    return numpy.percentile(array, ZOOM_PERCENTILE_MAX)
 
 
 def axis_data_transform(axis, xin, yin, inverse=False):
@@ -83,17 +101,21 @@ def format_yticks_scientific(axis):
     multiplies each ticklabel). Remove the multiplier from the top-left hand
     corner of the plot, and add it to the ticklabel instead.
     """
-    formatter = ScalarFormatter(useMathText=True)
-    formatter.set_scientific(True)
-    formatter.set_powerlimits((-2, 2))
-    axis.yaxis.set_major_formatter(formatter)
-    y_axis = axis.yaxis
+    y_min, y_max= axis.get_ylim()
+    if y_max > 100000 or (y_min < 0.00001 and y_min > 0.0):
+        formatter = ScalarFormatter(useMathText=True, useOffset=False)
+        formatter.set_scientific(True)
+        formatter.set_powerlimits((-6, 6))
+        axis.yaxis.set_major_formatter(formatter)
+    else:
+        formatter = FormatStrFormatter('%.5f')
+        axis.yaxis.set_major_formatter(formatter)
     pyplot.draw()
-    offset = y_axis.get_offset_text().get_text()
+    offset = axis.yaxis.get_offset_text().get_text()
     if len(offset) > 0:
         labels = [label.get_text() + offset for label in axis.get_yticklabels()]
         axis.set_yticklabels(labels)
-        y_axis.offsetText.set_visible(False)
+        axis.yaxis.offsetText.set_visible(False)
 
 
 def get_unified_yrange(executions, xlimits_start, xlimits_stop, padding=0.02):
