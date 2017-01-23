@@ -18,6 +18,7 @@ ifeq (${UNAME}, OpenBSD)
 	JAVA_INC = ${JAVA_HOME}/include/openbsd
 	GCC_LIB_DIR = ${PWD}/work/gcc-inst/lib
 endif
+LIBKRUN_DIR=${PWD}/krun/libkrun
 
 CC=${PWD}/work/gcc-inst/bin/zgcc
 
@@ -73,7 +74,7 @@ bench-dacapo: build-krun build-vms
 	bin/csv_to_krun_json -u "`uname -a`" -v HotSpot -l Java dacapo.hotspot.results
 
 bench-octane: build-krun build-vms
-	PYTHONPATH=krun/ ${PYTHON} extbench/runoctane.py
+	PYTHONPATH=krun/ LD_LIBRARY_PATH=${GCC_LIB_DIR}:${LIBKRUN_DIR} ${PYTHON} extbench/runoctane.py
 	bin/csv_to_krun_json -u "`uname -a`" -v V8 -l JavaScript octane.v8.results
 	bin/csv_to_krun_json -u "`uname -a`" -v SpiderMonkey -l JavaScript octane.spidermonkey.results
 
