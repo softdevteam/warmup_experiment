@@ -1,3 +1,15 @@
+diff --git a/base.js b/base.js
+index 9d6e3de..9542e11 100644
+--- a/base.js
++++ b/base.js
+@@ -30,6 +30,7 @@
+ var performance = performance || {};
+ performance.now = (function() {
+   return performance.now       ||
++         dateNow               ||
+          performance.mozNow    ||
+          performance.msNow     ||
+          performance.oNow      ||
 diff --git a/pdfjs.js b/pdfjs.js
 index 7953754..2d5584d 100644
 --- a/pdfjs.js
