@@ -3,6 +3,7 @@
 import csv, os, socket, sys, time
 from decimal import Decimal
 from krun.platform import detect_platform
+from krun.config import Config
 from krun.util import run_shell_cmd_bench
 from krun.vm_defs import find_internal_jvmci_java_home
 
@@ -33,7 +34,9 @@ else:
     SSH_DO_COPY = False
 
 def main():
-    platform = detect_platform(None, None)
+    platform = detect_platform(None, Config())
+    platform.check_preliminaries()
+    platform.sanity_checks()
     for jvm_name, jvm_cmd in JAVA_VMS.items():
         csvp = "dacapo.%s.results" % jvm_name
         with open(csvp, 'wb') as csvf:
@@ -73,6 +76,7 @@ def main():
                     assert len(output) == ITERATIONS
                     writer.writerow([process, benchmark] + output)
                 sys.stdout.write("\n")
+    platform.save_power()
 
 
 if __name__ == '__main__':

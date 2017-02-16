@@ -3,6 +3,7 @@
 import csv, os, socket, sys, time
 from decimal import Decimal
 from krun.platform import detect_platform
+from krun.config import Config
 from krun.util import run_shell_cmd_bench
 
 WARMUP_DIR = os.path.realpath(os.path.dirname(os.path.dirname(__file__)))
@@ -31,7 +32,9 @@ ITERATIONS = 2000
 PROCESSES = 30
 
 def main():
-    platform = detect_platform(None, None)
+    platform = detect_platform(None, Config())
+    platform.check_preliminaries()
+    platform.sanity_checks()
     for jsvm_name, jsvm_cmd in JAVASCRIPT_VMS.items():
         csvp = "octane.%s.results" % jsvm_name
         with open(csvp, 'wb') as csvf:
@@ -75,6 +78,7 @@ def main():
                 assert len(times) == ITERATIONS
                 writer.writerow([process, bench_name] + times)
             sys.stdout.write("\n")
+    platform.save_power()
 
 
 if __name__ == '__main__':
