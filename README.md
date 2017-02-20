@@ -2,8 +2,7 @@
 
 This is the main repository for the Software Development Team Warmup Experiment
 as detailed in the paper "Virtual Machine Warmup Blows Hot and Cold", by Edd
-Barrett, Carl Friedrich Bolz, Rebecca Killick, Vincent Knight, Sarah Mount and
-Laurence Tratt.
+Barrett, Carl Friedrich Bolz, Rebecca Killick, Sarah Mount and Laurence Tratt.
 
 The paper is available [here](http://arxiv.org/abs/1602.00602)
 
