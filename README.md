@@ -7,7 +7,7 @@ Barrett, Carl Friedrich Bolz, Rebecca Killick, Sarah Mount and Laurence Tratt.
 The paper is available [here](http://arxiv.org/abs/1602.00602)
 
 
-## Usage
+## Running the warmup experiment
 
 The script `build.sh` will fetch and build the VMs and the Krun benchmarking
 system. Once the VMs are built the `Makefile` contains a target
@@ -32,6 +32,103 @@ Special notes:
  * Java benchmarks have and additional `trace_KrunEntry.java` file as well.
  * Since we cannot distribute Java Richards, a patch is required to derive the
    tracing version (`patches/trace_java_richards.diff`)
+
+## Using the scripts here to analyse an existing benchmark
+
+### Mandatory requirements
+
+  * Python 2.7 - the code here is not Python 3.x ready
+  * bzip2 / bunzip2
+  * Python modules: numpy, rpy2
+  * R
+  * openssl and headers
+  * pkg-config
+  * curl and headers
+  * gcc and make
+
+### Optional requirements
+
+  * PyPy (will allow some code here to run faster)
+  * Python modules required for plotting: matplotlib, seaborn
+  * Required for generating LaTeX tables: a LaTeX distribution which provides
+    pdflatex, and the following packages: amsmath, amssymb, booktabs, calc,
+    geometry, mathtools, multicol, multirow, rotating, sparklines, xspace.
+    The TeX Live distribution should be fine.
+
+### Installing on Debian systems
+
+The following command will install all dependencies on Debian-based systems:
+
+```sh
+$ sudo apt-get install build-essential python2.7 pypy bzip2 r-base libssl-dev \
+       pkg-config libcurl4-openssl-dev python-numpy python-rpy2 \
+       python-matplotlib python-seaborn texlive texlive-latex-extra
+```
+
+### Setting up R
+
+To run the scripts here, it is necessary to install some R packages. By default,
+R will install these packages in `$HOME/R`. If you do not want R to use your
+home directory, then set the environment variable `$R_LIBS_USER`, e.g. (in BASH):
+
+```bash
+$ git clone https://github.com/softdevteam/warmup_experiment.git
+$ cd warmup_experiment
+$ mkdir R
+$ export R_LIBS_USER=`pwd`/R
+$ echo "export R_LIBS_USER=`pwd`/R" >> ~/.bashrc
+```
+
+To install the necessary packages, open R on the command line, and run the
+following commands:
+
+```R
+> install.packages("devtools")
+```
+
+At this point R may ask you to choose a CRAN mirror. Choose one and wait for
+installation to complete.
+
+Some Debian systems include a buggy version of R, as a work-around you may
+have to execute this command:
+
+```R
+options(download.file.method = "wget")
+```
+
+Lastly, you need to run:
+
+```R
+> devtools::install_github("rkillick/changepoint")
+```
+
+### CSV format
+
+The scripts here take CSV files as input. The format is as follows. The first row
+must contain a header with a process execution id, benchmark name and sequence
+of iteration numbers. Subsequent rows are data rows, one per process execution.
+The in-process iteration index columns should contain the time in seconds for
+the corresponding in-process iteration. Each process execution must execute the
+same number of iterations as described in the header. For example:
+
+```
+    process_exec_num, bench_name, 0, 1, 2, ...
+    0, spectral norm, 0.2, 0.1, 0.4, ...
+    1, spectral norm, 0.3, 0.15, 0.2, ...
+```
+
+### Usage
+
+The Python script `bin/warmup` must be used as a front-end to all other scripts.
+The script can be used to generate JSON containing summary statistics for
+the input data, PDF plots or LaTeX tables.
+
+The script also needs the names of the language and VM under test, and the
+output of `uname -a` on the machine the benchmarks were run on. Example usage:
+
+```
+./bin/warmup  --output-plots plots.pdf --output-json summary.json -l javascript -v V8 -u "`uname -a`" results.csv
+```
 
 ## License Information
 
