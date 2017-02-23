@@ -40,7 +40,7 @@ $ ./build_stats.sh
 
 ## Setting up R
 
-To run the scripts here, it is necessary to install some R and some R packages.
+To run the scripts here, it is necessary to install R and some R packages.
 To do this, just run the `build_stats.sh` script included in this repository.
 
 ## Manually setting up R
