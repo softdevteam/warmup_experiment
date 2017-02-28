@@ -40,7 +40,7 @@ BLANK_CELL = '\\begin{minipage}[c][\\blankheight]{0pt}\\end{minipage}'
 
 
 def write_latex_table(machine, all_benchs, summary, steady_state, tex_file,
-                           with_preamble=False):
+                      with_preamble=False):
     """Write a tex table to disk.
     This script has its own version of the write_latex_table function, in which
     each VM is a separate row, and benchmarks are grouped together (not the other
@@ -69,7 +69,6 @@ def write_latex_table(machine, all_benchs, summary, steady_state, tex_file,
         if bench_num % benchs_per_split == 0:
             split_idx += 1
 
-    print('Writing data to %s.' % tex_file)
     with open(tex_file, 'w') as fp:
         if with_preamble:
             fp.write(preamble(TITLE))
@@ -160,12 +159,11 @@ def write_latex_table(machine, all_benchs, summary, steady_state, tex_file,
         if with_preamble:
             fp.write('\\end{table*}\n')
             fp.write(end_document())
-    return
 
 
 def create_cli_parser():
-    """Create a parser to deal with command line switches.
-    """
+    """Create a parser to deal with command line switches."""
+
     script = os.path.basename(__file__)
     description = (('Summarise benchmark classifications stored within a Krun ' +
                     'results file. Must be run after mark_changepoints_in_json.' +
@@ -192,9 +190,8 @@ if __name__ == '__main__':
         print 'Writing out full document, with preamble.'
     summary_data = collect_summary_statistics(data_dcts, classifier['half_bound'],
                                               classifier['delta'], classifier['steady'])
-    convert_to_latex(summary_data, classifier['half_bound'], classifier['delta'],
-                     classifier['steady'], options.latex_file, options.with_preamble)
     machine, bmarks, latex_summary = convert_to_latex(summary_data, classifier['half_bound'],
                                          classifier['delta'], classifier['steady'])
-    print 'Writing data to:', options.latex_file
-    write_latex_table(machine, bmarks, latex_summary, options.latex_file, options.with_preamble)
+    print('Writing data to: %s.' % options.latex_file)
+    write_latex_table(machine, bmarks, latex_summary, classifier['steady'],
+                      options.latex_file, with_preamble=options.with_preamble)
