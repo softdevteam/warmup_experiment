@@ -21,6 +21,7 @@ endif
 LIBKRUN_DIR=${PWD}/krun/libkrun
 
 CC=${PWD}/work/gcc-inst/bin/zgcc
+R_LD_LIBRARY_PATH=${PWD}/work/R-inst/lib/R/lib
 
 all: build-benchmarks build-startup
 	@echo ""
@@ -70,13 +71,9 @@ bench-startup-with-reboots: build-startup build-benchmarks
 
 bench-dacapo: build-krun build-vms
 	PYTHONPATH=krun/ JAVA_HOME=${JAVA_HOME} LD_LIBRARY_PATH=${GCC_LIB_DIR} ${PYTHON} extbench/rundacapo.py
-	bin/csv_to_krun_json -u "`uname -a`" -v Graal -l Java dacapo.graal.results
-	bin/csv_to_krun_json -u "`uname -a`" -v HotSpot -l Java dacapo.hotspot.results
 
 bench-octane: build-krun build-vms
 	PYTHONPATH=krun/ LD_LIBRARY_PATH=${GCC_LIB_DIR}:${LIBKRUN_DIR} ${PYTHON} extbench/runoctane.py
-	bin/csv_to_krun_json -u "`uname -a`" -v V8 -l JavaScript octane.v8.results
-	bin/csv_to_krun_json -u "`uname -a`" -v SpiderMonkey -l JavaScript octane.spidermonkey.results
 
 plot-warmup-results:
 	bin/mark_outliers_in_json -w ${WINDOW_SIZE} -t ${OUTLIER_THRESHOLD} warmup_results.json.bz2
@@ -89,25 +86,38 @@ plot-warmup-outliers-by-threshold:
 	mv outliers_per_threshold.json.bz2 warmup_outliers_per_threshold.json.bz2
 	bin/plot_outliers_per_threshold warmup_outliers_per_threshold.json.bz2
 
-plot-dacapo-results:
-	bin/mark_outliers_in_json -w ${WINDOW_SIZE} -t ${OUTLIER_THRESHOLD} dacapo.graal.json.bz2
-	bin/mark_changepoints_in_json -s ${STEADY_STATE_EXPECTED} -p dacapo.graal_outliers_w${WINDOW_SIZE}.json.bz2
-	bin/plot_krun_results --wallclock-only -w ${WINDOW_SIZE} -m -t --with-outliers -o dacapo.graal_${PLOTS_NO_CPTS} dacapo.graal_outliers_w${WINDOW_SIZE}.json.bz2
-	bin/plot_krun_results --wallclock-only -w ${WINDOW_SIZE} -m -t --with-outliers --with-changepoints -o dacapo.graal_${PLOTS_WITH_CPTS} dacapo.graal_outliers_w${WINDOW_SIZE}_changepoints.json.bz2
-	bin/mark_outliers_in_json -w ${WINDOW_SIZE} -t ${OUTLIER_THRESHOLD} dacapo.hotspot.json.bz2
-	bin/mark_changepoints_in_json -s ${STEADY_STATE_EXPECTED} -p dacapo.hotspot_outliers_w${WINDOW_SIZE}.json.bz2
-	bin/plot_krun_results --wallclock-only -w ${WINDOW_SIZE} -m -t --with-outliers -o dacapo.hotspot_${PLOTS_NO_CPTS} dacapo.graal_outliers_w${WINDOW_SIZE}.json.bz2
-	bin/plot_krun_results --wallclock-only -w ${WINDOW_SIZE} -m -t --with-outliers --with-changepoints -o dacapo.hotspot_${PLOTS_WITH_CPTS} dacapo.graal_outliers_w${WINDOW_SIZE}_changepoints.json.bz2
+# The following plotting targets assume that build_stats.sh has been used to
+# install the necessary R and Python environment under 'work/'.
 
+# Note: Graal is skipped on OpenBSD
+plot-dacapo-results:
+	bin/csv_to_krun_json -u "`uname -a`" -v HotSpot -l Java dacapo.hotspot.results
+	bin/mark_outliers_in_json -w ${WINDOW_SIZE} -t ${OUTLIER_THRESHOLD} dacapo.hotspot.json.bz2
+	LD_LIBRARY_PATH=${R_LD_LIBRARY_PATH}:${LD_LIBRARY_PATH} bin/mark_changepoints_in_json -s ${STEADY_STATE_EXPECTED} dacapo.hotspot_outliers_w${WINDOW_SIZE}.json.bz2
+	bin/plot_krun_results --wallclock-only -w ${WINDOW_SIZE} -m -t --with-outliers -o dacapo.hotspot_${PLOTS_NO_CPTS} dacapo.hotspot_outliers_w${WINDOW_SIZE}.json.bz2
+	bin/plot_krun_results --wallclock-only -w ${WINDOW_SIZE} -m -t --with-outliers --with-changepoints -o dacapo.hotspot_${PLOTS_WITH_CPTS} dacapo.hotspot_outliers_w${WINDOW_SIZE}_changepoints.json.bz2
+	if [ -e dacapo.graal.results ]; then \
+		bin/csv_to_krun_json -u "`uname -a`" -v Graal -l Java dacapo.graal.results && \
+		bin/mark_outliers_in_json -w ${WINDOW_SIZE} -t ${OUTLIER_THRESHOLD} dacapo.graal.json.bz2 && \
+		LD_LIBRARY_PATH=${R_LD_LIBRARY_PATH}:${LD_LIBRARY_PATH} bin/mark_changepoints_in_json -s ${STEADY_STATE_EXPECTED} dacapo.graal_outliers_w${WINDOW_SIZE}.json.bz2 && \
+		bin/plot_krun_results --wallclock-only -w ${WINDOW_SIZE} -m -t --with-outliers -o dacapo.graal_${PLOTS_NO_CPTS} dacapo.graal_outliers_w${WINDOW_SIZE}.json.bz2 && \
+		bin/plot_krun_results --wallclock-only -w ${WINDOW_SIZE} -m -t --with-outliers --with-changepoints -o dacapo.graal_${PLOTS_WITH_CPTS} dacapo.graal_outliers_w${WINDOW_SIZE}_changepoints.json.bz2; \
+		fi
+
+# Note: Spidermonkey is skipped on OpenBSD
 plot-octane-results:
+	bin/csv_to_krun_json -u "`uname -a`" -v V8 -l JavaScript octane.v8.results
 	bin/mark_outliers_in_json -w ${WINDOW_SIZE} -t ${OUTLIER_THRESHOLD} octane.v8.json.bz2
-	bin/mark_changepoints_in_json -s ${STEADY_STATE_EXPECTED} -p octane.v8_outliers_w${WINDOW_SIZE}.json.bz2
+	LD_LIBRARY_PATH=${R_LD_LIBRARY_PATH}:${LD_LIBRARY_PATH} bin/mark_changepoints_in_json -s ${STEADY_STATE_EXPECTED} octane.v8_outliers_w${WINDOW_SIZE}.json.bz2
 	bin/plot_krun_results --wallclock-only -w ${WINDOW_SIZE} -m -t --with-outliers -o octane.v8_${PLOTS_NO_CPTS} octane.v8_outliers_w${WINDOW_SIZE}.json.bz2
 	bin/plot_krun_results --wallclock-only -w ${WINDOW_SIZE} -m -t --with-outliers --with-changepoints -o octane.v8_${PLOTS_WITH_CPTS} octane.v8_outliers_w${WINDOW_SIZE}_changepoints.json.bz2
-	bin/mark_outliers_in_json -w ${WINDOW_SIZE} -t ${OUTLIER_THRESHOLD} octane.spidermonkey.json.bz2
-	bin/mark_changepoints_in_json -s ${STEADY_STATE_EXPECTED} -p octane.spidermonkey_outliers_w${WINDOW_SIZE}.json.bz2
-	bin/plot_krun_results --wallclock-only -w ${WINDOW_SIZE} -m -t --with-outliers -o octane.spidermonkey_${PLOTS_NO_CPTS} octane.spidermonkey_outliers_w${WINDOW_SIZE}.json.bz2
-	bin/plot_krun_results --wallclock-only -w ${WINDOW_SIZE} -m -t --with-outliers --with-changepoints -o octane.spidermonkey_${PLOTS_WITH_CPTS} octane.spidermonkey_outliers_w${WINDOW_SIZE}_changepoints.json.bz2
+	if [ -e octane.spidermonkey.results ]; then \
+		bin/csv_to_krun_json -u "`uname -a`" -v SpiderMonkey -l JavaScript octane.spidermonkey.results && \
+		bin/mark_outliers_in_json -w ${WINDOW_SIZE} -t ${OUTLIER_THRESHOLD} octane.spidermonkey.json.bz2 && \
+		LD_LIBRARY_PATH=${R_LD_LIBRARY_PATH}:${LD_LIBRARY_PATH} bin/mark_changepoints_in_json -s ${STEADY_STATE_EXPECTED} octane.spidermonkey_outliers_w${WINDOW_SIZE}.json.bz2 && \
+		bin/plot_krun_results --wallclock-only -w ${WINDOW_SIZE} -m -t --with-outliers -o octane.spidermonkey_${PLOTS_NO_CPTS} octane.spidermonkey_outliers_w${WINDOW_SIZE}.json.bz2 && \
+		bin/plot_krun_results --wallclock-only -w ${WINDOW_SIZE} -m -t --with-outliers --with-changepoints -o octane.spidermonkey_${PLOTS_WITH_CPTS} octane.spidermonkey_outliers_w${WINDOW_SIZE}_changepoints.json.bz2; \
+		fi
 
 tables-warmup:
 	bin/table_classification_summaries_main -o bencher3.table warmup_results_0_7_linux1_i7_4790k_outliers_w${WINDOW_SIZE}_changepoints.json.bz2
