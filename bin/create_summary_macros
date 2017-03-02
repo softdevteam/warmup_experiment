@@ -16,9 +16,10 @@ from warmup.krun_results import read_krun_results_file
 NUMBERS = {0:'zero', 1:'one', 2:'two', 3:'three', 4:'four', 5:'five',
            6:'six', 7:'seven', 8:'eight', 9:'nine'}
 BLANK_CLASSES = {'flat': 0, 'warmup': 0, 'slowdown': 0, 'no steady state': 0}
-BLANK_CONSISTENT = {'consistent': 0, 'inconsistent': 0}
+BLANK_CONSISTENT = {'consistent': 0, 'good inconsistent': 0, 'bad inconsistent': 0}
 BLANK_CLASSES_PLUS_INCONSISTENT = {'flat': 0, 'warmup': 0, 'slowdown': 0,
-                                   'no steady state': 0, 'inconsistent': 0}
+                                   'no steady state': 0, 'good inconsistent': 0,
+                                   'bad inconsistent': 0}
 
 
 def main(data, latex_file):
@@ -79,11 +80,17 @@ def main(data, latex_file):
                     summary['vm_bench_consistent'][vm_bench]['consistent'] += 1
                     classification = data_dicts[machine]['classifications'][key][0]
                     summary['machine_vm_bench_classes'][machine][classification] += 1
-                else:
-                    summary['total_consistent']['inconsistent'] += 1
-                    summary['machine_consistent'][machine]['inconsistent'] += 1
-                    summary['vm_bench_consistent'][vm_bench]['inconsistent'] += 1
-                    summary['machine_vm_bench_classes'][machine]['inconsistent'] += 1
+                elif _good_inconsistent(data_dicts[machine]['classifications'][key]):
+                    # 'Good' inconsistent (i.e. only flats and warmups).
+                    summary['total_consistent']['good inconsistent'] += 1
+                    summary['machine_consistent'][machine]['good inconsistent'] += 1
+                    summary['vm_bench_consistent'][vm_bench]['good inconsistent'] += 1
+                    summary['machine_vm_bench_classes'][machine]['good inconsistent'] += 1
+                else:  # Bad inconsistent.
+                    summary['total_consistent']['bad inconsistent'] += 1
+                    summary['machine_consistent'][machine]['bad inconsistent'] += 1
+                    summary['vm_bench_consistent'][vm_bench]['bad inconsistent'] += 1
+                    summary['machine_vm_bench_classes'][machine]['bad inconsistent'] += 1
     # Calculate total percentages.
     for machine in summary['total']:
         totals = list()
@@ -122,27 +129,36 @@ def main(data, latex_file):
                     summary['vm_benches'][vm_bench][classification] / total * 100.0
     # Calculate total consistent / inconsistent percentages.
     total = math.fsum((summary['total_consistent']['consistent'],
-                       summary['total_consistent']['inconsistent']))
+                       summary['total_consistent']['good inconsistent'],
+                       summary['total_consistent']['bad inconsistent']))
     summary['total_consistent_percentages']['consistent'] = \
         summary['total_consistent']['consistent'] / total * 100.0
-    summary['total_consistent_percentages']['inconsistent'] = \
-        summary['total_consistent']['inconsistent'] / total * 100.0
+    summary['total_consistent_percentages']['good inconsistent'] = \
+        summary['total_consistent']['good inconsistent'] / total * 100.0
+    summary['total_consistent_percentages']['bad inconsistent'] = \
+        summary['total_consistent']['bad inconsistent'] / total * 100.0
     # Calculate machine consistent / inconsistent percentages.
     for machine in summary['machine_consistent']:
         total = math.fsum((summary['machine_consistent'][machine]['consistent'],
-                           summary['machine_consistent'][machine]['inconsistent']))
+                           summary['machine_consistent'][machine]['good inconsistent'],
+                           summary['machine_consistent'][machine]['bad inconsistent']))
         summary['machine_consistent_percentages'][machine]['consistent'] = \
             summary['machine_consistent'][machine]['consistent'] / total * 100.0
-        summary['machine_consistent_percentages'][machine]['inconsistent'] = \
-            summary['machine_consistent'][machine]['inconsistent'] / total * 100.0
+        summary['machine_consistent_percentages'][machine]['good inconsistent'] = \
+            summary['machine_consistent'][machine]['good inconsistent'] / total * 100.0
+        summary['machine_consistent_percentages'][machine]['bad inconsistent'] = \
+            summary['machine_consistent'][machine]['bad inconsistent'] / total * 100.0
     # Calculate vm/bench consistent / inconsistent percentages.
     for vm_bench in summary['vm_bench_consistent']:
         total = math.fsum((summary['vm_bench_consistent'][vm_bench]['consistent'],
-                           summary['vm_bench_consistent'][vm_bench]['inconsistent']))
+                           summary['vm_bench_consistent'][vm_bench]['good inconsistent'],
+                           summary['vm_bench_consistent'][vm_bench]['bad inconsistent']))
         summary['vm_bench_consistent_percentages'][vm_bench]['consistent'] = \
             summary['vm_bench_consistent'][vm_bench]['consistent'] / total * 100.0
-        summary['vm_bench_consistent_percentages'][vm_bench]['inconsistent'] = \
-            summary['vm_bench_consistent'][vm_bench]['inconsistent'] / total * 100.0
+        summary['vm_bench_consistent_percentages'][vm_bench]['good inconsistent'] = \
+            summary['vm_bench_consistent'][vm_bench]['good inconsistent'] / total * 100.0
+        summary['vm_bench_consistent_percentages'][vm_bench]['bad inconsistent'] = \
+            summary['vm_bench_consistent'][vm_bench]['bad inconsistent'] / total * 100.0
     write_latex_summary(summary, latex_file)
 
 
@@ -151,6 +167,11 @@ def _identical(list_elements):
     This only works for hashable types, but we are passing in lists of strings.
     """
     return len(set(list_elements)) == 1
+
+
+def _good_inconsistent(list_elements):
+    """Check all elements in a list are 'flat' or 'warmup'."""
+    return set(list_elements) == set(['flat', 'warmup'])
 
 
 def _reformat(word):
@@ -190,14 +211,18 @@ def write_latex_summary(summary, tex_file):
         fd.write('\\newcommand{\\%s}{%d}\n' %
                  ('totalconsistent', summary['total_consistent']['consistent']))
         fd.write('\\newcommand{\\%s}{%d}\n' %
-                 ('totalinconsistent', summary['total_consistent']['inconsistent']))
+                 ('totalgoodinconsistent', summary['total_consistent']['good inconsistent']))
+        fd.write('\\newcommand{\\%s}{%d}\n' %
+                 ('totalbadinconsistent', summary['total_consistent']['bad inconsistent']))
         fd.write('%%%\n')
         fd.write('%%% Percentage consistent classifications over all executions.\n')
         fd.write('%%%\n')
         fd.write('\\newcommand{\\%s}{%.1f}\n' %
                  ('totalconsistentpercentage', summary['total_consistent_percentages']['consistent']))
         fd.write('\\newcommand{\\%s}{%.1f}\n' %
-                 ('totalinconsistentpercentage', summary['total_consistent_percentages']['inconsistent']))
+                 ('totalgoodinconsistentpercentage', summary['total_consistent_percentages']['good inconsistent']))
+        fd.write('\\newcommand{\\%s}{%.1f}\n' %
+                 ('totalbadinconsistentpercentage', summary['total_consistent_percentages']['bad inconsistent']))
         fd.write('%%%\n')
         fd.write('%%% Classifications per machine (machine category).\n')
         fd.write('%%%\n')
@@ -246,7 +271,9 @@ def write_latex_summary(summary, tex_file):
             fd.write('\\newcommand{\\%s}{%d}\n' %
                      (mc_name + 'consistent', summary['machine_consistent'][machine]['consistent']))
             fd.write('\\newcommand{\\%s}{%d}\n' %
-                     (mc_name + 'inconsistent', summary['machine_consistent'][machine]['inconsistent']))
+                     (mc_name + 'goodinconsistent', summary['machine_consistent'][machine]['good inconsistent']))
+            fd.write('\\newcommand{\\%s}{%d}\n' %
+                     (mc_name + 'badinconsistent', summary['machine_consistent'][machine]['bad inconsistent']))
         fd.write('%%%\n')
         fd.write('%%% Consistent machine percentages (machine consistent percentage).\n')
         fd.write('%%%\n')
@@ -257,8 +284,11 @@ def write_latex_summary(summary, tex_file):
                      (mc_name + 'consistentpercentage',
                       summary['machine_consistent_percentages'][machine]['consistent']))
             fd.write('\\newcommand{\\%s}{%.1f}\n' %
-                     (mc_name + 'inconsistentpercentage',
-                      summary['machine_consistent_percentages'][machine]['inconsistent']))
+                     (mc_name + 'goodinconsistentpercentage',
+                      summary['machine_consistent_percentages'][machine]['good inconsistent']))
+            fd.write('\\newcommand{\\%s}{%.1f}\n' %
+                     (mc_name + 'badinconsistentpercentage',
+                      summary['machine_consistent_percentages'][machine]['bad inconsistent']))
         fd.write('%%%\n')
         fd.write('%%% Classifications per vm/benchmark pair (VM bmark category).\n')
         fd.write('%%%\n')
@@ -287,7 +317,9 @@ def write_latex_summary(summary, tex_file):
             fd.write('\\newcommand{\\%s}{%d}\n' %
                      (name + 'consistent', summary['vm_bench_consistent'][vm_bench]['consistent']))
             fd.write('\\newcommand{\\%s}{%d}\n' %
-                     (name + 'inconsistent', summary['vm_bench_consistent'][vm_bench]['inconsistent']))
+                     (name + 'goodinconsistent', summary['vm_bench_consistent'][vm_bench]['good inconsistent']))
+            fd.write('\\newcommand{\\%s}{%d}\n' %
+                     (name + 'badinconsistent', summary['vm_bench_consistent'][vm_bench]['bad inconsistent']))
         fd.write('%%%\n')
         fd.write('%%% Consistent vm/bench percentages (vm bench consistent percentage).\n')
         fd.write('%%%\n')
@@ -298,8 +330,11 @@ def write_latex_summary(summary, tex_file):
                      (name + 'consistentpercentage',
                       summary['vm_bench_consistent_percentages'][vm_bench]['consistent']))
             fd.write('\\newcommand{\\%s}{%.1f}\n' %
-                     (name + 'inconsistentpercentage',
-                      summary['vm_bench_consistent_percentages'][vm_bench]['inconsistent']))
+                     (name + 'goodinconsistentpercentage',
+                      summary['vm_bench_consistent_percentages'][vm_bench]['good inconsistent']))
+            fd.write('\\newcommand{\\%s}{%.1f}\n' %
+                     (name + 'badinconsistentpercentage',
+                      summary['vm_bench_consistent_percentages'][vm_bench]['bad inconsistent']))
 
 
 def get_data_dictionaries(json_files):
