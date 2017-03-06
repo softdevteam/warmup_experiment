@@ -10,7 +10,7 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from warmup.krun_results import read_krun_results_file
 from warmup.latex import preamble, end_document, end_table, escape
-from warmup.latex import format_median_error, section, start_table
+from warmup.latex import format_median_error, machine_name_to_macro, section, start_table
 from warmup.statistics import bootstrap_confidence_interval
 
 TITLE = 'Startup Experiment Results'
@@ -84,7 +84,7 @@ def write_results_as_latex(summary, machines, tex_filename, with_preamble):
                 ['\multicolumn{%s}{c}{Machine}' % len(machines)])
             table_headings2 = '&'.join(
                 [''] + ['\\multicolumn{1}{c}{\\footnotesize %s}' %
-                          x for x in  machines])
+                          machine_name_to_macro(name) for name in  machines])
             table_headings = '\\\\'.join([table_headings1, table_headings2])
             fp.write(start_table(table_format, table_headings))
             for vm in sorted(summary.keys()):
