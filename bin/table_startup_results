@@ -6,7 +6,6 @@ import argparse
 import os
 import os.path
 import sys
-from collections import OrderedDict
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from warmup.krun_results import read_krun_results_file
@@ -17,7 +16,7 @@ from warmup.statistics import bootstrap_confidence_interval
 TITLE = 'Startup Experiment Results'
 
 
-def main(data_dcts, latex_file, machine_map):
+def main(data_dcts, latex_file, with_preamble):
     # machine -> vm -> times
     summary_data = {machine: {} for machine in data_dcts.keys()}
     all_vms = set()
@@ -46,7 +45,9 @@ def main(data_dcts, latex_file, machine_map):
     # Average the summary data.
     # vm -> machine -> summary
     summary = {vm: {} for vm in all_vms}
-    for machine in machine_map.iterkeys():
+    machines = list()
+    for machine in summary_data:
+        machines.append(machine)
         for vm in all_vms:
             try:
                 data = summary_data[machine][vm]
@@ -60,34 +61,40 @@ def main(data_dcts, latex_file, machine_map):
                 summary[vm][machine] = format_median_error(median, error)
 
     # Write out results.
-    write_results_as_latex(summary, machine_map, latex_file)
+    write_results_as_latex(summary, sorted(machines), latex_file, with_preamble)
     return
 
 
-def write_results_as_latex(summary, machines_map, tex_filename):
-    """Write a results file.
-    """
+def write_results_as_latex(summary, machines, tex_filename, with_preamble):
+    """Write a results file."""
+
     print('Writing data to %s.' % tex_filename)
     with open(tex_filename, 'w') as fp:
         sections = (('Startup-times', summary)),
-        fp.write(preamble(TITLE))
+        if with_preamble:
+            fp.write(preamble(TITLE))
+            fp.write('\\begin{table*}[t]\n')
+            fp.write('\\centering\n')
         for section_heading, summary in sections:
-            fp.write(section(section_heading))
-            table_format = 'l' + ('r' * len(machine_map))
+            if with_preamble:
+                fp.write(section(section_heading))
+            table_format = 'l' + ('r' * len(machines))
             table_headings1 = '&'.join(
                 ['\multicolumn{1}{c}{\multirow{2}{*}{VM}}'] +
-                ['\multicolumn{%s}{c}{Machine}' % len(machines_map)])
+                ['\multicolumn{%s}{c}{Machine}' % len(machines)])
             table_headings2 = '&'.join(
                 [''] + ['\\multicolumn{1}{c}{\\footnotesize %s}' %
-                          x for x in  machine_map.itervalues()])
+                          x for x in  machines])
             table_headings = '\\\\'.join([table_headings1, table_headings2])
             fp.write(start_table(table_format, table_headings))
             for vm in sorted(summary.keys()):
                 row = [escape(vm)] + \
-                    [summary[vm][machine] for machine in machine_map.iterkeys()]
+                    [summary[vm][machine] for machine in machines]
                 fp.write('%s\\\\ \n' % '&'.join(row))
             fp.write(end_table())
-        fp.write(end_document())
+        if with_preamble:
+            fp.write('\\end{table*}\n')
+            fp.write(end_document())
     return
 
 
@@ -95,45 +102,45 @@ def get_data_dictionaries(json_files):
     """Read a list of BZipped JSON files and return their contents as a
     dictionaries of machine name -> JSON values.
     """
+
     data_dictionary = dict()
-    machine_map = OrderedDict()
-    for arg in json_files:
-        machine_name, filename = arg.split(':')
-        # machine name prevents ~ expanding
-        filename = os.path.expanduser(filename)
+    for filename in json_files:
         assert os.path.exists(filename), 'File %s does not exist.' % filename
         print('Loading: %s' % filename)
         data = read_krun_results_file(filename)
-        machine = data['audit']['uname'].split(' ')[1]
-        if '.' in machine:  # Remove domain, if there is one.
-            machine = machine_name.split('.')[0]
-        data_dictionary[machine] = data
-        machine_map[machine] = machine_name
-
-    return data_dictionary, machine_map
+        machine_name = data['audit']['uname'].split(' ')[1]
+        if '.' in machine_name:  # Remove domain, if there is one.
+            machine_name = machine_name.split('.')[0]
+        data_dictionary[machine_name] = data
+    return data_dictionary
 
 
 def create_cli_parser():
-    """Create a parser to deal with command line switches.
-    """
+    """Create a parser to deal with command line switches."""
+
     script = os.path.basename(__file__)
     description = (('Summarise information from a startup experiment.\n' +
                     'See startup.krun for details.' +
                     '\n\nExample usage:\n\n' +
-                    '\t$ python %s -l startup.tex results.json.bz2') % script)
+                    '\t$ python %s -o startup.tex results.json.bz2') % script)
     parser = argparse.ArgumentParser(description=description,
                                      formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('json_files', action='append', nargs='+', default=[],
                         type=str,
-                        help='One or more \'machine_name:results_filename\' pairs.')
+                        help='One or more Krun JSON results files.')
     parser.add_argument('--outfile', '-o', action='store', dest='latex_file',
                         type=str, help='Name of the LaTeX file to write to.',
                         required=True)
+    parser.add_argument('--with-preamble', action='store_true',
+                        dest='with_preamble', default=False,
+                        help='Write out a whole LaTeX article (not just the table).')
     return parser
 
 
 if __name__ == '__main__':
     parser = create_cli_parser()
     options = parser.parse_args()
-    data_dcts, machine_map = get_data_dictionaries(options.json_files[0])
-    main(data_dcts, options.latex_file, machine_map)
+    data_dcts = get_data_dictionaries(options.json_files[0])
+    if options.with_preamble:
+        print 'Writing out full document, with preamble.'
+    main(data_dcts, options.latex_file, options.with_preamble)
