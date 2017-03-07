@@ -4,7 +4,6 @@ Must be run after mark_changepoints_in_json.
 """
 
 import argparse
-import math
 import os
 import os.path
 import sys
@@ -168,7 +167,7 @@ def get_data_dictionaries(json_files):
         else:
             assert classifier == data['classifier'], \
                    ('Cannot summarise categories generated with different '
-                    'command-line options for steady-state-expected, half_bound '
+                    'command-line options for steady-state-expected '
                     'or delta. Please re-run the mark_changepoints_in_json script.')
         if window_size is None:
             window_size = data['window_size']
