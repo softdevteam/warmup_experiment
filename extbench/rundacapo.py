@@ -61,7 +61,13 @@ def main():
 
                     stdout, stderr, rc = run_shell_cmd_bench(
                         "%s -jar %s %s -n %s" % (jvm_cmd, JAR, benchmark,
-                                                 ITERATIONS + 1), platform)
+                                                 ITERATIONS + 1), platform, failure_fatal=False)
+                    if rc != 0:
+                        sys.stdout.write(stdout + "\n")
+                        sys.stdout.flush()
+                        sys.stderr.write(stderr + "\n")
+                        sys.stderr.flush()
+                        continue
                     output = []
                     for line in stderr.splitlines():
                         if not line.startswith("====="):
