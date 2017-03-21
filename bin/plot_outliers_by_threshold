@@ -11,11 +11,14 @@ from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.ticker import FormatStrFormatter, FuncFormatter, MaxNLocator
 import os
 import os.path
-import seaborn
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-from warmup.plotting import add_margin_to_axes, compute_grid_offsets, style_axis
+from warmup.plotting import add_margin_to_axes, compute_grid_offsets, style_axis, STYLE_DICT
+
+# Set matplotlib styles, similar to Seaborn 'whitegrid'.
+for style in STYLE_DICT:
+    matplotlib.rcParams[style] = STYLE_DICT[style]
 
 PDF_FILENAME = 'outliers_per_threshold.pdf'
 WINDOWS = [25, 50, 100, 200, 300, 400]
@@ -51,10 +54,6 @@ FILL_ALPHA = 0.2
 
 MAX_SUBPLOTS_PER_ROW = 2
 MARKERSIZE=4
-
-seaborn.set_palette('colorblind')
-seaborn.set_style('whitegrid', {'lines.linewidth': 1.0, 'axes.linewidth': 1.0})
-seaborn.set_context('paper')
 
 plt.figure(tight_layout=True)
 
