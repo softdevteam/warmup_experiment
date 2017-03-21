@@ -13,8 +13,9 @@ ITERATIONS = 2000
 PROCESSES = 30
 
 # broken: batik, eclipse, tomcat
-WORKING_BENCHS = ['avrora', 'fop', 'h2', 'jython', 'luindex', 'lusearch',
-                  'pmd', 'sunflow', 'tradebeans', 'xalan']
+WORKING_BENCHS   = ['avrora', 'fop', 'h2', 'jython', 'luindex', 'lusearch',
+                    'pmd', 'sunflow', 'tradebeans', 'tradesoap', 'xalan']
+DISABLE_ON_GRAAL = set(["luindex", "tradebeans", "tradesoap"])
 
 JAR = os.path.join(os.path.dirname(__file__), "dacapo-9.12-bach.jar")
 
@@ -44,6 +45,8 @@ def main():
             writer = csv.writer(csvf)
             writer.writerow(['processnum', 'benchmark'] + range(ITERATIONS))
             for benchmark in WORKING_BENCHS:
+                if jvm_name == "graal" and benchmark in DISABLE_ON_GRAAL:
+                    continue
                 sys.stdout.write("  %s:" % benchmark)
                 for process in range(PROCESSES):
                     sys.stdout.write(" %s" % str(process))
