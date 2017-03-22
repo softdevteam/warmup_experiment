@@ -66,8 +66,10 @@ def main():
                         "%s -jar %s %s -n %s" % (jvm_cmd, JAR, benchmark,
                                                  ITERATIONS + 1), platform, failure_fatal=False)
                     if rc != 0:
-                        sys.stdout.write(stdout + "\n")
-                        sys.stdout.flush()
+                        sys.stderr.write("\nWARNING: process exec crashed\n")
+                        sys.stderr.write("stdout:\n")
+                        sys.stderr.write(stdout + "\n")
+                        sys.stderr.write("\nstderr:\n")
                         sys.stderr.write(stderr + "\n")
                         sys.stderr.flush()
                         continue
