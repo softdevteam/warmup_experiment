@@ -72,6 +72,7 @@ def main():
                         sys.stderr.write("\nstderr:\n")
                         sys.stderr.write(stderr + "\n")
                         sys.stderr.flush()
+                        writer.writerow([process, benchmark, "crash"])
                         continue
                     output = []
                     for line in stderr.splitlines():
