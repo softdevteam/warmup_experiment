@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(
 from warmup.krun_results import read_krun_results_file
 from warmup.latex import preamble, end_document, end_table, escape
 from warmup.latex import format_median_error, machine_name_to_macro, section, start_table
-from warmup.statistics import bootstrap_confidence_interval
+from warmup.statistics import  median_iqr
 
 TITLE = 'Startup Experiment Results'
 
@@ -54,11 +54,10 @@ def main(data_dcts, latex_file, with_preamble):
             except KeyError:
                 summary[vm][machine] = ''
             else:
-                median, error = bootstrap_confidence_interval(
-                    data, confidence=0.99)
+                median, iqr =  median_iqr(data, confidence=0.99)
                 sys.stdout.write('.')
                 sys.stdout.flush()
-                summary[vm][machine] = format_median_error(median, error)
+                summary[vm][machine] = format_median_error(median, iqr)
 
     # Write out results.
     write_results_as_latex(summary, sorted(machines), latex_file, with_preamble)
