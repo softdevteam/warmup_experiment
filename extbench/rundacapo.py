@@ -15,7 +15,8 @@ PROCESSES = 30
 # broken: batik, eclipse, tomcat
 WORKING_BENCHS   = ['avrora', 'fop', 'h2', 'jython', 'luindex', 'lusearch',
                     'pmd', 'sunflow', 'tradebeans', 'tradesoap', 'xalan']
-DISABLE_ON_GRAAL = set(["luindex", "tradebeans", "tradesoap"])
+# Graal regularly hangs (with an idle CPU) when running these benchmarks
+DISABLE_ON_GRAAL = set(["luindex", "lusearch", "tradebeans", "tradesoap"])
 
 JAR = os.path.join(os.path.dirname(__file__), "dacapo-9.12-bach.jar")
 
