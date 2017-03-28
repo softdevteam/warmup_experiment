@@ -1,31 +1,21 @@
 #!/usr/bin/env python2.7
 """
 usage:
-    chart_results.py <json results file>
+    XXX
 """
 
-import bz2
 import sys
-import json
 import os
-import matplotlib
-matplotlib.use("TkAgg")
-import matplotlib.pyplot as plt
-from matplotlib.backends.backend_pdf import PdfPages
+import numpy
+from statsmodels.tsa.stattools import acf
+from terminalplot import plot
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(
+    os.path.abspath(__file__)))))
 from warmup.krun_results import read_krun_results_file
 
-# Set figure size for plots
-#plt.figure(tight_layout=True)
-
-# Set font size
-font = {
-    'family' : 'sans',
-    'weight' : 'regular',
-    'size'   : '12',
-}
-matplotlib.rc('font', **font)
+CORR_THRESHOLD = 0.5  # flag correlation coefficients above this value
+N_LAGS = 40           # No. of lags to analyse for correlations
 
 
 # put in warmup lib if we decide to use this XXX
@@ -42,43 +32,85 @@ def get_steady_indexes(data_dct, key):
             ret.append(None)
     return ret
 
+
 def main(data_dct):
-    # Iterate over keys in the json file drawing some graphs
     keys = sorted(data_dct["wallclock_times"].keys())
-    n = 4 # XXX hack see below.
-    with PdfPages("out.pdf") as pdf:
-        for key in keys:
-            sys.stdout.write(key)
-            steady_idxs = get_steady_indexes(data_dct, key)
-            executions = data_dct["wallclock_times"][key]
-            assert len(steady_idxs) == len(executions)
-            draw_acrs(pdf, executions, key, steady_idxs)
-            print("")
-            # stop after 4 XXX
-            n -= 1
-            if n < 0:
-                break
+    total_num_steady = 0
+    total_num_corr = 0
+    total_num_pexecs = 0
+
+    for key in keys:
+        steady_idxs = get_steady_indexes(data_dct, key)
+        executions = data_dct["wallclock_times"][key]
+        assert len(steady_idxs) == len(executions)
+        num_steady, num_corr = \
+            analyse_correlations(executions, key, steady_idxs)
+        total_num_steady += num_steady
+        total_num_corr += num_corr
+        total_num_pexecs += len(executions)
+
+    print("Summary:")
+    print("  Correlation threshold: %s" % CORR_THRESHOLD)
+    print("  Number of lags: %s" % N_LAGS)
+    print("  Total num pexecs: %s" % total_num_pexecs)
+    print("  Total num steady pexecs: %s" % total_num_steady)
+    print("  Total num steady pexecs showing correlation: %s" % total_num_corr)
+
+    if total_num_steady:
+        percent = float(total_num_corr) / total_num_steady * 100
+    else:
+        percent = "N/A"
+    print("  Percent of steady correlated pexecs: %s" % percent)
 
 
-def draw_acrs(pdf, data, key, steady_idxs):
+def analyse_correlations(data, key, steady_idxs):
+    """Examine correlations for the pexecs for a single key
+
+    Returns a pair conatining the number of pexecs that were stable, and the
+    number of stable pexecs for which one or more lag is correlated above the
+    threshold.
+    """
+
     n_execs = len(data)
-    n_rows, n_cols = n_execs / 2, 2
-    fig = plt.figure(figsize=(20, 45))
+    num_corr_pexecs = 0
+    num_steady_pexecs = 0
 
-    for num, execu in enumerate(data):
-        mean = float(sum(execu)) / len(execu)
-        steady_iter = steady_idxs[num]
-        vals = [v - mean for v in execu][steady_iter:]
+    for pnum, execu in enumerate(data):
+        steady_iter = steady_idxs[pnum]
+        pexec_corr = False
 
-        p = fig.add_subplot(n_rows, n_cols, num + 1)
-        p.set_title("%s, Proc. Exec. #%s" % (key, num + 1))
-        p.set_xlabel("Lag")
-        p.set_ylabel("Correlation")
-        if steady_iter is not None:
-            p.acorr(vals)
-        sys.stdout.write(".")
-        sys.stdout.flush()
-    pdf.savefig()
+        if steady_iter:
+            num_steady_pexecs += 1
+            coeffs = acf(numpy.array(execu[steady_iter:]), unbiased=True,
+                     nlags=N_LAGS)
+            n_coeffs = len(coeffs)
+            hdr_done = False
+            for lag_num, coef in enumerate(coeffs):
+                if lag_num == 0:
+                    assert coef == 1.0
+                    continue
+                if abs(coef) > CORR_THRESHOLD:
+                    if not hdr_done:
+                        print("")
+                        print(78 * "-")
+                        print("%s, pexec %s, steady_iter %s" % \
+                              (key, pnum, steady_iter + 1))
+                        print(78 * "-")
+                        plot(xrange(n_coeffs), list(coeffs), rows=10,
+                             columns=n_coeffs)
+                        print(78 * "-")
+                        print("Details:")
+                        hdr_done = True
+                    print("  pexec=%s, lag=%s, corr=%s" % (pnum, lag_num, coef))
+                    pexec_corr = True
+            if pexec_corr:
+                num_corr_pexecs += 1
+    return num_steady_pexecs, num_corr_pexecs
+
+
+def usage():
+    print(__doc__)
+    sys.exit(1) # XXX
 
 
 if __name__ == "__main__":
@@ -88,5 +120,4 @@ if __name__ == "__main__":
         usage()
 
     data_dct = read_krun_results_file(json_file)
-    plt.close() # avoid extra blank window
     main(data_dct)
