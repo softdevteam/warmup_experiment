@@ -17,6 +17,9 @@ from warmup.krun_results import read_krun_results_file
 CORR_THRESHOLD = 0.5  # flag correlation coefficients above this value
 N_LAGS = 40           # No. of lags to analyse for correlations
 
+KURT_THRESHOLD = 1.0
+SKEW_THRESHOLD = 1.0
+
 
 # put in warmup lib if we decide to use this XXX
 def get_steady_indexes(data_dct, key):
@@ -38,15 +41,17 @@ def main(data_dct):
     total_num_steady = 0
     total_num_corr = 0
     total_num_pexecs = 0
+    total_num_normal = 0
 
     for key in keys:
         steady_idxs = get_steady_indexes(data_dct, key)
         executions = data_dct["wallclock_times"][key]
         assert len(steady_idxs) == len(executions)
-        num_steady, num_corr = \
-            analyse_correlations(executions, key, steady_idxs)
+        num_steady, num_corr, num_normal = \
+            analyse(executions, key, steady_idxs)
         total_num_steady += num_steady
         total_num_corr += num_corr
+        total_num_normal += num_normal
         total_num_pexecs += len(executions)
 
     print("Summary:")
@@ -63,7 +68,17 @@ def main(data_dct):
     print("  Percent of steady correlated pexecs: %s" % percent)
 
 
-def analyse_correlations(data, key, steady_idxs):
+    print("  Skew threshold: +/-%s" % SKEW_THRESHOLD)
+    print("  Kurtosis threshold: +/-%s" % KURT_THRESHOLD)
+    print("  Total num steady pexecs approximately normal: %s" % total_num_normal)
+    if total_num_normal:
+        percent = float(total_num_normal) / total_num_steady * 100
+    else:
+        percent = "N/A"
+    print("  Percent of steady pexecs also normal: %s" % percent)
+
+
+def analyse(data, key, steady_idxs):
     """Examine correlations for the pexecs for a single key
 
     Returns a pair conatining the number of pexecs that were stable, and the
@@ -74,6 +89,7 @@ def analyse_correlations(data, key, steady_idxs):
     n_execs = len(data)
     num_corr_pexecs = 0
     num_steady_pexecs = 0
+    num_normal_pexecs = 0
 
     for pnum, execu in enumerate(data):
         steady_iter = steady_idxs[pnum]
@@ -81,8 +97,11 @@ def analyse_correlations(data, key, steady_idxs):
 
         if steady_iter:
             num_steady_pexecs += 1
-            coeffs = acf(numpy.array(execu[steady_iter:]), unbiased=True,
-                     nlags=N_LAGS)
+            steady_seg = execu[steady_iter:]
+            steady_seg_np = numpy.array(steady_seg)
+
+            # Correlation analysis
+            coeffs = acf(steady_seg_np, unbiased=True, nlags=N_LAGS)
             n_coeffs = len(coeffs)
             hdr_done = False
             for lag_num, coef in enumerate(coeffs):
@@ -101,11 +120,32 @@ def analyse_correlations(data, key, steady_idxs):
                         print(78 * "-")
                         print("Details:")
                         hdr_done = True
-                    print("  pexec=%s, lag=%s, corr=%s" % (pnum, lag_num, coef))
+                    #print("  pexec=%s, lag=%s, corr=%s" % (pnum, lag_num, coef))
                     pexec_corr = True
             if pexec_corr:
                 num_corr_pexecs += 1
-    return num_steady_pexecs, num_corr_pexecs
+
+            # Normality Analysis
+            # XXX prints all for now
+            if len(steady_seg) < 8:
+                continue  # test fails with this few samples
+
+            from scipy.stats.mstats import normaltest
+            import math
+            n_bins = 70
+            skew_sq, kurt_sq = normaltest(steady_seg_np)
+            skew, kurt = math.sqrt(skew_sq), math.sqrt(kurt_sq)
+            hist = numpy.histogram(steady_seg_np, bins=n_bins)
+
+            print(n_bins * "-")
+            plot(xrange(n_bins), list(hist[0]), rows=10, columns=n_bins)
+            print(n_bins * "-")
+            print("skew=%s, kurt=%s\n" % (skew, kurt))
+            if (-SKEW_THRESHOLD <= skew <= SKEW_THRESHOLD) and \
+                    (-KURT_THRESHOLD <= kurt <= KURT_THRESHOLD):
+                num_normal_pexecs += 1
+
+    return num_steady_pexecs, num_corr_pexecs, num_normal_pexecs
 
 
 def usage():
