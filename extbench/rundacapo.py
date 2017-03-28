@@ -6,6 +6,7 @@ from krun.platform import detect_platform
 from krun.config import Config
 from krun.util import run_shell_cmd_bench
 from krun.vm_defs import find_internal_jvmci_java_home
+from collections import OrderedDict
 
 WARMUP_DIR = os.path.realpath(os.path.dirname(os.path.dirname(__file__)))
 
@@ -20,9 +21,9 @@ DISABLE_ON_GRAAL = set(["luindex", "lusearch", "tradebeans", "tradesoap"])
 
 JAR = os.path.join(os.path.dirname(__file__), "dacapo-9.12-bach.jar")
 
-JAVA_VMS = {
-    "hotspot" : "$JAVA_HOME/bin/java"
-}
+JAVA_VMS = OrderedDict()
+JAVA_VMS["hotspot"] = "$JAVA_HOME/bin/java"
+
 if os.uname()[0].startswith("Linux"):
     JVMCI_JAVA_HOME = find_internal_jvmci_java_home('%s/work/graal-jvmci-8/' % WARMUP_DIR)
     JAVA_VMS["graal"] = "%s/work/mx/mx --java-home=%s -p %s/work/graal/ vm -XX:+UseJVMCICompiler" % (WARMUP_DIR, JVMCI_JAVA_HOME, WARMUP_DIR)
