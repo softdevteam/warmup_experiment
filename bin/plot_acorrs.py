@@ -14,6 +14,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(
     os.path.abspath(__file__)))))
 from warmup.krun_results import parse_krun_file_with_changepoints
 from warmup.summary_statistics import collect_summary_statistics
+from scipy.stats.mstats import normaltest
 
 CORR_THRESHOLD = 0.5  # flag correlation coefficients above this value
 N_LAGS = 40           # No. of lags to analyse for correlations
@@ -28,7 +29,6 @@ def main(data_dct, classifier):
 
     summary_stats = collect_summary_statistics(data_dct, classifier['delta'],
                                                classifier['steady'])
-
     for machine, machine_data in data_dct.iteritems():
         for key in machine_data['wallclock_times'].keys():
             bench, vm, _ = key.split(":")
@@ -137,11 +137,12 @@ def analyse(data, key, steady_idxs, machine):
             # Normality Analysis
             # XXX prints all for now
 
-            from scipy.stats.mstats import normaltest
-            import math
+            # cut off bottom and top 25% to "zoom in" on histogram
             n_bins = 30
+            chop = int(float(n_bins/4))
+            n_bins -= chop * 2
             _, pval = normaltest(steady_iters_np)
-            hist = numpy.histogram(steady_iters_np, bins=n_bins)
+            hist = numpy.histogram(sorted(steady_iters_np)[chop:-chop], bins=n_bins)
 
             print("machine=%s, key=%s, pexec=%s, steady_iter=%s" % (machine, key, pnum, steady_iter))
             print(n_bins * "-")
