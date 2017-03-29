@@ -12,7 +12,7 @@ from terminalplot import plot
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(
     os.path.abspath(__file__)))))
-from warmup.krun_results import read_krun_results_file
+from warmup.krun_results import parse_krun_file_with_changepoints
 
 CORR_THRESHOLD = 0.5  # flag correlation coefficients above this value
 N_LAGS = 40           # No. of lags to analyse for correlations
@@ -21,22 +21,70 @@ KURT_THRESHOLD = 1.0
 SKEW_THRESHOLD = 1.0
 
 
-# put in warmup lib if we decide to use this XXX
-def get_steady_indexes(data_dct, key):
+# XXX put in warmup lib
+def get_steady_segment(segment_means, segment_vars, delta):
+    """Gets the steady segment and iteration number taking into account
+    "equivalent" consecutive segments.
+
+    Arguments:
+        segment_means: list of segment means
+        segment_vars: list of segment variances
+        delta: tolerance for segment equivalence
+
+    Returns:
+        A pair:
+
+        * The index of the first steady segment or "equivalent" consecutive
+          earlier segment.
+
+        * The number of steady segments.
+    """
+
+    num_segments = len(segment_means)
+
+    last_segment_mean = segment_means[-1]
+    last_segment_var = segment_vars[-1]
+    lower_bound = min(last_segment_mean - last_segment_var,
+                      last_segment_mean - delta)
+    upper_bound = max(last_segment_mean + last_segment_var,
+                      last_segment_mean + delta)
+
+    first_steady_segment = num_segments - 1
+    print("init steady seg: %s" % first_steady_segment)
+    num_steady_segments = 1
+    for index in xrange(num_segments - 2, -1, -1):
+        current_segment_mean = segment_means[index]
+        current_segment_var = segment_vars[index]
+        if (current_segment_mean + current_segment_var >= lower_bound and
+                current_segment_mean - current_segment_var <= upper_bound):
+            first_steady_segment -= 1
+            num_steady_segments += 1
+        else:
+            break
+    return first_steady_segment, num_steady_segments
+
+
+# XXX put in warmup lib?
+def get_steady_indices(data_dct, key, delta):
     ret = []
-    for idx, cls in enumerate(data_dct["classifications"][key]):
+    for pexec_idx, cls in enumerate(data_dct["classifications"][key]):
         if cls != "no steady state":
-            cps = data_dct["changepoints"][key][idx]
+            cps = data_dct["changepoints"][key][pexec_idx]
             if not cps:
+                assert cls == "flat"
                 ret.append(0)
             else:
-                ret.append(cps[-1])
+                segment_means = data_dct['changepoint_means'][key][pexec_idx]
+                segment_vars = data_dct['changepoint_vars'][key][pexec_idx]
+                steady_seg_idx, _ = get_steady_segment(segment_means, segment_vars, delta)
+                # minus one, because seg_n starts at cpt_{n-1}
+                ret.append(cps[steady_seg_idx - 1])
         else:
             ret.append(None)
     return ret
 
 
-def main(data_dct):
+def main(data_dct, delta):
     keys = sorted(data_dct["wallclock_times"].keys())
     total_num_steady = 0
     total_num_corr = 0
@@ -44,7 +92,7 @@ def main(data_dct):
     total_num_normal = 0
 
     for key in keys:
-        steady_idxs = get_steady_indexes(data_dct, key)
+        steady_idxs = get_steady_indices(data_dct, key, delta)
         executions = data_dct["wallclock_times"][key]
         assert len(steady_idxs) == len(executions)
         num_steady, num_corr, num_normal = \
@@ -132,17 +180,19 @@ def analyse(data, key, steady_idxs):
 
             from scipy.stats.mstats import normaltest
             import math
-            n_bins = 70
-            skew_sq, kurt_sq = normaltest(steady_seg_np)
-            skew, kurt = math.sqrt(skew_sq), math.sqrt(kurt_sq)
+            n_bins = 30
+            _, pval = normaltest(steady_seg_np)
             hist = numpy.histogram(steady_seg_np, bins=n_bins)
 
             print(n_bins * "-")
             plot(xrange(n_bins), list(hist[0]), rows=10, columns=n_bins)
             print(n_bins * "-")
-            print("skew=%s, kurt=%s\n" % (skew, kurt))
-            if (-SKEW_THRESHOLD <= skew <= SKEW_THRESHOLD) and \
-                    (-KURT_THRESHOLD <= kurt <= KURT_THRESHOLD):
+
+            # p < 0.01 rejects the null hypothesis, meaning that the value
+            # isn't likely from the normal distribution.
+            print("pval=%s" % pval)
+            if pval >= 0.05:
+                # Likely normally distributed
                 num_normal_pexecs += 1
 
     return num_steady_pexecs, num_corr_pexecs, num_normal_pexecs
@@ -159,5 +209,10 @@ if __name__ == "__main__":
     except IndexError:
         usage()
 
-    data_dct = read_krun_results_file(json_file)
-    main(data_dct)
+    # XXX check existence of keys
+    # This script deals with only one file at a time
+    classifier, data_dcts = parse_krun_file_with_changepoints([json_file])
+    assert len(data_dcts) == 1
+    data_dct = data_dcts[data_dcts.keys()[0]]
+
+    main(data_dct, classifier['delta'])
