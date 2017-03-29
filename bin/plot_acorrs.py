@@ -15,10 +15,10 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(
 from warmup.krun_results import parse_krun_file_with_changepoints
 from warmup.summary_statistics import collect_summary_statistics
 from scipy.stats.mstats import normaltest
+import scipy
 
 CORR_THRESHOLD = 0.5  # flag correlation coefficients above this value
 N_LAGS = 40           # No. of lags to analyse for correlations
-NORMAL_P_THRESHOLD = 0.01   # upper bound on p-value to reject null hypothesis
 
 
 def main(data_dct, classifier):
@@ -56,6 +56,17 @@ def main(data_dct, classifier):
                 else:
                     steady_idxs.append(None)
 
+            # This would not take in to account "equivalent segs"
+            #for cls, idxs in zip(data_dct[machine]["classifications"][key],
+            #                     data_dct[machine]["changepoints"][key]):
+            #    if cls == "no steady state":
+            #        steady_idxs.append(None)
+            #    else:
+            #        if idxs:
+            #            steady_idxs.append(idxs[-1])
+            #        else:
+            #            steady_idxs.append(0)
+
             assert len(steady_idxs) == len(executions)
             num_steady, num_corr, num_normal = \
                 analyse(executions, key, steady_idxs, machine)
@@ -89,7 +100,7 @@ def main(data_dct, classifier):
 def analyse(data, key, steady_idxs, machine):
     """Examine correlations for the pexecs for a single key
 
-    Returns a pair conatining the number of pexecs that were stable, and the
+    Returns a pair containing the number of pexecs that were stable, and the
     number of stable pexecs for which one or more lag is correlated above the
     threshold.
     """
@@ -134,32 +145,35 @@ def analyse(data, key, steady_idxs, machine):
             if pexec_corr:
                 num_corr_pexecs += 1
 
-            # Normality Analysis
-            # XXX prints all for now
+            # https://plot.ly/python/normality-test/
+            nres, criticals, sig_levels = scipy.stats.anderson(steady_iters_np)
 
-            # cut off bottom and top 25% to "zoom in" on histogram
-            n_bins = 30
-            chop = int(float(n_bins/4))
-            n_bins -= chop * 2
-            _, pval = normaltest(steady_iters_np)
+            # Other stuff i played with
+            #   normaltest(steady_iters_np)
+            #   scipy.stats.shapiro(steady_iters_np)
+
+            # 1% chance of errorneous rejecting, meaning a 1% chance of letting
+            # through samples which are not really normal.
+            sig_idx = 4
+            assert sig_levels[sig_idx] == 1
+            reject = nres >= criticals[sig_idx]
+            if reject:
+                print("REJECT: NOT NORMAL")
+            else:
+                print("ACCEPT: NORMAL")
+                num_normal_pexecs += 1
+            print("norm_res=%s, critical=%s" % (nres, criticals[sig_idx]))
+
+            n_bins = 100
+            chop = int(len(steady_iters_np) * 0.01)  # Cut head and tails off
             hist = numpy.histogram(sorted(steady_iters_np)[chop:-chop], bins=n_bins)
 
-            print("machine=%s, key=%s, pexec=%s, steady_iter=%s" % (machine, key, pnum, steady_iter))
+            print("machine=%s, key=%s, pexec=%s, steady_iter=%s, num_samples=%s" % \
+                  (machine, key, pnum, steady_iter, len(steady_iters_np)))
             print(n_bins * "-")
             plot(xrange(n_bins), list(hist[0]), rows=10, columns=n_bins)
             print(n_bins * "-")
-
-            # p < NORMAL_P_THRESHOLD rejects the null hypothesis, meaning that
-            # the value isn't likely from the normal distribution.
-            print("pval=%s" % pval)
-            if pval >= NORMAL_P_THRESHOLD:
-                # Likely normally distributed
-                print("^^^ IS NORMAL")
-                num_normal_pexecs += 1
-            else:
-                print("^^^ IS NOT NORMAL")
             print("\n")
-
     return num_steady_pexecs, num_corr_pexecs, num_normal_pexecs
 
 
