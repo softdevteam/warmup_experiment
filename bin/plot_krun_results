@@ -1405,11 +1405,12 @@ def create_cli_parser():
                         action='store',
                         dest='xlimits',
                         default=None,
-                        type=str,
-                        help="Specify X-axis limits as a comma separated pair "
-                             "'start,end'. Samples start from 0. e.g. "
-                             "'-x 100,130' will show samples in the range "
-                             "100 to 130.")
+                        nargs=2,
+                        type=int,
+                        help='Specify X-axis limits as a space separated pair '
+                             '"start end". Samples start from 0. e.g. '
+                             '"-x 100 130" will show samples in the range '
+                             '100 to 130.')
     parser.add_argument('--no-inset',
                         action='store_true',
                         dest='inset',
@@ -1463,26 +1464,33 @@ def create_cli_parser():
                         help='Do not draw a legend.')
     parser.add_argument('--export-size',
                         action='store',
-                        default='12, 10',
-                        help="Set the total size (comma separated pair, "
-                             "in inches) of each process execution's "
-                             "plots in the output.")
+                        default=[12, 10],
+                        type=int,
+                        nargs=2,
+                        help='Set the total size (space separated pair, '
+                             'in inches) of each process execution\'s '
+                             'plots in the output.')
     parser.add_argument('--cycles-ylimits',
                         action='store',
+                        type=float,
+                        nargs=2,
                         default=None,
-                        help="Set the y-axis range for core cycle plots "
-                             "(comma separated pair)")
+                        help='Set the y-axis range for core cycle plots '
+                             '(space separated pair)')
     parser.add_argument('--core-cycles',
                         action='store',
+                        type=int,
+                        nargs='+',
                         dest='core_cycles',
                         default=None,
                         help='Only plot the core cycles for specified cores'
-                              '(comma separated). e.g: 0,1,2,3')
+                              '(space separated). e.g: 0 1 2 3')
     parser.add_argument('--inset-xlimits', '-X',
                         action='store',
                         dest='inset_xlimits',
+                        nargs=2,
                         default=None,
-                        type=str,
+                        type=int,
                         help='Similar to --xlimits, but for thumbnail plots.')
     return parser
 
@@ -1511,59 +1519,13 @@ if __name__ == '__main__':
            (options.window_size, options.xlimits))
 
     # Set process execution plot-stack sizes
-    try:
-        sz_x, sz_y = options.export_size.split(',')
-        EXPORT_SIZE_INCHES[0] = float(sz_x)
-        EXPORT_SIZE_INCHES[1] = float(sz_y)
-    except ValueError:
-        fatal_error('invalid --export-size argument')
+    EXPORT_SIZE_INCHES = options.export_size
 
     if options.cycles_ylimits and options.wallclock:
         fatal_error('Cannot use --cycles-ylimits AND --wallclock-only.')
 
-    if options.cycles_ylimits:
-        try:
-            y1, y2 = options.cycles_ylimits.split(',')
-            cycles_ylimits = float(y1), float(y2)
-        except ValueError:
-            fatal_error('invalid --cycles-ylimits argument')
-    else:
-        cycles_ylimits = None
-
     if options.core_cycles and options.wallclock:
         fatal_error('Cannot use --core-cycles AND --wallclock-only.')
-
-    if options.core_cycles is not None and not options.wallclock:
-        if options.core_cycles.strip() == "":
-            core_cycles = list()
-        else:
-            try:
-                cycles_str = options.core_cycles.split(',')
-                core_cycles = [int(cycle) for cycle in cycles_str]
-            except ValueError:
-                fatal_error('invalid --core-cycles argument')
-            print 'Plotting cycle counts for core(s): %s' % ','.join([str(core) for core in core_cycles])
-    else:
-        core_cycles = None
-
-    if options.xlimits:
-        try:
-            options.xlimits = [int(x) for x in options.xlimits.split(',')]
-        except ValueError:
-            fatal_error('invalid --xlimits pair')
-
-        if len(options.xlimits) != 2:
-            fatal_error('wrong number of --xlimits elements')
-
-    if options.inset_xlimits:
-        try:
-            options.inset_xlimits = \
-                [int(x) for x in options.inset_xlimits.split(',')]
-        except ValueError:
-            fatal_error('invalid --inset-xlimits pair')
-
-        if len(options.inset_xlimits) != 2:
-            fatal_error('wrong number of --inset-xlimits elements')
 
     if options.xlimits and options.inset_xlimits:
         if options.inset_xlimits[0] < options.xlimits[0] or \
@@ -1622,6 +1584,6 @@ if __name__ == '__main__':
          zoom=not options.zoom,
          one_page=options.one_page,
          legend_off=options.legend_off,
-         core_cycles=core_cycles,
-         cycles_ylimits=cycles_ylimits,
+         core_cycles=options.core_cycles,
+         cycles_ylimits=options.cycles_ylimits,
          inset_xlimits=options.inset_xlimits)
