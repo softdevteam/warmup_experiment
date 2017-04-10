@@ -16,9 +16,13 @@ from warmup.krun_results import parse_krun_file_with_changepoints
 from warmup.summary_statistics import collect_summary_statistics
 from scipy.stats.mstats import normaltest
 import scipy
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 
-CORR_THRESHOLD = 0.5  # flag correlation coefficients above this value
+ABS_CORR_THRESHOLD = 0.5  # flag correlation coefficients above this value
 N_LAGS = 40           # No. of lags to analyse for correlations
+PLOT_DIR = "correlated_plots"
 
 
 def main(data_dct, classifier):
@@ -56,17 +60,6 @@ def main(data_dct, classifier):
                 else:
                     steady_idxs.append(None)
 
-            # This would not take in to account "equivalent segs"
-            #for cls, idxs in zip(data_dct[machine]["classifications"][key],
-            #                     data_dct[machine]["changepoints"][key]):
-            #    if cls == "no steady state":
-            #        steady_idxs.append(None)
-            #    else:
-            #        if idxs:
-            #            steady_idxs.append(idxs[-1])
-            #        else:
-            #            steady_idxs.append(0)
-
             assert len(steady_idxs) == len(executions)
             num_steady, num_corr, num_normal = \
                 analyse(executions, key, steady_idxs, machine)
@@ -76,7 +69,7 @@ def main(data_dct, classifier):
             total_num_pexecs += len(executions)
 
     print("Summary:")
-    print("  Correlation threshold: %s" % CORR_THRESHOLD)
+    print("  Absolute correlation threshold: %s" % ABS_CORR_THRESHOLD)
     print("  Number of lags: %s" % N_LAGS)
     print("  Total num pexecs: %s" % total_num_pexecs)
     print("  Total num steady pexecs: %s" % total_num_steady)
@@ -87,14 +80,6 @@ def main(data_dct, classifier):
     else:
         percent = "N/A"
     print("  Percent of steady correlated pexecs: %s" % percent)
-
-    print("  Normality p-value threshold: %s" % NORMAL_P_THRESHOLD)
-    print("  Total num steady pexecs approximately normal: %s" % total_num_normal)
-    if total_num_normal:
-        percent = float(total_num_normal) / total_num_steady * 100
-    else:
-        percent = "N/A"
-    print("  Percent of steady pexecs approximately normal: %s" % percent)
 
 
 def analyse(data, key, steady_idxs, machine):
@@ -113,6 +98,7 @@ def analyse(data, key, steady_idxs, machine):
     for pnum, execu in enumerate(data):
         steady_iter = steady_idxs[pnum]
         pexec_corr = False
+        corrs = []
 
         if steady_iter:
             num_steady_pexecs += 1
@@ -127,55 +113,55 @@ def analyse(data, key, steady_idxs, machine):
                 if lag_num == 0:
                     assert coef == 1.0
                     continue
-                if abs(coef) > CORR_THRESHOLD:
+                abs_coef = abs(coef)
+                if abs_coef > ABS_CORR_THRESHOLD:
+                    corrs.append((lag_num, coef))
                     if not hdr_done:
-                        # XXX commented until we decide if we want to keep
-                        #print("")
-                        #print(78 * "-")
-                        #print("%s, pexec %s, steady_iter %s" % \
-                        #      (key, pnum, steady_iter + 1))
-                        #print(78 * "-")
-                        #plot(xrange(n_coeffs), list(coeffs), rows=10,
-                        #     columns=n_coeffs)
-                        #print(78 * "-")
-                        #print("Details:")
+                        print("\n%s, pexec %s, steady_iter %s" % \
+                              (key, pnum, steady_iter + 1))
                         hdr_done = True
-                    #print("  pexec=%s, lag=%s, corr=%s" % (pnum, lag_num, coef))
+                    print("  pexec=%s, lag=%s, corr=%s" % (pnum, lag_num, coef))
                     pexec_corr = True
             if pexec_corr:
+                plot_steady(key, pnum, machine, steady_iter, corrs, steady_iters_np)
                 num_corr_pexecs += 1
-
-            # https://plot.ly/python/normality-test/
-            nres, criticals, sig_levels = scipy.stats.anderson(steady_iters_np)
-
-            # Other stuff i played with
-            #   normaltest(steady_iters_np)
-            #   scipy.stats.shapiro(steady_iters_np)
-
-            # 1% chance of errorneous rejecting, meaning a 1% chance of letting
-            # through samples which are not really normal.
-            sig_idx = 4
-            assert sig_levels[sig_idx] == 1
-            reject = nres >= criticals[sig_idx]
-            if reject:
-                print("REJECT: NOT NORMAL")
-            else:
-                print("ACCEPT: NORMAL")
-                num_normal_pexecs += 1
-            print("norm_res=%s, critical=%s" % (nres, criticals[sig_idx]))
-
-            n_bins = 100
-            chop = int(len(steady_iters_np) * 0.01)  # Cut head and tails off
-            hist = numpy.histogram(sorted(steady_iters_np)[chop:-chop], bins=n_bins)
-
-            print("machine=%s, key=%s, pexec=%s, steady_iter=%s, num_samples=%s" % \
-                  (machine, key, pnum, steady_iter, len(steady_iters_np)))
-            print(n_bins * "-")
-            plot(xrange(n_bins), list(hist[0]), rows=10, columns=n_bins)
-            print(n_bins * "-")
-            print("\n")
     return num_steady_pexecs, num_corr_pexecs, num_normal_pexecs
 
+
+def plot_steady(key, pnum, machine, steady_iter, corrs, steady_iters_np):
+    xs = xrange(steady_iter + 1, steady_iter + len(steady_iters_np) + 1)
+
+    corrs_elems = []
+    for lag, val in corrs:
+        title = str(corrs[:3])
+        corrs_elems.append("%s=%.02f" % (lag, val))
+    title = " ".join(corrs_elems)
+
+    f, axarr = plt.subplots(5, sharex=False)
+    plt.tight_layout()
+    f.suptitle(title)
+    axarr[0].plot(xs, steady_iters_np, color="red")
+
+    from warmup.plotting import zoom_y_min, zoom_y_max
+    def subplot(sub_idx, data, start_idx):
+        ymin = zoom_y_min(data, [], 0)
+        ymax = zoom_y_max(data, [], 0)
+        axarr[sub_idx].set_ylim(ymin, ymax)
+        xs = xrange(start_idx + 1, start_idx + len(data) + 1)
+        axarr[sub_idx].plot(xs, data)
+
+    slices = 200, 100, 50, 25
+    for sp_idx, end in enumerate(slices):
+        subplot(sp_idx + 1, steady_iters_np[:end], steady_iter)
+
+    filename = "%s_%s_%s.pdf" % (machine, key.replace(":", "_"), pnum)
+    path = os.path.join(PLOT_DIR, filename)
+    gcf = matplotlib.pyplot.gcf()
+    gcf.set_size_inches(5, 10)
+    f.savefig(path)
+
+    plt.clf()
+    plt.close()
 
 def usage():
     print(__doc__)
@@ -183,6 +169,11 @@ def usage():
 
 
 if __name__ == "__main__":
+    if os.path.exists(PLOT_DIR):
+        print("%s already exists" % PLOT_DIR)
+        sys.exit(1)
+    os.mkdir(PLOT_DIR)
+
     # XXX check existence of keys
     # XXX check args
     classifier, data_dcts = parse_krun_file_with_changepoints(sys.argv[1:])
