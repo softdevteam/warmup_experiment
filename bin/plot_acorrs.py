@@ -6,34 +6,40 @@ usage:
 
 import sys
 import os
-import numpy
+import numpy as np
 from statsmodels.tsa.stattools import acf
-from terminalplot import plot
+from statsmodels.regression.linear_model import OLS
+from statsmodels.stats.stattools import durbin_watson
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(
     os.path.abspath(__file__)))))
 from warmup.krun_results import parse_krun_file_with_changepoints
 from warmup.summary_statistics import collect_summary_statistics
-from scipy.stats.mstats import normaltest
-import scipy
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
+from warmup.plotting import zoom_y_min, zoom_y_max
 
-ABS_CORR_THRESHOLD = 0.5  # flag correlation coefficients above this value
-N_LAGS = 10           # No. of lags to analyse for correlations
+CORR_THRESHOLD = 1.1, 2.9
 CORR_PLOT_DIR = "correlated_plots"
 NOCORR_PLOT_DIR = "uncorrelated_plots"
+
+# debug bits
+DEBUG = False
+if os.environ.get("CORR_DEBUG"):
+    DEBUG = True
+N_LAGS = 40
 
 
 def main(data_dct, classifier):
     total_num_steady = 0
     total_num_corr = 0
     total_num_pexecs = 0
-    total_num_normal = 0
 
     summary_stats = collect_summary_statistics(data_dct, classifier['delta'],
                                                classifier['steady'])
+    # XXX print per-machine summaries
+    # XXX check all segs in steady state
     for machine, machine_data in data_dct.iteritems():
         for key in machine_data['wallclock_times'].keys():
             bench, vm, _ = key.split(":")
@@ -42,7 +48,8 @@ def main(data_dct, classifier):
             executions = data_dct[machine]['wallclock_times'][key]
 
             if not executions:
-                print("warning: skipping %s:%s: no executions" % (machine, key))
+                print("warning: skipping %s:%s: no executions" %
+                      (machine, key))
                 continue  # skipped benchmark
 
             # find summary stats for the machine/vm/benchmark
@@ -63,122 +70,92 @@ def main(data_dct, classifier):
                     steady_idxs.append(None)
 
             assert len(steady_idxs) == len(executions)
-            num_steady, num_corr, num_normal = \
+            num_steady, num_corr = \
                 analyse(executions, key, steady_idxs, machine, key_cpts)
             total_num_steady += num_steady
             total_num_corr += num_corr
-            total_num_normal += num_normal
             total_num_pexecs += len(executions)
 
+    print("\n" + (72 * "-"))
     print("Summary:")
-    print("  Absolute correlation threshold: %s" % ABS_CORR_THRESHOLD)
-    print("  Number of lags: %s" % N_LAGS)
+    print("  Absolute correlation threshold: %s" % str(CORR_THRESHOLD))
     print("  Total num pexecs: %s" % total_num_pexecs)
     print("  Total num steady pexecs: %s" % total_num_steady)
     print("  Total num steady pexecs showing correlation: %s" % total_num_corr)
-
     if total_num_steady:
         percent = float(total_num_corr) / total_num_steady * 100
     else:
         percent = "N/A"
     print("  Percent of steady correlated pexecs: %s" % percent)
+    print(72 * "-")
+
+
+def dw(data_np):
+    """Compute the Durbin-Watson statistic for 1-dimensional numpy array"""
+
+    # The only "dependent" variable is only the "intercept", since we
+    # are correlating the data with itself.
+    ones_np = np.ones(len(data_np))
+
+    # Perform ordinary least squares (OLS) to get residuals
+    ols_res = OLS(data_np, ones_np).fit()
+
+    # Return the Durbin-Watson value
+    dw_res = durbin_watson(ols_res.resid)
+    assert 0 <= dw_res <= 4
+    return dw_res
 
 
 def analyse(data, key, steady_idxs, machine, cpts):
-    """Examine correlations for the pexecs for a single key
+    """Look for the correlations for the pexecs of a single key.
 
     Returns a pair containing the number of pexecs that were stable, and the
-    number of stable pexecs for which one or more lag is correlated above the
-    threshold.
+    number of stable pexecs for which correlation was detected.
     """
 
-    n_execs = len(data)
     num_corr_pexecs = 0
     num_steady_pexecs = 0
-    num_normal_pexecs = 0
 
-    for pnum, execu in enumerate(data):
-        steady_iter = steady_idxs[pnum]
-        if len(cpts[pnum]) > 0:
-            last_change = cpts[pnum][-1]
+    for pexec_idx, execu in enumerate(data):
+        steady_iter = steady_idxs[pexec_idx]
+        if len(cpts[pexec_idx]) > 0:
+            last_change = cpts[pexec_idx][-1]
         else:
             last_change = 0
         pexec_corr = False
-        bad_corrs = []
-        hdr_done = False
 
         if steady_iter is not None:
             num_steady_pexecs += 1
-            #steady_iters = execu[steady_iter:]
-            steady_iters = execu[last_change:]
 
-            # XXX
-            #mean = sum(steady_iters) / len(steady_iters)
-            #teady_iters = [x - mean for x in steady_iters]
+            # The independent variable is the steady iterations
+            steady_iters_np = np.array(execu[last_change:])
+            dw_res = dw(steady_iters_np)
 
-            #
-            # Correlation analysis
-            #
-            for lag in xrange(1, N_LAGS + 1):
-                from pandas import DataFrame
-                # First, the independent variable is the steady iterations
-                df = DataFrame(steady_iters, columns=("wallclock",))
-
-                # The first dependent var is the lagged steady state iterations
-                def do_lag(data, lag):
-                    rv = numpy.concatenate((data[lag:], data[:lag]))
-                    #rv = numpy.concatenate((data[-lag:], data[:-lag]))
-                    assert len(data) == len(rv)
-                    return rv
-                df["lagged"] = do_lag(steady_iters, lag)
-
-                # Second independent var is the intercept constants
-                df['ones'] = numpy.ones(len(df))
-
-                # Perform ordinary least squares to get residuals
-                from statsmodels.regression.linear_model import OLS
-                ols_res = OLS(df["wallclock"], df[["lagged", "ones"]]).fit()
-                #resids = ols_res.fit().resid
-
-                # finally get the Durbin-Watson value
-                #from statsmodels.stats.stattools import durbin_watson
-                #dw_res = durbin_watson(resids)
-                dw_res = numpy.sum(numpy.diff(ols_res.resid.values )**2.0) / ols_res.ssr
-                assert 0 <= dw_res <= 4
-
-                if dw_res < 1.1 or dw_res > 2.9:
-                    bad_corrs.append((lag, dw_res))
-                    pexec_corr = True
-                    if not hdr_done:
-                        print("\n%s, pexec %s, steady_iter %s" % \
-                              (key, pnum, steady_iter + 1))
-                        hdr_done = True
-
-                    print("lag %3d=%.3f" % (lag, dw_res))
-
-            if pexec_corr:
-                direc = CORR_PLOT_DIR
+            if dw_res < CORR_THRESHOLD[0] or dw_res > CORR_THRESHOLD[1]:
+                if DEBUG:
+                    print("[!] %s, pexec=%s, steady_iter=%s, dw=%.3f" %
+                          (key, pexec_idx, steady_iter + 1, dw_res))
                 num_corr_pexecs += 1
-                plot_steady(key, pnum, machine, steady_iter, bad_corrs, steady_iters, direc)
-            else:
-                direc = NOCORR_PLOT_DIR
-    return num_steady_pexecs, num_corr_pexecs, num_normal_pexecs
+                pexec_corr = True
+
+            if DEBUG:
+                if pexec_corr:
+                    direc = CORR_PLOT_DIR
+                else:
+                    direc = NOCORR_PLOT_DIR
+                plot_steady(key, pexec_idx, machine, steady_iter, dw_res,
+                            steady_iters_np, direc)
+    return num_steady_pexecs, num_corr_pexecs
 
 
-def plot_steady(key, pnum, machine, steady_iter, corrs, steady_iters, direc):
-    xs = xrange(steady_iter + 1, steady_iter + len(steady_iters) + 1)
-
-    corrs_elems = []
-    for lag, val in sorted(corrs, key=lambda x: abs(x[1] - 2), reverse=True):
-        corrs_elems.append("%s=%.02f" % (lag, val))
-    title = ", ".join(corrs_elems)
-
-    slices = len(steady_iters), 200, 100, 50, 25
+def plot_steady(key, pexec_idx, machine, steady_iter, corr, steady_iters_np,
+                direc):
+    slices = len(steady_iters_np), 200, 100, 50, 25
     f, axarr = plt.subplots(len(slices) + 1, sharex=False)
     plt.tight_layout()
+    title = "%s <= %s <= %s" % (CORR_THRESHOLD[0], corr, CORR_THRESHOLD[1])
     f.suptitle(title)
 
-    from warmup.plotting import zoom_y_min, zoom_y_max
     def subplot(sub_idx, data, start_idx):
         ymin = zoom_y_min(data, [], 0)
         ymax = zoom_y_max(data, [], 0)
@@ -187,37 +164,33 @@ def plot_steady(key, pnum, machine, steady_iter, corrs, steady_iters, direc):
         axarr[sub_idx].plot(xs, data)
 
     for sp_idx, end in enumerate(slices):
-        subplot(sp_idx, steady_iters[:end], steady_iter)
+        subplot(sp_idx, steady_iters_np[:end], steady_iter)
 
-    acf_coefs = acf(numpy.array(steady_iters), nlags=N_LAGS + 1, unbiased=True)
+    acf_coefs = acf(np.array(steady_iters_np), nlags=N_LAGS + 1, unbiased=True)
     axarr[len(slices)].bar(xrange(len(acf_coefs)), acf_coefs)
 
-    filename = "%s_%s_%s.pdf" % (machine, key.replace(":", "_"), pnum)
+    filename = "%s_%s_%s.pdf" % (machine, key.replace(":", "_"), pexec_idx)
     path = os.path.join(direc, filename)
     gcf = matplotlib.pyplot.gcf()
     gcf.set_size_inches(10, 10)
+    print("saving out: %s" % path)
     f.savefig(path)
 
     plt.clf()
     plt.close()
 
-def usage():
-    print(__doc__)
-    sys.exit(1) # XXX
-
 
 if __name__ == "__main__":
-    if os.path.exists(CORR_PLOT_DIR):
-        print("%s already exists" % CORR_PLOT_DIR)
+    if len(sys.argv) < 2:
+        print("usage: find_corrs file1, [... fileN]")
         sys.exit(1)
-    os.mkdir(CORR_PLOT_DIR)
 
-    if os.path.exists(NOCORR_PLOT_DIR):
-        print("%s already exists" % NOCORR_PLOT_DIR)
-        sys.exit(1)
-    os.mkdir(NOCORR_PLOT_DIR)
+    if DEBUG:
+        for direc in CORR_PLOT_DIR, NOCORR_PLOT_DIR:
+            if os.path.exists(direc):
+                print("%s already exists" % direc)
+                sys.exit(1)
+            os.mkdir(direc)
 
-    # XXX check existence of keys
-    # XXX check args
     classifier, data_dcts = parse_krun_file_with_changepoints(sys.argv[1:])
     main(data_dcts, classifier)
