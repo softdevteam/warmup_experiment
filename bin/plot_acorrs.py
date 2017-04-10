@@ -145,9 +145,9 @@ def analyse(data, key, steady_idxs, machine):
             if pexec_corr:
                 direc = CORR_PLOT_DIR
                 num_corr_pexecs += 1
+                plot_steady(key, pnum, machine, steady_iter, corrs, steady_iters, direc)
             else:
                 direc = NOCORR_PLOT_DIR
-            plot_steady(key, pnum, machine, steady_iter, corrs, steady_iters, direc)
     return num_steady_pexecs, num_corr_pexecs, num_normal_pexecs
 
 
@@ -161,8 +161,8 @@ def plot_steady(key, pnum, machine, steady_iter, corrs, steady_iters, direc):
             break
     title = ", ".join(corrs_elems)
 
-    slices = len(steady_iters), 400, 200, 100, 50, 25
-    f, axarr = plt.subplots(len(slices), sharex=False)
+    slices = len(steady_iters), 200, 100, 50, 25
+    f, axarr = plt.subplots(len(slices) + 1, sharex=False)
     plt.tight_layout()
     f.suptitle(title)
 
@@ -177,10 +177,13 @@ def plot_steady(key, pnum, machine, steady_iter, corrs, steady_iters, direc):
     for sp_idx, end in enumerate(slices):
         subplot(sp_idx, steady_iters[:end], steady_iter)
 
+    acf_coefs = acf(numpy.array(steady_iters), nlags=N_LAGS + 1, unbiased=True)
+    axarr[len(slices)].bar(xrange(len(acf_coefs)), acf_coefs)
+
     filename = "%s_%s_%s.pdf" % (machine, key.replace(":", "_"), pnum)
     path = os.path.join(direc, filename)
     gcf = matplotlib.pyplot.gcf()
-    gcf.set_size_inches(10, 8)
+    gcf.set_size_inches(10, 10)
     f.savefig(path)
 
     plt.clf()
