@@ -38,6 +38,7 @@ def main(data_dct, classifier):
         for key in machine_data['wallclock_times'].keys():
             bench, vm, _ = key.split(":")
             key_classifications = data_dct[machine]['classifications'][key]
+            key_cpts = data_dct[machine]['changepoints'][key]
             executions = data_dct[machine]['wallclock_times'][key]
 
             if not executions:
@@ -63,7 +64,7 @@ def main(data_dct, classifier):
 
             assert len(steady_idxs) == len(executions)
             num_steady, num_corr, num_normal = \
-                analyse(executions, key, steady_idxs, machine)
+                analyse(executions, key, steady_idxs, machine, key_cpts)
             total_num_steady += num_steady
             total_num_corr += num_corr
             total_num_normal += num_normal
@@ -83,7 +84,7 @@ def main(data_dct, classifier):
     print("  Percent of steady correlated pexecs: %s" % percent)
 
 
-def analyse(data, key, steady_idxs, machine):
+def analyse(data, key, steady_idxs, machine, cpts):
     """Examine correlations for the pexecs for a single key
 
     Returns a pair containing the number of pexecs that were stable, and the
@@ -98,13 +99,22 @@ def analyse(data, key, steady_idxs, machine):
 
     for pnum, execu in enumerate(data):
         steady_iter = steady_idxs[pnum]
+        if len(cpts[pnum]) > 0:
+            last_change = cpts[pnum][-1]
+        else:
+            last_change = 0
         pexec_corr = False
-        corrs = []
+        bad_corrs = []
         hdr_done = False
 
-        if steady_iter:
+        if steady_iter is not None:
             num_steady_pexecs += 1
-            steady_iters = execu[steady_iter:]
+            #steady_iters = execu[steady_iter:]
+            steady_iters = execu[last_change:]
+
+            # XXX
+            #mean = sum(steady_iters) / len(steady_iters)
+            #teady_iters = [x - mean for x in steady_iters]
 
             #
             # Correlation analysis
@@ -116,7 +126,10 @@ def analyse(data, key, steady_idxs, machine):
 
                 # The first dependent var is the lagged steady state iterations
                 def do_lag(data, lag):
-                    return data[lag:] + data[:lag]
+                    rv = numpy.concatenate((data[lag:], data[:lag]))
+                    #rv = numpy.concatenate((data[-lag:], data[:-lag]))
+                    assert len(data) == len(rv)
+                    return rv
                 df["lagged"] = do_lag(steady_iters, lag)
 
                 # Second independent var is the intercept constants
@@ -124,17 +137,18 @@ def analyse(data, key, steady_idxs, machine):
 
                 # Perform ordinary least squares to get residuals
                 from statsmodels.regression.linear_model import OLS
-                ols_res = OLS(df["wallclock"], df[["lagged", "ones"]])
-                resids = ols_res.fit().resid
+                ols_res = OLS(df["wallclock"], df[["lagged", "ones"]]).fit()
+                #resids = ols_res.fit().resid
 
                 # finally get the Durbin-Watson value
-                from statsmodels.stats.stattools import durbin_watson
-                dw_res = durbin_watson(resids)
+                #from statsmodels.stats.stattools import durbin_watson
+                #dw_res = durbin_watson(resids)
+                dw_res = numpy.sum(numpy.diff(ols_res.resid.values )**2.0) / ols_res.ssr
+                assert 0 <= dw_res <= 4
 
-                corrs.append((lag, dw_res))
-                if dw_res < 1.0:
+                if dw_res < 1.1 or dw_res > 2.9:
+                    bad_corrs.append((lag, dw_res))
                     pexec_corr = True
-
                     if not hdr_done:
                         print("\n%s, pexec %s, steady_iter %s" % \
                               (key, pnum, steady_iter + 1))
@@ -145,7 +159,7 @@ def analyse(data, key, steady_idxs, machine):
             if pexec_corr:
                 direc = CORR_PLOT_DIR
                 num_corr_pexecs += 1
-                plot_steady(key, pnum, machine, steady_iter, corrs, steady_iters, direc)
+                plot_steady(key, pnum, machine, steady_iter, bad_corrs, steady_iters, direc)
             else:
                 direc = NOCORR_PLOT_DIR
     return num_steady_pexecs, num_corr_pexecs, num_normal_pexecs
@@ -155,10 +169,8 @@ def plot_steady(key, pnum, machine, steady_iter, corrs, steady_iters, direc):
     xs = xrange(steady_iter + 1, steady_iter + len(steady_iters) + 1)
 
     corrs_elems = []
-    for lag, val in sorted(corrs, key=lambda x: x[1]):
+    for lag, val in sorted(corrs, key=lambda x: abs(x[1] - 2), reverse=True):
         corrs_elems.append("%s=%.02f" % (lag, val))
-        if len(corrs_elems) == 5:
-            break
     title = ", ".join(corrs_elems)
 
     slices = len(steady_iters), 200, 100, 50, 25
