@@ -21,8 +21,9 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 ABS_CORR_THRESHOLD = 0.5  # flag correlation coefficients above this value
-N_LAGS = 40           # No. of lags to analyse for correlations
-PLOT_DIR = "correlated_plots"
+N_LAGS = 10           # No. of lags to analyse for correlations
+CORR_PLOT_DIR = "correlated_plots"
+NOCORR_PLOT_DIR = "uncorrelated_plots"
 
 
 def main(data_dct, classifier):
@@ -99,50 +100,71 @@ def analyse(data, key, steady_idxs, machine):
         steady_iter = steady_idxs[pnum]
         pexec_corr = False
         corrs = []
+        hdr_done = False
 
         if steady_iter:
             num_steady_pexecs += 1
             steady_iters = execu[steady_iter:]
-            steady_iters_np = numpy.array(steady_iters)
 
+            #
             # Correlation analysis
-            coeffs = acf(steady_iters_np, unbiased=True, nlags=N_LAGS)
-            n_coeffs = len(coeffs)
-            hdr_done = False
-            for lag_num, coef in enumerate(coeffs):
-                if lag_num == 0:
-                    assert coef == 1.0
-                    continue
-                abs_coef = abs(coef)
-                if abs_coef > ABS_CORR_THRESHOLD:
-                    corrs.append((lag_num, coef))
+            #
+            for lag in xrange(1, N_LAGS + 1):
+                from pandas import DataFrame
+                # First, the independent variable is the steady iterations
+                df = DataFrame(steady_iters, columns=("wallclock",))
+
+                # The first dependent var is the lagged steady state iterations
+                def do_lag(data, lag):
+                    return data[lag:] + data[:lag]
+                df["lagged"] = do_lag(steady_iters, lag)
+
+                # Second independent var is the intercept constants
+                df['ones'] = numpy.ones(len(df))
+
+                # Perform ordinary least squares to get residuals
+                from statsmodels.regression.linear_model import OLS
+                ols_res = OLS(df["wallclock"], df[["lagged", "ones"]])
+                resids = ols_res.fit().resid
+
+                # finally get the Durbin-Watson value
+                from statsmodels.stats.stattools import durbin_watson
+                dw_res = durbin_watson(resids)
+
+                corrs.append((lag, dw_res))
+                if dw_res < 1.0:
+                    pexec_corr = True
+
                     if not hdr_done:
                         print("\n%s, pexec %s, steady_iter %s" % \
                               (key, pnum, steady_iter + 1))
                         hdr_done = True
-                    print("  pexec=%s, lag=%s, corr=%s" % (pnum, lag_num, coef))
-                    pexec_corr = True
+
+                    print("lag %3d=%.3f" % (lag, dw_res))
+
             if pexec_corr:
-                plot_steady(key, pnum, machine, steady_iter, corrs, steady_iters_np)
+                direc = CORR_PLOT_DIR
                 num_corr_pexecs += 1
+            else:
+                direc = NOCORR_PLOT_DIR
+            plot_steady(key, pnum, machine, steady_iter, corrs, steady_iters, direc)
     return num_steady_pexecs, num_corr_pexecs, num_normal_pexecs
 
 
-def plot_steady(key, pnum, machine, steady_iter, corrs, steady_iters_np):
-    xs = xrange(steady_iter + 1, steady_iter + len(steady_iters_np) + 1)
+def plot_steady(key, pnum, machine, steady_iter, corrs, steady_iters, direc):
+    xs = xrange(steady_iter + 1, steady_iter + len(steady_iters) + 1)
 
     corrs_elems = []
-    for lag, val in corrs:
-        title = str(corrs[:3])
+    for lag, val in sorted(corrs, key=lambda x: x[1]):
         corrs_elems.append("%s=%.02f" % (lag, val))
-        if len(corrs) == 3:
+        if len(corrs_elems) == 5:
             break
-    title = " ".join(corrs_elems)
+    title = ", ".join(corrs_elems)
 
-    f, axarr = plt.subplots(5, sharex=False)
+    slices = len(steady_iters), 400, 200, 100, 50, 25
+    f, axarr = plt.subplots(len(slices), sharex=False)
     plt.tight_layout()
     f.suptitle(title)
-    axarr[0].plot(xs, steady_iters_np, color="red")
 
     from warmup.plotting import zoom_y_min, zoom_y_max
     def subplot(sub_idx, data, start_idx):
@@ -152,14 +174,13 @@ def plot_steady(key, pnum, machine, steady_iter, corrs, steady_iters_np):
         xs = xrange(start_idx + 1, start_idx + len(data) + 1)
         axarr[sub_idx].plot(xs, data)
 
-    slices = 200, 100, 50, 25
     for sp_idx, end in enumerate(slices):
-        subplot(sp_idx + 1, steady_iters_np[:end], steady_iter)
+        subplot(sp_idx, steady_iters[:end], steady_iter)
 
     filename = "%s_%s_%s.pdf" % (machine, key.replace(":", "_"), pnum)
-    path = os.path.join(PLOT_DIR, filename)
+    path = os.path.join(direc, filename)
     gcf = matplotlib.pyplot.gcf()
-    gcf.set_size_inches(5, 8)
+    gcf.set_size_inches(10, 8)
     f.savefig(path)
 
     plt.clf()
@@ -171,10 +192,15 @@ def usage():
 
 
 if __name__ == "__main__":
-    if os.path.exists(PLOT_DIR):
-        print("%s already exists" % PLOT_DIR)
+    if os.path.exists(CORR_PLOT_DIR):
+        print("%s already exists" % CORR_PLOT_DIR)
         sys.exit(1)
-    os.mkdir(PLOT_DIR)
+    os.mkdir(CORR_PLOT_DIR)
+
+    if os.path.exists(NOCORR_PLOT_DIR):
+        print("%s already exists" % NOCORR_PLOT_DIR)
+        sys.exit(1)
+    os.mkdir(NOCORR_PLOT_DIR)
 
     # XXX check existence of keys
     # XXX check args
