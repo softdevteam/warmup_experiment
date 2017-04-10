@@ -135,6 +135,8 @@ def plot_steady(key, pnum, machine, steady_iter, corrs, steady_iters_np):
     for lag, val in corrs:
         title = str(corrs[:3])
         corrs_elems.append("%s=%.02f" % (lag, val))
+        if len(corrs) == 3:
+            break
     title = " ".join(corrs_elems)
 
     f, axarr = plt.subplots(5, sharex=False)
@@ -157,7 +159,7 @@ def plot_steady(key, pnum, machine, steady_iter, corrs, steady_iters_np):
     filename = "%s_%s_%s.pdf" % (machine, key.replace(":", "_"), pnum)
     path = os.path.join(PLOT_DIR, filename)
     gcf = matplotlib.pyplot.gcf()
-    gcf.set_size_inches(5, 10)
+    gcf.set_size_inches(5, 8)
     f.savefig(path)
 
     plt.clf()
