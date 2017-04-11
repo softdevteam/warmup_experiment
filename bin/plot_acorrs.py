@@ -1,8 +1,4 @@
 #!/usr/bin/env python2.7
-"""
-usage:
-    XXX
-"""
 
 import sys
 import os
@@ -20,15 +16,51 @@ from warmup.krun_results import parse_krun_file_with_changepoints
 from warmup.summary_statistics import collect_summary_statistics
 from warmup.plotting import zoom_y_min, zoom_y_max
 
-CORR_THRESHOLD = 1.1, 2.9
-CORR_PLOT_DIR = "correlated_plots"
-NOCORR_PLOT_DIR = "uncorrelated_plots"
+CORR_THRESHOLD = 1.0, 3.0       # threshold for DW analysis
+MIN_CORR_SEG_LEN = 50           # shortest seg to apply DW to
 
 # debug bits
 DEBUG = False
 if os.environ.get("CORR_DEBUG"):
     DEBUG = True
 N_LAGS = 40
+CORR_PLOT_DIR = "correlated_plots"
+NOCORR_PLOT_DIR = "uncorrelated_plots"
+
+
+def get_steady_segs(cpts, steady_idx, pexec_len):
+    """Get a list of steady segments.
+
+    Each steady segment is a tuple (start, end), inclusive of start and
+    exlusive of end. Start and end are list indicies.
+    """
+
+    segs = []
+    start = 0
+    num_cpts_in_steady_state = 0  # used in sanity checks only
+    for end in cpts:
+        if start < steady_idx:
+            pass  # not yet steady
+        else:
+            num_cpts_in_steady_state += 1
+            segs.append((start, end))
+        start = end
+
+    # And add the final segment
+    segs.append((start, pexec_len))
+
+    # Sanity checks
+    assert len(segs) >= 1, 'should be at least one steady segment'
+    assert len(segs) == num_cpts_in_steady_state + 1, \
+        'should be 1 more seg than changepoint'
+    assert segs[-1][1] == pexec_len, 'last seg should end with pexec'
+    assert segs[0][0] == steady_idx, 'first seg should start at steady_idx'
+    num_segs = len(segs)
+    for seg_idx in xrange(len(segs)):
+        if seg_idx < num_segs - 1:
+            assert segs[seg_idx][1] == segs[seg_idx + 1][0], \
+                'end seg idx should be start of next'
+    return segs
 
 
 def main(data_dct, classifier):
@@ -38,8 +70,6 @@ def main(data_dct, classifier):
 
     summary_stats = collect_summary_statistics(data_dct, classifier['delta'],
                                                classifier['steady'])
-    # XXX print per-machine summaries
-    # XXX check all segs in steady state
     for machine, machine_data in data_dct.iteritems():
         for key in machine_data['wallclock_times'].keys():
             bench, vm, _ = key.split(":")
@@ -62,22 +92,26 @@ def main(data_dct, classifier):
             raw_steady_idxs = bench_summary['steady_state_iteration_list']
 
             # Build a list of steady indices (or None if it didn't stabilize)
-            steady_idxs = []
+            steady_segs = []
             for pexec_idx, classif in enumerate(key_classifications):
                 if classif != "no steady state":
-                    steady_idxs.append(raw_steady_idxs[pexec_idx])
+                    # pexec does reach a steady state
+                    pexec_len = len(machine_data["wallclock_times"][key][pexec_idx])
+                    pexec_cpts = machine_data["changepoints"][key][pexec_idx]
+                    pexec_steady_iter = raw_steady_idxs[pexec_idx]
+                    steady_segs.append(get_steady_segs(pexec_cpts, pexec_steady_iter, pexec_len))
                 else:
-                    steady_idxs.append(None)
+                    # pexec does *not* reach a steady state
+                    steady_segs.append(None)
 
-            assert len(steady_idxs) == len(executions)
-            num_steady, num_corr = \
-                analyse(executions, key, steady_idxs, machine, key_cpts)
+            assert len(steady_segs) == len(executions)
+            num_steady, num_corr = analyse(executions, key, steady_segs, machine)
             total_num_steady += num_steady
             total_num_corr += num_corr
             total_num_pexecs += len(executions)
 
     print("\n" + (72 * "-"))
-    print("Summary:")
+    print("Summary for %s:" % machine)
     print("  Absolute correlation threshold: %s" % str(CORR_THRESHOLD))
     print("  Total num pexecs: %s" % total_num_pexecs)
     print("  Total num steady pexecs: %s" % total_num_steady)
@@ -106,7 +140,7 @@ def dw(data_np):
     return dw_res
 
 
-def analyse(data, key, steady_idxs, machine, cpts):
+def analyse(data, key, steady_segs, machine):
     """Look for the correlations for the pexecs of a single key.
 
     Returns a pair containing the number of pexecs that were stable, and the
@@ -117,43 +151,56 @@ def analyse(data, key, steady_idxs, machine, cpts):
     num_steady_pexecs = 0
 
     for pexec_idx, execu in enumerate(data):
-        steady_iter = steady_idxs[pexec_idx]
-        if len(cpts[pexec_idx]) > 0:
-            last_change = cpts[pexec_idx][-1]
-        else:
-            last_change = 0
-        pexec_corr = False
+        pexec_steady_segs = steady_segs[pexec_idx]
 
-        if steady_iter is not None:
-            num_steady_pexecs += 1
+        if pexec_steady_segs is None:
+            continue  # pexec did not reach a steady state
+        num_steady_pexecs += 1
+
+        # Do the correlation analysis on each seg in isolation.
+        #
+        # If one seg is correlated, then we say the steady segment is too.
+        one_seg_correlated = False
+        for seg_idx, seg in enumerate(pexec_steady_segs):
+            seg_start, seg_end = seg
 
             # The independent variable is the steady iterations
-            steady_iters_np = np.array(execu[last_change:])
-            dw_res = dw(steady_iters_np)
+            seg_iters_np = np.array(execu[seg_start:seg_end])
 
+            # filter out "too short" segments
+            seg_len = len(seg_iters_np)
+            if seg_len < MIN_CORR_SEG_LEN:
+                print("segment too short: %s" % seg_len)
+                continue
+
+            # Perform the Durbin-Watson test on this segment and flag the
+            # pexec if it fails the test.
+            dw_res = dw(seg_iters_np)
             if dw_res < CORR_THRESHOLD[0] or dw_res > CORR_THRESHOLD[1]:
                 if DEBUG:
-                    print("[!] %s, pexec=%s, steady_iter=%s, dw=%.3f" %
-                          (key, pexec_idx, steady_iter + 1, dw_res))
-                num_corr_pexecs += 1
-                pexec_corr = True
+                    print("key=%s, pexec_idx=%s, steady_seg_idx=%s, dw=%.3f" %
+                          (key, pexec_idx, seg_idx, dw_res))
+                one_seg_correlated = True
+                direc = CORR_PLOT_DIR
+            else:
+                direc = NOCORR_PLOT_DIR
 
             if DEBUG:
-                if pexec_corr:
-                    direc = CORR_PLOT_DIR
-                else:
-                    direc = NOCORR_PLOT_DIR
-                plot_steady(key, pexec_idx, machine, steady_iter, dw_res,
-                            steady_iters_np, direc)
+                plot_steady(key, pexec_idx, machine, seg, seg_idx, dw_res,
+                            seg_iters_np, direc)
+        if one_seg_correlated:
+            num_corr_pexecs += 1
     return num_steady_pexecs, num_corr_pexecs
 
 
-def plot_steady(key, pexec_idx, machine, steady_iter, corr, steady_iters_np,
-                direc):
-    slices = len(steady_iters_np), 200, 100, 50, 25
-    f, axarr = plt.subplots(len(slices) + 1, sharex=False)
+def plot_steady(key, pexec_idx, machine, seg, steady_seg_idx, dw_res,
+                seg_iters_np, direc):
+    seg_len = len(seg_iters_np)
+    zoom_slices = seg_len, seg_len / 2, seg_len / 4, 50, 25
+
+    f, axarr = plt.subplots(len(zoom_slices) + 1, sharex=False)
     plt.tight_layout()
-    title = "%s <= %s <= %s" % (CORR_THRESHOLD[0], corr, CORR_THRESHOLD[1])
+    title = "%s <= %s <= %s" % (CORR_THRESHOLD[0], dw_res, CORR_THRESHOLD[1])
     f.suptitle(title)
 
     def subplot(sub_idx, data, start_idx):
@@ -163,13 +210,14 @@ def plot_steady(key, pexec_idx, machine, steady_iter, corr, steady_iters_np,
         xs = xrange(start_idx + 1, start_idx + len(data) + 1)
         axarr[sub_idx].plot(xs, data)
 
-    for sp_idx, end in enumerate(slices):
-        subplot(sp_idx, steady_iters_np[:end], steady_iter)
+    for sp_idx, end in enumerate(zoom_slices):
+        subplot(sp_idx, seg_iters_np[:end], seg[0])
 
-    acf_coefs = acf(np.array(steady_iters_np), nlags=N_LAGS + 1, unbiased=True)
-    axarr[len(slices)].bar(xrange(len(acf_coefs)), acf_coefs)
+    acf_coefs = acf(np.array(seg_iters_np), nlags=N_LAGS + 1, unbiased=True)
+    axarr[len(zoom_slices)].bar(xrange(len(acf_coefs)), acf_coefs)
 
-    filename = "%s_%s_%s.pdf" % (machine, key.replace(":", "_"), pexec_idx)
+    filename = "%s_%s_%s_steadyseg%s.pdf" % (machine, key.replace(":", "_"),
+                                             pexec_idx, steady_seg_idx)
     path = os.path.join(direc, filename)
     gcf = matplotlib.pyplot.gcf()
     gcf.set_size_inches(10, 10)
@@ -181,8 +229,8 @@ def plot_steady(key, pexec_idx, machine, steady_iter, corr, steady_iters_np,
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("usage: find_corrs file1, [... fileN]")
+    if len(sys.argv) != 2:
+        print("usage: find_corrs annotated_results_file")
         sys.exit(1)
 
     if DEBUG:
@@ -193,4 +241,5 @@ if __name__ == "__main__":
             os.mkdir(direc)
 
     classifier, data_dcts = parse_krun_file_with_changepoints(sys.argv[1:])
+    assert len(data_dcts) == 1
     main(data_dcts, classifier)
