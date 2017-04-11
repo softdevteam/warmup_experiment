@@ -3,15 +3,17 @@
 """Create a LaTeX summary of a Krun results file from the startup experiment."""
 
 import argparse
+import json
 import os
 import os.path
 import sys
 
+
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from warmup.krun_results import read_krun_results_file
 from warmup.latex import preamble, end_document, end_table, escape
-from warmup.latex import format_median_error, machine_name_to_macro, section, start_table
-from warmup.statistics import  median_iqr
+from warmup.latex import format_median_ci, machine_name_to_macro, section, start_table
+from warmup.statistics import bootstrap_runner
 
 TITLE = 'Startup Experiment Results'
 
@@ -54,10 +56,13 @@ def main(data_dcts, latex_file, with_preamble):
             except KeyError:
                 summary[vm][machine] = ''
             else:
-                median, iqr =  median_iqr(data, confidence=0.99)
-                sys.stdout.write('.')
-                sys.stdout.flush()
-                summary[vm][machine] = format_median_error(median, iqr)
+                # The bootstrapper is expecting data from a number of pexecs,
+                # and each pexec should have a number of segments. Therefore,
+                # we wrap data in two extra lists before writing it out.
+                mean, ci = bootstrap_runner(json.dumps([[data]]))
+                if mean is None or ci is None:
+                    raise ValueError()
+                summary[vm][machine] = format_median_ci(mean, ci, data)
 
     # Write out results.
     write_results_as_latex(summary, sorted(machines), latex_file, with_preamble)
