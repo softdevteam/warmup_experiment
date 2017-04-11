@@ -1,0 +1,140 @@
+#!/usr/bin/env python2.7
+
+"""
+Create a LaTeX summary comparing annotated Krun results to those reported by
+the method described in Georges et. al. (2007).
+"""
+
+import argparse
+import numpy
+import os
+import os.path
+import sys
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+from warmup.krun_results import parse_krun_file_with_changepoints
+from warmup.latex import preamble, end_document, end_table
+from warmup.latex import machine_name_to_macro, STYLE_SYMBOLS
+
+
+_TITLE = 'Comparison with Georges et. al. (2007)'
+_START_TABLE = lambda format_, headings: """
+{
+\\begin{tabular}{%s}
+\\toprule
+%s \\\\
+\\midrule
+""" % (format_, headings)
+
+
+def _start_table(format_, headings):
+    """Unlike the start_table() function in warmup.latex, this one does not
+    contain any code to configure sparklines.
+    """
+
+    return _START_TABLE(format_, headings)
+
+
+def _cov(data):
+    """Computes the coefficient of variation of data."""
+
+    return numpy.std(data) / numpy.mean(data)
+
+
+def compute_comparison(in_files, threshold):
+    """For each classification type, find the number of process executions that
+    Georges et. al. (2007) would have classified as having a steady state.
+    """
+
+    classifier, data_dictionaries = parse_krun_file_with_changepoints(in_files)
+    steady = classifier['steady']  # Min iterations expected in steady state.
+    counts = dict()
+    for machine in data_dictionaries:
+        counts[machine] = {'warmup': 0, 'slowdown': 0, 'flat': 0,
+                            'no steady state': 0, 'total warmup': 0,
+                            'total flat': 0, 'total slowdown': 0,
+                            'total no steady state': 0}
+        keys = sorted(data_dictionaries[machine]['wallclock_times'].keys())
+        for key in sorted(keys):
+            wallclock_times = data_dictionaries[machine]['wallclock_times'][key]
+            if len(wallclock_times) == 0:
+                print('WARNING: Skipping: %s from %s (no executions)' %
+                       (key, machine))
+            elif len(wallclock_times[0]) == 0:
+                print('WARNING: Skipping: %s from %s (benchmark crashed)' %
+                      (key, machine))
+            else:
+                bench, vm, variant = key.split(':')
+                n_pexecs = len(data_dictionaries[machine]['wallclock_times'][key])
+                for pexec in xrange(n_pexecs):
+                    stop = len(data_dictionaries[machine]['wallclock_times'][key][pexec]) - steady
+                    classification = data_dictionaries[machine]['classifications'][key][pexec]
+                    counts[machine]['total ' + classification] += 1
+                    for iteration in xrange(len(data_dictionaries[machine]['wallclock_times'][key][pexec])):
+                        if iteration >= stop:
+                            break  # We expected to reach a steady state by now.
+                        if _cov(data_dictionaries[machine]['wallclock_times'][key][pexec][iteration:]) < threshold:
+                            counts[machine][classification] += 1
+                            break
+    return counts
+
+
+def write_tables(counts, tex_filename, with_preamble=False):
+    """Write out LaTeX table."""
+
+    print('Writing data to: %s.' % options.latex_file)
+    machines = counts.keys()
+    with open(tex_filename, 'w') as fp:
+        if with_preamble:
+            fp.write(preamble(_TITLE))
+            fp.write('\\begin{table*}[t]\n')
+            fp.write('\\centering\n')
+        table_format = 'l' + ('r' * len(machines))
+        table_headings1 = '&'.join(
+            ['\multicolumn{1}{c}{\multirow{2}{*}{Classification}}'] +
+            ['\multicolumn{%s}{c}{Machine}' % len(machines)])
+        table_headings2 = '&'.join(
+            [''] + ['\\multicolumn{1}{c}{\\footnotesize %s}' %
+                      machine_name_to_macro(name) for name in sorted(machines)])
+        table_headings = '\\\\'.join([table_headings1, table_headings2])
+        fp.write(_start_table(table_format, table_headings))
+        for style in ('flat', 'warmup', 'slowdown', 'no steady state'):
+            row = [STYLE_SYMBOLS[style]] + \
+                      ['%.2f\\%%' % (float(counts[machine][style]) /
+                                     float(counts[machine]['total ' + style]) * 100.0)
+                       for machine in machines]
+            fp.write('%s\\\\ \n' % '&'.join(row))
+        fp.write(end_table())
+        if with_preamble:
+            fp.write('\\end{table*}\n')
+            fp.write(end_document())
+
+
+def create_cli_parser():
+    """Create a parser to deal with command line switches."""
+
+    description = ('Given a number of annotated Krun results files, for each '
+                   'classification type, find the number of process executions '
+                   'that Georges et. al. (2007) would have classified as '
+                   'having a steady state.')
+    parser = argparse.ArgumentParser(description,
+                                     formatter_class=argparse.RawTextHelpFormatter)
+    parser.add_argument('json_files', nargs='+', action='append', default=[],
+                        type=str, help='One or more JSON result files.')
+    parser.add_argument('--threshold', '-t', dest='threshold', action='store',
+                        type=float, default=0.01, help='CoV threshold.')
+    parser.add_argument('--outfile', '-o', action='store', dest='latex_file',
+                        type=str, help='Name of the LaTeX file to write to.',
+                        required=True)
+    parser.add_argument('--with-preamble', action='store_true',
+                        dest='with_preamble', default=False,
+                        help='Write out a whole LaTeX article (not just the table).')
+    return parser
+
+
+if __name__ == '__main__':
+    parser = create_cli_parser()
+    options = parser.parse_args()
+    print('Using CoV threshold %.3f.' % options.threshold)
+    counts = compute_comparison(options.json_files[0], options.threshold)
+    write_tables(counts, options.latex_file, options.with_preamble)
