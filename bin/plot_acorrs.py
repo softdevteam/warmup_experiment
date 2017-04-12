@@ -16,7 +16,7 @@ from warmup.krun_results import parse_krun_file_with_changepoints
 from warmup.summary_statistics import collect_summary_statistics
 from warmup.plotting import zoom_y_min, zoom_y_max
 
-CORR_THRESHOLD = 1.0, 3.0       # threshold for DW analysis
+CORR_THRESHOLD = 1.6, 3.4       # threshold for DW analysis
 MIN_CORR_SEG_LEN = 50           # shortest seg to apply DW to
 
 # debug bits
@@ -26,28 +26,31 @@ if os.environ.get("CORR_DEBUG"):
 N_LAGS = 40
 CORR_PLOT_DIR = "correlated_plots"
 NOCORR_PLOT_DIR = "uncorrelated_plots"
+SMALL_VARIANCE = 0.0001
 
 
-def get_steady_segs(cpts, steady_idx, pexec_len):
+def get_steady_segs(cpts, variances, steady_idx, pexec_len):
     """Get a list of steady segments.
 
     Each steady segment is a tuple (start, end), inclusive of start and
     exlusive of end. Start and end are list indicies.
     """
 
+    assert len(variances) == len(cpts) + 1
     segs = []
     start = 0
     num_cpts_in_steady_state = 0  # used in sanity checks only
-    for end in cpts:
+    for seg_idx, end in enumerate(cpts):
         if start < steady_idx:
             pass  # not yet steady
         else:
             num_cpts_in_steady_state += 1
-            segs.append((start, end))
+            variance = variances[seg_idx]
+            segs.append((start, end, variance))
         start = end
 
     # And add the final segment
-    segs.append((start, pexec_len))
+    segs.append((start, pexec_len, variances[-1]))
 
     # Sanity checks
     assert len(segs) >= 1, 'should be at least one steady segment'
@@ -67,6 +70,8 @@ def main(data_dct, classifier):
     total_num_steady = 0
     total_num_corr = 0
     total_num_pexecs = 0
+    total_num_steady_segs = 0
+    total_num_small_var_steady_segs = 0
 
     summary_stats = collect_summary_statistics(data_dct, classifier['delta'],
                                                classifier['steady'])
@@ -99,16 +104,19 @@ def main(data_dct, classifier):
                     pexec_len = len(machine_data["wallclock_times"][key][pexec_idx])
                     pexec_cpts = machine_data["changepoints"][key][pexec_idx]
                     pexec_steady_iter = raw_steady_idxs[pexec_idx]
-                    steady_segs.append(get_steady_segs(pexec_cpts, pexec_steady_iter, pexec_len))
+                    pexec_vars = machine_data['changepoint_vars'][key][pexec_idx]
+                    steady_segs.append(get_steady_segs(pexec_cpts, pexec_vars, pexec_steady_iter, pexec_len))
                 else:
                     # pexec does *not* reach a steady state
                     steady_segs.append(None)
 
             assert len(steady_segs) == len(executions)
-            num_steady, num_corr = analyse(executions, key, steady_segs, machine)
+            num_steady, num_corr, num_steady_segs, num_small_var_steady_segs = analyse(executions, key, steady_segs, machine)
             total_num_steady += num_steady
             total_num_corr += num_corr
             total_num_pexecs += len(executions)
+            total_num_steady_segs += num_steady_segs
+            total_num_small_var_steady_segs += num_small_var_steady_segs
 
     print("\n" + (72 * "-"))
     print("Summary for %s:" % machine)
@@ -116,6 +124,8 @@ def main(data_dct, classifier):
     print("  Total num pexecs: %s" % total_num_pexecs)
     print("  Total num steady pexecs: %s" % total_num_steady)
     print("  Total num steady pexecs showing correlation: %s" % total_num_corr)
+    print("  Total steady segs: %s" % total_num_steady_segs)
+    print("  Total steady segs with variance < %s: %s" % (SMALL_VARIANCE, total_num_small_var_steady_segs))
     if total_num_steady:
         percent = float(total_num_corr) / total_num_steady * 100
     else:
@@ -149,6 +159,8 @@ def analyse(data, key, steady_segs, machine):
 
     num_corr_pexecs = 0
     num_steady_pexecs = 0
+    num_steady_segs = 0
+    num_small_var_steady_segs = 0
 
     for pexec_idx, execu in enumerate(data):
         pexec_steady_segs = steady_segs[pexec_idx]
@@ -161,8 +173,12 @@ def analyse(data, key, steady_segs, machine):
         #
         # If one seg is correlated, then we say the steady segment is too.
         one_seg_correlated = False
+        num_steady_segs += len(pexec_steady_segs)
         for seg_idx, seg in enumerate(pexec_steady_segs):
-            seg_start, seg_end = seg
+            seg_start, seg_end, seg_var = seg
+
+            if seg_var < SMALL_VARIANCE:
+                num_small_var_steady_segs += 1
 
             # The independent variable is the steady iterations
             seg_iters_np = np.array(execu[seg_start:seg_end])
@@ -171,6 +187,9 @@ def analyse(data, key, steady_segs, machine):
             seg_len = len(seg_iters_np)
             if seg_len < MIN_CORR_SEG_LEN:
                 print("segment too short: %s" % seg_len)
+                continue
+            elif seg_var < SMALL_VARIANCE:
+                print("segment variance too low: %s" % seg_var)
                 continue
 
             # Perform the Durbin-Watson test on this segment and flag the
@@ -190,7 +209,7 @@ def analyse(data, key, steady_segs, machine):
                             seg_iters_np, direc)
         if one_seg_correlated:
             num_corr_pexecs += 1
-    return num_steady_pexecs, num_corr_pexecs
+    return num_steady_pexecs, num_corr_pexecs, num_steady_segs, num_small_var_steady_segs
 
 
 def plot_steady(key, pexec_idx, machine, seg, steady_seg_idx, dw_res,
