@@ -15,18 +15,21 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(
 from warmup.krun_results import parse_krun_file_with_changepoints
 from warmup.summary_statistics import collect_summary_statistics
 from warmup.plotting import zoom_y_min, zoom_y_max
+from statsmodels.stats.diagnostic import acorr_ljungbox
 
 CORR_THRESHOLD = 1.6, 3.4       # threshold for DW analysis
 MIN_CORR_SEG_LEN = 50           # shortest seg to apply DW to
+SMALL_VARIANCE = 0.0001         # threshold for a "small" seg variance
+N_LJBOX_LAGS = 10               # number of p-vals to test with Ljung-Box
+LJBOX_P_THRESHOLD = 0.05        # p-value used to determine correlation
 
 # debug bits
 DEBUG = False
 if os.environ.get("CORR_DEBUG"):
     DEBUG = True
-N_LAGS = 40
+N_ACR_PLOT_LAGS = 40
 CORR_PLOT_DIR = "correlated_plots"
 NOCORR_PLOT_DIR = "uncorrelated_plots"
-SMALL_VARIANCE = 0.0001
 
 
 def get_steady_segs(cpts, variances, steady_idx, pexec_len):
@@ -72,6 +75,8 @@ def main(data_dct, classifier):
     total_num_pexecs = 0
     total_num_steady_segs = 0
     total_num_small_var_steady_segs = 0
+    total_num_corr_steady_segs = 0
+    total_num_short_steady_segs = 0
 
     summary_stats = collect_summary_statistics(data_dct, classifier['delta'],
                                                classifier['steady'])
@@ -111,21 +116,29 @@ def main(data_dct, classifier):
                     steady_segs.append(None)
 
             assert len(steady_segs) == len(executions)
-            num_steady, num_corr, num_steady_segs, num_small_var_steady_segs = analyse(executions, key, steady_segs, machine)
+            num_steady, num_corr, num_steady_segs, num_small_var_steady_segs, num_corr_steady_segs, num_short_steady_segs = analyse(executions, key, steady_segs, machine)
             total_num_steady += num_steady
             total_num_corr += num_corr
             total_num_pexecs += len(executions)
             total_num_steady_segs += num_steady_segs
             total_num_small_var_steady_segs += num_small_var_steady_segs
+            total_num_corr_steady_segs += num_corr_steady_segs
+            total_num_short_steady_segs += num_short_steady_segs
 
     print("\n" + (72 * "-"))
     print("Summary for %s:" % machine)
-    print("  Absolute correlation threshold: %s" % str(CORR_THRESHOLD))
+    print("  Ljung-Box P threshold: %s" % LJBOX_P_THRESHOLD)
     print("  Total num pexecs: %s" % total_num_pexecs)
     print("  Total num steady pexecs: %s" % total_num_steady)
-    print("  Total num steady pexecs showing correlation: %s" % total_num_corr)
     print("  Total steady segs: %s" % total_num_steady_segs)
-    print("  Total steady segs with variance < %s: %s" % (SMALL_VARIANCE, total_num_small_var_steady_segs))
+    print("  Total steady segs ignored due to variance < %s: %s" %
+          (SMALL_VARIANCE, total_num_small_var_steady_segs))
+    print("  Total steady segs with ok variance then ignored due to being too short: %s" %
+          (total_num_short_steady_segs))
+    print("  Remaining steady segs correlated: %s/%s" %
+          (total_num_corr_steady_segs,
+           total_num_steady_segs - total_num_small_var_steady_segs - total_num_short_steady_segs))
+    print("  Total num steady pexecs showing correlation: %s" % total_num_corr)
     if total_num_steady:
         percent = float(total_num_corr) / total_num_steady * 100
     else:
@@ -134,20 +147,22 @@ def main(data_dct, classifier):
     print(72 * "-")
 
 
-def dw(data_np):
-    """Compute the Durbin-Watson statistic for 1-dimensional numpy array"""
+def get_ljbox_pvals(data_np, n_lags):
+    """Use the Ljung-Box test on a one dimensional numpy array to get a list of
+    p-values, one for each lag"""
 
+    # Perform ordinary least squares (OLS) to get residuals
     # The only "dependent" variable is only the "intercept", since we
     # are correlating the data with itself.
     ones_np = np.ones(len(data_np))
-
-    # Perform ordinary least squares (OLS) to get residuals
     ols_res = OLS(data_np, ones_np).fit()
 
-    # Return the Durbin-Watson value
-    dw_res = durbin_watson(ols_res.resid)
-    assert 0 <= dw_res <= 4
-    return dw_res
+    # Now get p-values
+    lj_res = acorr_ljungbox(ols_res.resid, lags=n_lags)
+    ps = lj_res[1]
+    assert all([0.0 <= p <= 1 for p in ps])  # p-vals are probabilities
+    assert len(ps) == n_lags
+    return ps
 
 
 def analyse(data, key, steady_segs, machine):
@@ -161,6 +176,8 @@ def analyse(data, key, steady_segs, machine):
     num_steady_pexecs = 0
     num_steady_segs = 0
     num_small_var_steady_segs = 0
+    num_short_steady_segs = 0  # that had good variance
+    num_corr_steady_segs = 0  # that were not skipped
 
     for pexec_idx, execu in enumerate(data):
         pexec_steady_segs = steady_segs[pexec_idx]
@@ -177,39 +194,39 @@ def analyse(data, key, steady_segs, machine):
         for seg_idx, seg in enumerate(pexec_steady_segs):
             seg_start, seg_end, seg_var = seg
 
+            # Skip segs with too small variance
             if seg_var < SMALL_VARIANCE:
                 num_small_var_steady_segs += 1
-
-            # The independent variable is the steady iterations
-            seg_iters_np = np.array(execu[seg_start:seg_end])
-
-            # filter out "too short" segments
-            seg_len = len(seg_iters_np)
-            if seg_len < MIN_CORR_SEG_LEN:
-                print("segment too short: %s" % seg_len)
-                continue
-            elif seg_var < SMALL_VARIANCE:
                 print("segment variance too low: %s" % seg_var)
                 continue
 
-            # Perform the Durbin-Watson test on this segment and flag the
-            # pexec if it fails the test.
-            dw_res = dw(seg_iters_np)
-            if dw_res < CORR_THRESHOLD[0] or dw_res > CORR_THRESHOLD[1]:
-                if DEBUG:
-                    print("key=%s, pexec_idx=%s, steady_seg_idx=%s, dw=%.3f" %
-                          (key, pexec_idx, seg_idx, dw_res))
-                one_seg_correlated = True
-                direc = CORR_PLOT_DIR
-            else:
-                direc = NOCORR_PLOT_DIR
+            # filter out "too short" segments
+            seg_iters_np = np.array(execu[seg_start:seg_end])
+            seg_len = len(seg_iters_np)
+            if seg_len < MIN_CORR_SEG_LEN:
+                print("segment too short: %s" % seg_len)
+                num_short_steady_segs += 1
+                continue
 
-            if DEBUG:
-                plot_steady(key, pexec_idx, machine, seg, seg_idx, dw_res,
-                            seg_iters_np, direc)
+            # Perform the Ljung-Box Test and check p-values
+            lj_res = get_ljbox_pvals(seg_iters_np, N_LJBOX_LAGS)
+            for lag_idx, p in enumerate(lj_res):
+                if p < LJBOX_P_THRESHOLD:
+                    print("key=%s, pexec_idx=%s, steady_seg_idx=%s, lag=%s, p=%.3f" %
+                          (key, pexec_idx, seg_idx, lag_idx, p))
+                    one_seg_correlated = True
+                    direc = CORR_PLOT_DIR
+                    num_corr_steady_segs += 1
+                    break
+                else:
+                    direc = NOCORR_PLOT_DIR
+
+                if DEBUG:
+                    plot_steady(key, pexec_idx, machine, seg, seg_idx, dw_res,
+                                seg_iters_np, direc)
         if one_seg_correlated:
             num_corr_pexecs += 1
-    return num_steady_pexecs, num_corr_pexecs, num_steady_segs, num_small_var_steady_segs
+    return num_steady_pexecs, num_corr_pexecs, num_steady_segs, num_small_var_steady_segs, num_corr_steady_segs, num_short_steady_segs
 
 
 def plot_steady(key, pexec_idx, machine, seg, steady_seg_idx, dw_res,
@@ -232,7 +249,8 @@ def plot_steady(key, pexec_idx, machine, seg, steady_seg_idx, dw_res,
     for sp_idx, end in enumerate(zoom_slices):
         subplot(sp_idx, seg_iters_np[:end], seg[0])
 
-    acf_coefs = acf(np.array(seg_iters_np), nlags=N_LAGS + 1, unbiased=True)
+    acf_coefs = acf(np.array(seg_iters_np), nlags=N_ACR_PLOT_LAGS + 1,
+                    unbiased=True)
     axarr[len(zoom_slices)].bar(xrange(len(acf_coefs)), acf_coefs)
 
     filename = "%s_%s_%s_steadyseg%s.pdf" % (machine, key.replace(":", "_"),
