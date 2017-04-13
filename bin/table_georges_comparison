@@ -66,14 +66,20 @@ def compute_comparison(in_files, threshold):
             else:
                 bench, vm, variant = key.split(':')
                 n_pexecs = len(data_dictionaries[machine]['wallclock_times'][key])
+                # In the Georges et al. (2007) paper, measurements are defined
+                # as x_i,j where i is the ith invocation of the VM, and j is
+                # a benchmark iteration. In this code pexec is "i", and iteration
+                # "j". The "k" iterations that we might to retain (i.e. the
+                # minimum length of a steady state) is called steady.
                 for pexec in xrange(n_pexecs):
-                    stop = len(data_dictionaries[machine]['wallclock_times'][key][pexec]) - steady
                     classification = data_dictionaries[machine]['classifications'][key][pexec]
                     counts[machine]['total ' + classification] += 1
-                    for iteration in xrange(len(data_dictionaries[machine]['wallclock_times'][key][pexec])):
-                        if iteration >= stop:
-                            break  # We expected to reach a steady state by now.
-                        if _cov(data_dictionaries[machine]['wallclock_times'][key][pexec][iteration:]) < threshold:
+                    iter_length = len(data_dictionaries[machine]['wallclock_times'][key][pexec])
+                    for iteration in xrange(steady, iter_length):
+                        start = iteration - steady
+                        end = iteration + 1
+                        this_cov = _cov(data_dictionaries[machine]['wallclock_times'][key][pexec][start:end])
+                        if this_cov < threshold:
                             counts[machine][classification] += 1
                             break
     return counts
@@ -102,7 +108,7 @@ def write_tables(counts, tex_filename, with_preamble=False):
             row = [STYLE_SYMBOLS[style]] + \
                       ['%.2f\\%%' % (float(counts[machine][style]) /
                                      float(counts[machine]['total ' + style]) * 100.0)
-                       for machine in machines]
+                       for machine in sorted(machines)]
             fp.write('%s\\\\ \n' % '&'.join(row))
         fp.write(end_table())
         if with_preamble:
