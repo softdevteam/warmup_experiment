@@ -5,10 +5,13 @@ Must be run after mark_changepoints_in_json.
 
 import argparse
 import copy
+import locale
 import math
 import os
 import os.path
 import sys
+
+locale.setlocale(locale.LC_ALL, '')
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from warmup.krun_results import read_krun_results_file
@@ -192,7 +195,7 @@ def write_latex_summary(summary, tex_file):
         fd.write('%%% Total executions and iterations.\n')
         fd.write('%%%\n')
         fd.write('\\newcommand{\\totalpexecs}{%d}\n' % summary['total_pexecs'])
-        fd.write('\\newcommand{\\totaliterations}{%d}\n' % summary['total_iterations'])
+        fd.write('\\newcommand{\\totaliterations}{%s}\n' % locale.format('%d', summary['total_iterations'], grouping=True))
         fd.write('%%%\n')
         fd.write('%%% Total classifications over all executions.\n')
         fd.write('%%%\n')
