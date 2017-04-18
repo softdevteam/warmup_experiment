@@ -26,6 +26,9 @@ _START_TABLE = lambda format_, headings: """
 \\midrule
 """ % (format_, headings)
 
+_NUMBERS = {0:'zero', 1:'one', 2:'two', 3:'three', 4:'four', 5:'five',
+            6:'six', 7:'seven', 8:'eight', 9:'nine'}
+
 
 def _start_table(format_, headings):
     """Unlike the start_table() function in warmup.latex, this one does not
@@ -85,7 +88,7 @@ def compute_comparison(in_files, threshold):
     return counts
 
 
-def write_tables(counts, tex_filename, with_preamble=False):
+def write_table(counts, tex_filename, with_preamble=False):
     """Write out LaTeX table."""
 
     print('Writing data to: %s.' % options.latex_file)
@@ -116,6 +119,56 @@ def write_tables(counts, tex_filename, with_preamble=False):
             fp.write(end_document())
 
 
+def _reformat(word):
+    """Reformat word as a LaTeX macro name.
+    Removes spaces and underscores. Translates numbers to words. Lower cases.
+    """
+
+    for number in _NUMBERS:
+        word = word.replace(str(number), _NUMBERS[number])
+    word = str(word).translate(None, ' _')
+    return word.lower()
+
+
+def write_macros(counts, tex_filename):
+    """Write out macros that summarise the information in the table."""
+
+    # Sum data over all machines.
+    totals = {'warmup': 0, 'slowdown': 0, 'flat': 0, 'no steady state': 0,
+              'total warmup': 0, 'total flat': 0, 'total slowdown': 0,
+              'total no steady state': 0}
+    for machine in counts:
+        for category in ('flat', 'warmup', 'slowdown', 'no steady state'):
+            totals[category] += counts[machine][category]
+            totals['total ' + category] += counts[machine]['total ' + category]
+    print('Writing data to %s.' % tex_filename)
+    with open(tex_filename, 'w') as fd:
+        fd.write('%%%\n')
+        fd.write('%%% Number of benchmarks on that Georges et al. found to reach a state state.\n')
+        fd.write('%%%\n')
+        for machine in counts:
+            mc_name = _reformat(machine)
+            for category in ('flat', 'warmup', 'slowdown', 'no steady state'):
+                fd.write('\\newcommand{\\%s}{%d}\n' %
+                         (_reformat('georges' + mc_name + category), counts[machine][category]))
+        fd.write('%%%\n')
+        fd.write('%%% Percentage of benchmarks on that Georges et al. found to reach a state state.\n')
+        fd.write('%%%\n')
+        for machine in counts:
+            mc_name = _reformat(machine)
+            for category in ('flat', 'warmup', 'slowdown', 'no steady state'):
+                fd.write('\\newcommand{\\%s}{%.1f}\n' %
+                         (_reformat('georges' + mc_name + category + 'percent'),
+                          float(counts[machine][category]) / float(counts[machine]['total ' + category]) * 100.0))
+        fd.write('%%%\n')
+        fd.write('%%% Percentage of benchmarks over all machines that Georges et al. found to reach a state state.\n')
+        fd.write('%%%\n')
+        for category in ('flat', 'warmup', 'slowdown', 'no steady state'):
+            fd.write('\\newcommand{\\%s}{%.1f}\n' %
+                     (_reformat('georges' + category + 'percent'),
+                      float(totals[category]) / float(totals['total ' + category]) * 100.0))
+
+
 def create_cli_parser():
     """Create a parser to deal with command line switches."""
 
@@ -141,6 +194,8 @@ def create_cli_parser():
 if __name__ == '__main__':
     parser = create_cli_parser()
     options = parser.parse_args()
+    base_filename, extention = os.path.splitext(options.latex_file)
     print('Using CoV threshold %.3f.' % options.threshold)
     counts = compute_comparison(options.json_files[0], options.threshold)
-    write_tables(counts, options.latex_file, options.with_preamble)
+    write_table(counts, options.latex_file, options.with_preamble)
+    write_macros(counts, base_filename + '_macros' + extention)
