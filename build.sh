@@ -88,6 +88,7 @@ fi
 HERE=`pwd`
 wrkdir=${HERE}/work
 PATCH_DIR=${HERE}/patches
+ARCHIVE_DISTFILES=https://archive.org/download/softdev_warmup_experiment_artefacts/distfiles/
 
 mkdir -p ${wrkdir}
 echo "===> Working in $wrkdir"
@@ -97,9 +98,15 @@ PATCH_DIR=`pwd`/patches/
 # System (from OS packages) Java 7, for making a JDK8. We must not use a JDK8
 # to build a JDK8. See README-builds.html in JDK8 src tarball.
 case `uname` in
-    Linux)      SYS_JDK7_HOME=/usr/lib/jvm/java-7-openjdk-amd64;;
-    OpenBSD)    SYS_JDK7_HOME=/usr/local/jdk-1.7.0;;
-    *)          unknown_platform;;
+    Linux)
+        SYS_JDK7_HOME=/usr/lib/jvm/java-7-openjdk-amd64
+        SYS_JDK8_HOME=/usr/lib/jvm/java-8-openjdk-amd64
+        ;;
+    OpenBSD)
+        SYS_JDK7_HOME=/usr/local/jdk-1.7.0
+        SYS_JDK8_HOME=/not_used_on_openbsd
+        ;;
+    *) unknown_platform;;
 esac
 
 if [ ! -d ${SYS_JDK7_HOME} ]; then
@@ -115,7 +122,7 @@ build_initial_krun() {
     fi
 
     # We do a quick build now so that VMs which link libkruntime can find it.
-    # Not that we will build again later once we have the JVM built, so that
+    # Note that we will build again later once we have the JVM built, so that
     # libkruntime can itself be built with Java support.
     #
     # Due to the above, We don't care what compiler we use at this stage.
@@ -129,7 +136,7 @@ clean_krun() {
 
 # We build our own fixed version of GCC, thus ruling out differences in
 # packaged compilers for the different platforms.
-GCC_V=4.9.3
+GCC_V=4.9.4
 OUR_CC=${wrkdir}/gcc-inst/bin/zgcc
 OUR_CXX=${wrkdir}/gcc-inst/bin/zg++
 GCC_TARBALL_URL=ftp://ftp.mirrorservice.org/sites/ftp.gnu.org/gnu/gcc/gcc-${GCC_V}/gcc-${GCC_V}.tar.gz
@@ -198,7 +205,9 @@ build_cpython() {
     echo "\n===> Download and build CPython\n"
     if [ -f ${wrkdir}/cpython/python ]; then return; fi
     cd $wrkdir
-    wget http://python.org/ftp/python/${CPYTHONV}/Python-${CPYTHONV}.tgz || exit $?
+    if [ ! -f Python-${CPYTHONV}.tgz ]; then
+        wget http://python.org/ftp/python/${CPYTHONV}/Python-${CPYTHONV}.tgz || exit $?
+    fi
     tar xfz Python-${CPYTHONV}.tgz || exit $?
     mv Python-${CPYTHONV} cpython
     cd cpython
@@ -228,7 +237,7 @@ build_luajit() {
     CFLAGS=-DLUAJIT_ENABLE_LUA52COMPAT ${GMAKE} CC=${OUR_CC} || exit $?
 }
 
-PYPYV=5.6.0
+PYPYV=5.7.1
 build_pypy() {
     cd ${wrkdir} || exit $?
     echo "\n===> Download and build PyPy\n"
@@ -246,7 +255,7 @@ build_pypy() {
         bunzip2 -c - pypy2-v${PYPYV}-src.tar.bz2 | tar xf - || exit $?
         mv pypy2-v${PYPYV}-src pypy || exit $?
         cd pypy
-        patch -p1 < ${PATCH_DIR}/pypy.diff || exit $?
+        patch -p0 < ${PATCH_DIR}/pypy.diff || exit $?
     fi
 
     cd ${wrkdir}/pypy/pypy/goal/ || exit $?
@@ -276,10 +285,10 @@ build_pypy() {
 # Note that there is often a newer tag in git than is shown on that page.
 # Make sure you check the tags for the stable branch. Don't use the github
 # mirror to look for tags, as it doesn't have them all.
-V8_V=5.4.500.43
+V8_V=5.8.283.32
 
 # Just take the newest hash at the time of updating.
-DEPOT_TOOLS_V=b8c535f696faf93835aa1fe7b99e00cbdc6d5a79
+DEPOT_TOOLS_V=72048266d5cf68dc06c2cd20e173fbcb6f0dcfd2
 
 build_v8() {
     cd ${wrkdir} || exit $?
@@ -299,15 +308,20 @@ build_v8() {
 
     # 'fetch' uses hooks to to sync heads, but the landmine script it would
     # call is not OpenBSD aware. We do have a patch, but it is for the $V tag,
-    # not master. We use --nohooks now, then once we swich tag we apply our
+    # not master. We use --nohooks now, then once we switch tag we apply our
     # patch and sync the heads manually.
     if [ ! -d ${wrkdir}/v8 ]; then
-        fetch --nohooks v8 || exit $?
+        # V8 won't let you 'fetch' into a git sandbox
+        v8tmp=`mktemp -d`
+        cd ${v8tmp} && fetch --nohooks v8 || exit $?
+        mv ${v8tmp}/v8 ${wrkdir}
+        mv ${v8tmp}/.* ${wrkdir}
     fi
-    cd v8 || exit $?
+    cd ${wrkdir}/v8 || exit $?
     git checkout ${V8_V} || exit $?
     patch -Ep1 < ${PATCH_DIR}/v8.diff || exit $?
-    gclient sync || exit $?
+    cd ${wrkdir}/v8/tools/clang || exit $?
+    patch -Ep1 < ${PATCH_DIR}/v8_clang.diff || exit $?
 
     # Test suite build doesn't listen to CC/CXX -- symlink/path hack ahoy
     ln -sf ${OUR_CC} `dirname ${OUR_CC}`/gcc
@@ -316,6 +330,7 @@ build_v8() {
 
     # V8 mistakes our compiler for clang for some reason, hence setting
     # GYP_DEFINES. It probably isn't expecting a gcc to be called zgcc.
+    cd ${wrkdir}/v8 || exit $?
     env GYP_DEFINES="clang=0" CC=${OUR_CC} CXX=${OUR_CXX} \
         LIBKRUN_DIR=${HERE}/krun/libkrun ${GMAKE} -j${num_jobs} native V=1 || exit $?
     test -f out/native/d8 || exit $?
@@ -348,7 +363,7 @@ case `uname` in
     OpenBSD) OUR_JAVA_HOME=${wrkdir}/openjdk/build/bsd-x86_64-normal-server-release/images/j2sdk-image/;;
     *) unknown_platform;;
 esac
-JDK_TARBALL_BASE=openjdk-8u112b15-bsd-port-20161210
+JDK_TARBALL_BASE=openjdk-8u121b13-bsd-port-20170201
 build_jdk() {
     echo "\n===> Download and build JDK8\n"
     if [ -f ${OUR_JAVA_HOME}/bin/javac ]; then return; fi
@@ -417,8 +432,11 @@ build_jdk() {
 
 # This is a bootstrap JDK used only for Graal, which requiries a very specific
 # version of the JDK.
-BOOT_JAVA_HOME=${wrkdir}/jdk8u111-b14_fullsource/build/linux-x86_64-normal-server-release/images/j2sdk-image/
-BOOT_JDK_BASE=jdk8u111-b14
+BOOT_JDK_UPDATE_V=121
+BOOT_JDK_BUILD_V=13
+BOOT_JAVA_V=8u${BOOT_JDK_UPDATE_V}-b${BOOT_JDK_BUILD_V}
+BOOT_JAVA_HOME=${wrkdir}/jdk${BOOT_JAVA_V}_fullsource/build/linux-x86_64-normal-server-release/images/j2sdk-image/
+BOOT_JDK_BASE=jdk${BOOT_JAVA_V}
 BOOT_JDK_TAR=${BOOT_JDK_BASE}_fullsource.tgz
 build_bootstrap_jdk() {
     echo "\n===> Download and build graal bootstrap JDK8\n"
@@ -427,9 +445,20 @@ build_bootstrap_jdk() {
     cd ${wrkdir} || exit $?
     # We fetch a hand-rolled tarball, as the JDK repo build downloads things
     # and I am not sure that they are fixed versions. The tarball was rolled on
-    # 2016-12-02.
+    # 2017-04-19 to match the current OTN build, which at the time was:
+    # labsjdk-8u121-jvmci-0.25-darwin-amd64.tar.gz
+    #
+    # To build the JDK8 tarball:
+    #   hg clone http://hg.openjdk.java.net/jdk8u/jdk8u openjdk8
+    #   hg up <tag>  # plug in the right tag, e.g. `jdk8u121-b13'
+    #   sh get_source.sh
+    #   find . -name '.hg' -type 'd' | xargs rm -rf
+    #   cd ..
+    #   mv openjdk8 ${BOOT_JDK_BASE}_fullsource
+    #   tar zcvf ${BOOT_JDK_BASE}_fullsource.tgz ${BOOT_JDK_BASE}_fullsource
+    #   Upload to archive.org once tested
     if [ ! -f ${wrkdir}/${BOOT_JDK_TAR} ]; then
-        wget https://archive.org/download/softdev_warmup_experiment_artefacts/distfiles/${BOOT_JDK_TAR}
+        wget ${ARCHIVE_DISTFILES}/${BOOT_JDK_TAR}
     fi
     if [ ! -d ${BOOT_JDK_BASE}_fullsource ]; then
         tar zxf ${BOOT_JDK_TAR} || exit $?
@@ -451,6 +480,8 @@ build_bootstrap_jdk() {
         --with-milestone=fcs \
         --with-jobs=$num_jobs \
         --with-boot-jdk=${SYS_JDK7_HOME} \
+        --with-update-version=${BOOT_JDK_UPDATE_V} \
+        --with-build-number=b${BOOT_JDK_BUILD_V} \
         || exit $?
     PATH=${JDK_BUILD_PATH} ../make-${GMAKE_V}/make all || exit $?
 }
@@ -458,9 +489,9 @@ build_bootstrap_jdk() {
 # The latest Graal and MX at the time of writing. Note that Graal will be part
 # of JDK9 soon, so the build steps you see here will be out of date soon. Also
 # note that MX doesn't have releases.
-JVMCI_VERSION=jvmci-0.23
-MX_VERSION=d9c7efa53f60e4ca493da08438af01f8ca985985
-GRAAL_VERSION=graal-vm-0.18
+JVMCI_VERSION=jvmci-0.25
+MX_VERSION=720976e8c52527416f7aec95262c9a47d93602c4
+GRAAL_VERSION=graal-vm-0.22
 build_graal() {
     echo "\n===> Download and build graal\n"
 
@@ -485,7 +516,7 @@ build_graal() {
     hg up ${JVMCI_VERSION} || exit $?
     if [ ! -d ${wrkdir}/graal-jvmci-8/jdk1.8.0 ]; then
         ${MX} sforceimports || exit $?
-        ${MX} build
+        ${MX} build || exit $?
     fi
 
     # Make mx use the jvmci-enabled jdk
@@ -502,7 +533,8 @@ build_graal() {
     cd ${wrkdir}/graal && git checkout ${GRAAL_VERSION} || exit $?
     ${MX} sforceimports || exit $?
     ${MX} || exit $?  # fetches truffle
-    ${MX} build || exit $?
+    cd ${wrkdir}/truffle && git checkout ${GRAAL_VERSION} || exit $?
+    cd ${wrkdir}/graal && ${MX} build || exit $?
 
     # remove the symlinks
     rm `dirname ${OUR_CC}`/gcc `dirname ${OUR_CC}`/g++ || exit $?
@@ -511,7 +543,7 @@ build_graal() {
 # We had problems with offline mode in maven2, which at the time of writing is
 # the version in Debian stable packages. We download a newer version from the
 # 3.x branch.
-MAVEN_V=3.3.9
+MAVEN_V=3.5.0
 MAVEN_TARBALL=apache-maven-${MAVEN_V}-bin.tar.gz
 MAVEN_TARBALL_URL=https://archive.apache.org/dist/maven/maven-3/${MAVEN_V}/binaries/${MAVEN_TARBALL}
 fetch_maven() {
@@ -535,11 +567,10 @@ fetch_maven() {
 }
 
 
-# 9.1.2.0 with build system fixes for the buildkit.
-JRUBY_V=graal-vm-0.18
-JRUBY_BUILDPACK_V=graal-vm-0.18
-JRUBY_BUILDPACK_DIR=${wrkdir}/jruby-build-pack/maven
-build_jruby_truffle() {
+TRUFFLERUBY_V=graal-vm-0.22
+TRUFFLERUBY_BUILDPACK_DIR=${wrkdir}/truffleruby-buildpack
+TRUFFLERUBY_BUILDPACK_TARBALL=truffleruby-buildpack-${TRUFFLERUBY_V}-20170502.tgz
+build_truffleruby() {
     echo "\n===> Download and build truffle+jruby\n"
 
     # maven caches dependencies, we dont ever want to pick those up, only
@@ -550,34 +581,47 @@ build_jruby_truffle() {
     fi
 
     cd ${wrkdir}
-    if [ -f ${wrkdir}/jruby/bin/jruby ]; then return; fi
-    if ! [ -d ${wrkdir}/jruby ]; then
-        git clone https://github.com/jruby/jruby.git || exit $?
+    if [ -f ${wrkdir}/truffleruby/truffleruby/target/truffleruby-0-SNAPSHOT.jar ]; then return; fi
+    if ! [ -d ${wrkdir}/truffleruby ]; then
+        git clone https://github.com/graalvm/truffleruby.git || exit $?
+        cd ${wrkdir}/truffleruby
+        git checkout ${TRUFFLERUBY_V} || exit $?
+        patch -Ep1 < ${PATCH_DIR}/truffleruby.diff || exit $?
     fi
-    if [ ! -d jruby-build-pack ]; then
-        git clone https://github.com/jruby/jruby-build-pack.git || exit $?
-    fi
-    cd ${wrkdir}/jruby-build-pack && git checkout ${JRUBY_BUILDPACK_V} || exit $?
-    cd ${wrkdir}/jruby && git checkout ${JRUBY_V} || exit $?
 
-    # NOTE: At the time of writing, JRuby will only build Truffle support if
-    # the build is initiated using JDK>=8.
+    cd ${wrkdir}
+    if [ ! -f ${TRUFFLERUBY_BUILDPACK_TARBALL} ]; then
+        wget ${ARCHIVE_DISTFILES}/${TRUFFLERUBY_BUILDPACK_TARBALL} || exit $?
+    fi
+    if [ ! -d ${TRUFFLERUBY_BUILDPACK_DIR} ]; then
+        cd ${wrkdir} && tar zxvf ${TRUFFLERUBY_BUILDPACK_TARBALL} || exit $?
+    fi
+
+    cd ${wrkdir}/truffleruby || exit $?
+
+    # To make a buildpack, you would do:
+    #   env JAVA_HOME=${SYS_JDK8_HOME} mvn -X \
+    #       -Dmaven.repo.local=${TRUFFLERUBY_BUILDPACK_DIR} || exit 1
+    # Then tar up the resultant directory, test it, and host on archive.org.
+
+    # We have to use the system JDK8 since the one we bootstrap doesn't have
+    # SSL configured (jdk has its own CA cert format). See:
+    # http://www.linuxfromscratch.org/blfs/view/svn/general/openjdk.html
+    env MVN_EXTRA_ARGS="-Dmaven.repo.local=${TRUFFLERUBY_BUILDPACK_DIR} --offline" \
+        V=1 JAVA_HOME=${SYS_JDK8_HOME} ruby tool/jt.rb build || exit $?
+
+    # To invoke the VM:
+    #   PATH=${PATH}:/path/to/work/mx \
+    #     JAVA_HOME=/path/to/work/graal-jvmci-8/jdk1.8.0_121/product \
+    #     GRAAL_HOME=/path/to/work/graal \
+    #     ../truffleruby/tool/jt.rb run --graal
     #
-    # Note the use of a specific truffle version. This is required and needs to
-    # match the graal version we built earlier.
-    cd ${wrkdir}/jruby || exit $?
-    patch -Ep1 < ${PATCH_DIR}/jruby.diff || exit $?
-    JAVACMD=${BOOT_JAVA_HOME}/bin/java \
-        mvn -Dtruffle.version=0.18 \
-        -Dmaven.repo.local=${JRUBY_BUILDPACK_DIR} --offline package || exit $?
-
-    # Then to invoke the VM (with mx and jruby bin dirs in $PATH):
-    # GRAAL_HOME=work/graal JAVA_HOME=${JVMCI_JAVA_HOME} \
-    #    work/jruby/tool/jt.rb ruby --graal <program-args>
+    # Check it has the JIT by evaluating (should be true):
+    #  Truffle::Graal.graal?
 }
 
 
-HHVM_VERSION=HHVM-3.15.3
+HHVM_VERSION=HHVM-3.19.1
 build_hhvm() {
     echo "\n===> Download and build HHVM\n"
     if [ -f ${wrkdir}/hhvm/hphp/hhvm/php ]; then return; fi
@@ -590,15 +634,15 @@ build_hhvm() {
     git submodule update --init --recursive || exit $?
     patch -Ep1 < ${PATCH_DIR}/hhvm.diff || exit $?
 
-    # Some parts of the build (e.g. OCaml)  won't listen to CC/CXX
+    # Some parts of the build (e.g. OCaml) won't listen to CC/CXX
     ln -sf ${OUR_CC} `dirname ${OUR_CC}`/gcc || exit $?
     ln -sf ${OUR_CXX} `dirname ${OUR_CXX}`/g++ || exit $?
     HHVM_PATH=`dirname ${OUR_CC}`:${PATH}
 
+    # -DBUILD_HACK=OFF since we only need the PHP part of HHVM (faster build)
+    # -DENABLE_EXTENSION_LZ4=OFF: https://github.com/facebook/hhvm/issues/7804
     env LIBKRUN_DIR=${HERE}/krun/libkrun PATH=${HHVM_PATH} CC=${OUR_CC} \
-        CXX=${OUR_CXX} sh -c \
-        "cmake -DMYSQL_UNIX_SOCK_ADDR=/dev/null -DBOOST_LIBRARYDIR=/usr/lib/x86_64-linux-gnu/ -DCMAKE_CXX_FLAGS=-I${HERE}/krun/libkrun . " \
-        || exit $?
+        CXX=${OUR_CXX} sh -c "cmake -DCMAKE_CXX_FLAGS=-I${HERE}/krun/libkrun -DENABLE_EXTENSION_LZ4=OFF -DBUILD_HACK=OFF ." || exit $?
     ${GMAKE} -j $num_jobs VERBOSE=1 || exit $?
 
     # remove the symlinks
@@ -622,7 +666,7 @@ build_autoconf() {
 }
 
 
-SPIDERMONKEY_VERSION=1196bf3032e1 # FIREFOX_AURORA_52_BASE
+SPIDERMONKEY_VERSION=6583496f169c # FIREFOX_AURORA_54_BASE
 build_spidermonkey() {
     echo "\n===> Download and build SpiderMonkey\n"
     if [ -d ${wrkdir}/spidermonkey ]; then return; fi
@@ -751,7 +795,7 @@ case `uname` in
         build_bootstrap_jdk
         build_graal
         fetch_maven
-        build_jruby_truffle
+        build_truffleruby
         build_hhvm
         build_autoconf
         build_spidermonkey

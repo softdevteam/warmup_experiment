@@ -1,5 +1,5 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index e215cac..b3148f9 100644
+index 17bc415..d6d9a05 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -1,4 +1,5 @@
@@ -9,11 +9,11 @@ index e215cac..b3148f9 100644
  # This needs to be done before any languages are enabled or
  # projects are created.
 diff --git a/hphp/hhvm/CMakeLists.txt b/hphp/hhvm/CMakeLists.txt
-index 18ac401..e027065 100644
+index a7f6380..c23e844 100644
 --- a/hphp/hhvm/CMakeLists.txt
 +++ b/hphp/hhvm/CMakeLists.txt
-@@ -45,6 +45,9 @@ if(CYGWIN)
-   target_link_libraries(hhvm dbghelp)
+@@ -40,6 +40,9 @@ if (ENABLE_SPLIT_DWARF)
+   target_link_libraries(hhvm debug "-Wl,--gdb-index")
  endif()
  
 +# softdev
@@ -23,25 +23,20 @@ index 18ac401..e027065 100644
  # See https://github.com/facebook/hhvm/issues/5217
  INCLUDE(CheckCXXSourceCompiles)
 diff --git a/hphp/runtime/ext/std/ext_std_misc.cpp b/hphp/runtime/ext/std/ext_std_misc.cpp
-index de7afa4..75e30c7 100644
+index 3c2f93f..ff5ef32 100644
 --- a/hphp/runtime/ext/std/ext_std_misc.cpp
 +++ b/hphp/runtime/ext/std/ext_std_misc.cpp
-@@ -44,10 +44,14 @@
+@@ -46,6 +46,9 @@
  #include "hphp/util/current-executable.h"
  #include "hphp/util/logger.h"
  
 +#include <inttypes.h>
-+
- #ifndef _MSC_VER
- #include <sys/param.h> // MAXPATHLEN is here
- #endif
- 
 +#include <libkruntime.h>
 +
  namespace HPHP {
  
  IMPLEMENT_THREAD_LOCAL(std::string, s_misc_highlight_default_string);
-@@ -191,6 +195,15 @@ void StandardExtension::initMisc() {
+@@ -212,6 +215,15 @@ void StandardExtension::initMisc() {
      HHVM_FE(sys_getloadavg);
      HHVM_FE(token_get_all);
      HHVM_FE(token_name);
@@ -57,7 +52,7 @@ index de7afa4..75e30c7 100644
      HHVM_FE(hphp_to_string);
      HHVM_FALIAS(__SystemLib\\max2, SystemLib_max2);
      HHVM_FALIAS(__SystemLib\\min2, SystemLib_min2);
-@@ -962,5 +975,41 @@ Variant HHVM_FUNCTION(SystemLib_min2, const Variant& value1,
+@@ -977,5 +989,41 @@ Variant HHVM_FUNCTION(SystemLib_min2, const Variant& value1,
  #undef YYTOKEN_MAP
  #undef YYTOKEN
  
@@ -100,7 +95,7 @@ index de7afa4..75e30c7 100644
  ///////////////////////////////////////////////////////////////////////////////
  }
 diff --git a/hphp/runtime/ext/std/ext_std_misc.h b/hphp/runtime/ext/std/ext_std_misc.h
-index 49db8a5..b3e4d12 100644
+index 37950b5..6aef0af 100644
 --- a/hphp/runtime/ext/std/ext_std_misc.h
 +++ b/hphp/runtime/ext/std/ext_std_misc.h
 @@ -48,6 +48,15 @@ Variant HHVM_FUNCTION(unpack, const String& format, const String& data);
@@ -120,10 +115,10 @@ index 49db8a5..b3e4d12 100644
  Variant HHVM_FUNCTION(SystemLib_max2, const Variant& arg1, const Variant& arg2);
  Variant HHVM_FUNCTION(SystemLib_min2, const Variant& arg1, const Variant& arg2);
 diff --git a/hphp/runtime/ext/std/ext_std_misc.php b/hphp/runtime/ext/std/ext_std_misc.php
-index da36140..461e6e3 100644
+index 38f0fd6..00e3f32 100644
 --- a/hphp/runtime/ext/std/ext_std_misc.php
 +++ b/hphp/runtime/ext/std/ext_std_misc.php
-@@ -214,6 +214,32 @@ function token_get_all(string $source): array;
+@@ -227,6 +227,32 @@ function token_get_all(string $source): array;
  <<__ParamCoerceModeFalse, __Native>>
  function token_name(int $token): string;
  

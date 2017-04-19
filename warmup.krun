@@ -2,7 +2,7 @@ import os
 import sys
 import platform
 from krun.vm_defs import (PythonVMDef, LuaVMDef, JavaVMDef, GraalVMDef,
-                          PHPVMDef, JRubyTruffleVMDef, V8VMDef,
+                          PHPVMDef, TruffleRubyVMDef, V8VMDef,
                           NativeCodeVMDef, find_internal_jvmci_java_home,
                           find_internal_jvmci_java_bin, PyPyVMDef)
 from krun import EntryPoint
@@ -58,7 +58,7 @@ VMS = {
         'variants': ['default-python'],
         'n_iterations': ITERATIONS_ALL_VMS,
     },
-    'Hotspot': {
+    'HotSpot': {
         'vm_def': JavaVMDef(JDK8_BIN, env=GCC_ENV),
         'variants': ['default-java'],
         'n_iterations': ITERATIONS_ALL_VMS,
@@ -83,7 +83,6 @@ VMS = {
 
 if not sys.platform.startswith("openbsd"):
     JVMCI_JAVA_HOME = find_internal_jvmci_java_home('work/graal-jvmci-8/')
-    JVMCI_JAVA_BIN = find_internal_jvmci_java_bin('work/graal-jvmci-8/')
 
     # The following VMs do not run on OpenBSD.
     VMS.update({
@@ -98,12 +97,12 @@ if not sys.platform.startswith("openbsd"):
             'variants': ['default-php'],
             'n_iterations': ITERATIONS_ALL_VMS,
         },
-        'JRubyTruffle': {
-            'vm_def': JRubyTruffleVMDef(jruby_dir='work/jruby',
-                                        graal_home='work/graal',
-                                        mx_dir='work/mx',
-                                        jvmci_home='work/graal-jvmci-8/jdk1.8.0/product',
-                                        env=GCC_ENV),
+        'TruffleRuby': {
+            'vm_def': TruffleRubyVMDef(truffleruby_dir='work/truffleruby',
+                                       graal_home='work/graal',
+                                       mx_dir='work/mx',
+                                       jvmci_home=JVMCI_JAVA_HOME,
+                                       env=GCC_ENV),
             'variants': ['default-ruby'],
             'n_iterations': ITERATIONS_ALL_VMS,
         },
@@ -125,19 +124,18 @@ SKIP = [
     #
     #"*:PyPy:*",
     "*:CPython:*",
-    #"*:Hotspot:*",
+    #"*:HotSpot:*",
     #"*:Graal:*",
     #"*:LuaJIT:*",
     #"*:HHVM:*",
-    #"*:JRubyTruffle:*",
+    #"*:TruffleRuby:*",
     #"*:V8:*",
     #"*:C:*",
 
-    # This benchmark is slow *and* crashes
-    "fasta:JRubyTruffle:default-ruby",
-
-    # Really very slow.
+    # Skipped due to being really slow.
     "richards:HHVM:default-php",
+    "nbody:HHVM:default-php",
+    "fasta:TruffleRuby:default-ruby",
 ]
 
 N_EXECUTIONS = 30  # Number of fresh processes.

@@ -14,6 +14,7 @@ JAVASCRIPT_VMS = {
           % (WARMUP_DIR, LD_LIBRARY_PATH, WARMUP_DIR),
 }
 
+# We only run spidermonkey/octane on Linux. It appears to be broken on OpenBSD (hangs on start).
 if sys.platform.startswith("linux"):
     JAVASCRIPT_VMS["spidermonkey"] = (
 	"sh -c 'cd %s/extbench/octane && LD_LIBRARY_PATH=%s "
@@ -28,6 +29,8 @@ if os.getenv("SSH_DO_COPY"):
 else:
     SSH_DO_COPY = False
 
+# Note that the iteration count is duplicated in octane/run_we.js and must
+# match the value here.
 ITERATIONS = 2000
 PROCESSES = 30
 

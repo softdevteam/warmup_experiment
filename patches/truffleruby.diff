@@ -1,66 +1,111 @@
-diff --git a/truffle/src/main/java/org/jruby/truffle/RubyContext.java b/truffle/src/main/java/org/jruby/truffle/RubyContext.java
-index b0cbb23..d0691aa 100644
---- a/truffle/src/main/java/org/jruby/truffle/RubyContext.java
-+++ b/truffle/src/main/java/org/jruby/truffle/RubyContext.java
-@@ -56,6 +56,8 @@ import java.io.PrintStream;
- import java.io.UnsupportedEncodingException;
- import java.nio.charset.StandardCharsets;
+diff --git a/mx.truffleruby/suite.py b/mx.truffleruby/suite.py
+index 77f9daf..b782115 100644
+--- a/mx.truffleruby/suite.py
++++ b/mx.truffleruby/suite.py
+@@ -15,7 +15,7 @@ suite = {
+             {
+                 "name": "truffle",
+                 # Must be the same as in truffle/pom.xml (except for the -SNAPSHOT part only in pom.xml, and there we can use a release name)
+-                "version": "c02973969fb144b533ae0e53187674cb04c2aacc",
++                "version": "8ee22e950e033dada680381ed9e02b0225360110",
+                 "urls": [
+                     {"url": "https://github.com/graalvm/truffle.git", "kind": "git"},
+                     {"url": "https://curio.ssw.jku.at/nexus/content/repositories/snapshots", "kind": "binary"},
+diff --git a/tool/jt.rb b/tool/jt.rb
+index 3e83fe6..63d37fa 100755
+--- a/tool/jt.rb
++++ b/tool/jt.rb
+@@ -386,7 +386,9 @@ module ShellUtils
+ 
+     args = ['-q', *args] unless VERBOSE
+ 
+-    sh *options, 'mvn', *args
++    extra_args = (ENV['MVN_EXTRA_ARGS'] || '').split || []
++
++    sh *options, 'mvn', *(args + extra_args)
+   end
+ 
+   def mx(dir, *args)
+diff --git a/truffleruby/pom.xml b/truffleruby/pom.xml
+index bbd7871..7ef82d1 100644
+--- a/truffleruby/pom.xml
++++ b/truffleruby/pom.xml
+@@ -11,7 +11,7 @@
+   <properties>
+     <maven.test.skip>true</maven.test.skip>
+     <!-- Must be the same as in mx.truffleruby/suite.py (except for the -SNAPSHOT part, and here we can use a release name) -->
+-    <truffle.version>c02973969fb144b533ae0e53187674cb04c2aacc-SNAPSHOT</truffle.version>
++    <truffle.version>8ee22e950e033dada680381ed9e02b0225360110-SNAPSHOT</truffle.version>
+   </properties>
+   <repositories>
+     <repository>
+diff --git a/truffleruby/src/main/java/org/truffleruby/RubyContext.java b/truffleruby/src/main/java/org/truffleruby/RubyContext.java
+index d85aa2c..44647f6 100644
+--- a/truffleruby/src/main/java/org/truffleruby/RubyContext.java
++++ b/truffleruby/src/main/java/org/truffleruby/RubyContext.java
+@@ -24,6 +24,7 @@ import org.truffleruby.core.encoding.EncodingManager;
+ import org.truffleruby.core.exception.CoreExceptions;
+ import org.truffleruby.core.kernel.AtExitManager;
+ import org.truffleruby.core.kernel.TraceManager;
++import org.truffleruby.core.kernel.LibKrunTime;
+ import org.truffleruby.core.module.MethodLookupResult;
+ import org.truffleruby.core.module.ModuleOperations;
+ import org.truffleruby.core.objectspace.ObjectSpaceManager;
+@@ -55,6 +56,8 @@ import java.io.File;
+ import java.io.InputStream;
+ import java.security.CodeSource;
  
 +import jnr.ffi.LibraryLoader;
 +
  public class RubyContext extends ExecutionContext {
  
-     private static volatile RubyContext latestInstance;
-@@ -92,6 +94,8 @@ public class RubyContext extends ExecutionContext {
-     private final PrintStream debugStandardOut;
+     private final TruffleLanguage.Env env;
+@@ -95,6 +98,8 @@ public class RubyContext extends ExecutionContext {
      private final CoverageManager coverageManager;
+     private ConsoleHolder consoleHolder;
  
 +    private final LibKrunTime libKrunTime;
 +
      private final Object classVariableDefinitionLock = new Object();
  
-     private final AttachmentsManager attachmentsManager;
-@@ -161,6 +165,10 @@ public class RubyContext extends ExecutionContext {
-         final PrintStream configStandardOut = jrubyRuntime.getInstanceConfig().getOutput();
-         debugStandardOut = (configStandardOut == System.out) ? null : configStandardOut;
+     private String currentDirectory;
+@@ -184,6 +189,10 @@ public class RubyContext extends ExecutionContext {
  
-+        final LibraryLoader<LibKrunTime> libKrunTimeLoader = LibraryLoader.create(LibKrunTime.class);
-+        libKrunTimeLoader.library("kruntime");
-+        libKrunTime = libKrunTimeLoader.load();
+             coreLibrary.initializePostBoot();
+ 
++            final LibraryLoader<LibKrunTime> libKrunTimeLoader = LibraryLoader.create(LibKrunTime.class);
++            libKrunTimeLoader.library("kruntime");
++            libKrunTime = libKrunTimeLoader.load();
 +
-         if (options.INSTRUMENTATION_SERVER_PORT != 0) {
-             instrumentationServerManager = new InstrumentationServerManager(this, options.INSTRUMENTATION_SERVER_PORT);
-             instrumentationServerManager.start();
-@@ -348,4 +356,7 @@ public class RubyContext extends ExecutionContext {
-         return coreExceptions;
+             // Share once everything is loaded
+             if (options.SHARED_OBJECTS_ENABLED && options.SHARED_OBJECTS_FORCE) {
+                 sharedObjects.startSharing();
+@@ -432,4 +441,7 @@ public class RubyContext extends ExecutionContext {
+         return consoleHolder;
      }
  
 +    public LibKrunTime getLibKrunTime() {
 +        return libKrunTime;
 +    }
  }
-diff --git a/truffle/src/main/java/org/jruby/truffle/core/kernel/KernelNodes.java b/truffle/src/main/java/org/jruby/truffle/core/kernel/KernelNodes.java
-index 50a155d..634fe90 100644
---- a/truffle/src/main/java/org/jruby/truffle/core/kernel/KernelNodes.java
-+++ b/truffle/src/main/java/org/jruby/truffle/core/kernel/KernelNodes.java
-@@ -141,6 +141,7 @@ import java.util.ArrayList;
- import java.util.Arrays;
- import java.util.List;
- import java.util.Map;
+diff --git a/truffleruby/src/main/java/org/truffleruby/core/kernel/KernelNodes.java b/truffleruby/src/main/java/org/truffleruby/core/kernel/KernelNodes.java
+index c241616..72a9109 100644
+--- a/truffleruby/src/main/java/org/truffleruby/core/kernel/KernelNodes.java
++++ b/truffleruby/src/main/java/org/truffleruby/core/kernel/KernelNodes.java
+@@ -148,6 +148,7 @@ import java.io.IOException;
+ import java.io.InputStream;
+ import java.io.InputStreamReader;
+ import java.io.PrintStream;
 +import java.math.BigInteger;
+ import java.util.Arrays;
+ import java.util.Collection;
  
- @CoreClass("Kernel")
- public abstract class KernelNodes {
-@@ -1985,4 +1986,145 @@ public abstract class KernelNodes {
+@@ -1776,4 +1777,121 @@ public abstract class KernelNodes {
  
      }
  
 +    @CoreMethod(names = "krun_init", needsSelf=false)
 +    public abstract static class KrunInitNode extends CoreMethodArrayArgumentsNode {
-+
-+        public KrunInitNode(RubyContext context, SourceSection sourceSection) {
-+            super(context, sourceSection);
-+        }
 +
 +        @TruffleBoundary
 +        @Specialization
@@ -73,24 +118,17 @@ index 50a155d..634fe90 100644
 +    @CoreMethod(names = "krun_done", needsSelf=false)
 +    public abstract static class KrunDoneNode extends CoreMethodArrayArgumentsNode {
 +
-+        public KrunDoneNode(RubyContext context, SourceSection sourceSection) {
-+            super(context, sourceSection);
-+        }
-+
 +        @TruffleBoundary
 +        @Specialization
 +        public DynamicObject krunDone() {
 +            getContext().getLibKrunTime().krun_done();
 +            return nil();
 +        }
++        
 +    }
 +
 +    @CoreMethod(names = "krun_measure", required=1, needsSelf=false)
 +    public abstract static class KrunMeasureNode extends CoreMethodArrayArgumentsNode {
-+
-+        public KrunMeasureNode(RubyContext context, SourceSection sourceSection) {
-+            super(context, sourceSection);
-+        }
 +
 +        @TruffleBoundary
 +        @Specialization
@@ -98,44 +136,35 @@ index 50a155d..634fe90 100644
 +            getContext().getLibKrunTime().krun_measure(mdata_index);
 +            return nil();
 +        }
++
 +    }
 +
 +    @CoreMethod(names = "krun_get_wallclock", required=1, needsSelf=false)
 +    public abstract static class KrunGetWallclockNode extends CoreMethodArrayArgumentsNode {
-+
-+        public KrunGetWallclockNode(RubyContext context, SourceSection sourceSection) {
-+            super(context, sourceSection);
-+        }
 +
 +        @TruffleBoundary
 +        @Specialization
 +        public double krunGetWallclock(int mdata_index) {
 +            return getContext().getLibKrunTime().krun_get_wallclock(mdata_index);
 +        }
++
 +    }
 +
 +    @CoreMethod(names = "krun_get_num_cores", needsSelf=false)
 +    public abstract static class KrunGetNumCoresNode extends CoreMethodArrayArgumentsNode {
-+
-+        public KrunGetNumCoresNode(RubyContext context, SourceSection sourceSection) {
-+            super(context, sourceSection);
-+        }
 +
 +        @TruffleBoundary
 +        @Specialization
 +        public double krunGetNumCores() {
 +            return getContext().getLibKrunTime().krun_get_num_cores();
 +        }
++
 +    }
 +
 +    @CoreMethod(names = "krun_get_core_cycles", required=2, needsSelf=false)
 +    public abstract static class KrunGetCoreCyclesNode extends CoreMethodArrayArgumentsNode {
 +
 +        private static final BigInteger negAdjust = BigInteger.ONE.shiftLeft(64); // 2^64
-+
-+        public KrunGetCoreCyclesNode(RubyContext context, SourceSection sourceSection) {
-+            super(context, sourceSection);
-+        }
 +
 +        @TruffleBoundary
 +        @Specialization
@@ -149,16 +178,13 @@ index 50a155d..634fe90 100644
 +
 +            return createBignum(bi);
 +        }
++
 +    }
 +
 +    @CoreMethod(names = "krun_get_aperf", required=2, needsSelf=false)
 +    public abstract static class KrunGetAperfNode extends CoreMethodArrayArgumentsNode {
 +
 +        private static final BigInteger negAdjust = BigInteger.ONE.shiftLeft(64); // 2^64
-+
-+        public KrunGetAperfNode(RubyContext context, SourceSection sourceSection) {
-+            super(context, sourceSection);
-+        }
 +
 +        @TruffleBoundary
 +        @Specialization
@@ -172,16 +198,13 @@ index 50a155d..634fe90 100644
 +
 +            return createBignum(bi);
 +        }
++
 +    }
 +
 +    @CoreMethod(names = "krun_get_mperf", required=2, needsSelf=false)
 +    public abstract static class KrunGetMperfNode extends CoreMethodArrayArgumentsNode {
 +
 +        private static final BigInteger negAdjust = BigInteger.ONE.shiftLeft(64); // 2^64
-+
-+        public KrunGetMperfNode(RubyContext context, SourceSection sourceSection) {
-+            super(context, sourceSection);
-+        }
 +
 +        @TruffleBoundary
 +        @Specialization
@@ -195,15 +218,17 @@ index 50a155d..634fe90 100644
 +
 +            return createBignum(bi);
 +        }
++
 +    }
++
  }
-diff --git a/truffle/src/main/java/org/jruby/truffle/core/kernel/LibKrunTime.java b/truffle/src/main/java/org/jruby/truffle/core/kernel/LibKrunTime.java
+diff --git a/truffleruby/src/main/java/org/truffleruby/core/kernel/LibKrunTime.java b/truffleruby/src/main/java/org/truffleruby/core/kernel/LibKrunTime.java
 new file mode 100644
-index 0000000..810b54a
+index 0000000..38fe5c1
 --- /dev/null
-+++ b/truffle/src/main/java/org/jruby/truffle/core/kernel/LibKrunTime.java
++++ b/truffleruby/src/main/java/org/truffleruby/core/kernel/LibKrunTime.java
 @@ -0,0 +1,12 @@
-+package org.jruby.truffle;
++package org.truffleruby.core.kernel;
 +
 +public interface LibKrunTime {
 +    void krun_init();

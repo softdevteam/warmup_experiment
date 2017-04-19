@@ -16,8 +16,18 @@ PROCESSES = 30
 # broken: batik, eclipse, tomcat
 WORKING_BENCHS   = ['avrora', 'fop', 'h2', 'jython', 'luindex', 'lusearch',
                     'pmd', 'sunflow', 'tradebeans', 'tradesoap', 'xalan']
-# Graal regularly hangs (with an idle CPU) when running these benchmarks
-DISABLE_ON_GRAAL = set(["luindex", "lusearch", "tradebeans", "tradesoap"])
+
+# These fail with a socket error on OpenBSD/JVM, even with the firewall off.
+# This seems to have happened with the upgrade to jdk8-u121 and OpenBSD-6.1.
+DISABLE_ON_OPENBSD  = ['tradebeans', 'tradesoap']
+# This gives checksum errors on OpenBSD/JVM with longer iteration counts. e.g.:
+#   Digest validation failed for stderr.log,
+#   expecting 0xda39a3ee5e6b4b0d3255bfef95601890afd80709
+#   found     0xdd01309ada1e7d2c11398dd6b880bf21214a8ddb
+#   ===== DaCapo 9.12 avrora FAILED =====
+DISABLE_ON_OPENBSD.append('avrora')
+
+DISABLE_ON_GRAAL = set([])
 
 JAR = os.path.join(os.path.dirname(__file__), "dacapo-9.12-bach.jar")
 
@@ -48,6 +58,8 @@ def main():
             writer.writerow(['processnum', 'benchmark'] + range(ITERATIONS))
             for benchmark in WORKING_BENCHS:
                 if jvm_name == "graal" and benchmark in DISABLE_ON_GRAAL:
+                    continue
+                if sys.platform.startswith("openbsd") and benchmark in DISABLE_ON_OPENBSD:
                     continue
                 sys.stdout.write("  %s:" % benchmark)
                 for process in range(PROCESSES):
