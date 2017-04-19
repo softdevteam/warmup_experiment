@@ -5,13 +5,10 @@ Must be run after mark_changepoints_in_json.
 
 import argparse
 import copy
-import locale
 import math
 import os
 import os.path
 import sys
-
-locale.setlocale(locale.LC_ALL, '')
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from warmup.krun_results import read_krun_results_file
@@ -33,6 +30,7 @@ def main(data, latex_file):
                'total_consistent_percentages': copy.deepcopy(BLANK_CONSISTENT),
                # Per-machine summaries.
                'machines': dict(), 'machine_percentages': dict(),
+               'machine_pexecs': dict(), 'machine_iterations': dict(),
                'machine_consistent': dict(),
                'machine_consistent_percentages': dict(),
                'machine_vm_bench_classes': dict(),
@@ -43,6 +41,8 @@ def main(data, latex_file):
                'vm_bench_consistent_percentages': dict(),}
     for machine in data:
         summary['machines'][machine] = copy.deepcopy(BLANK_CLASSES)
+        summary['machine_pexecs'][machine] = 0
+        summary['machine_iterations'][machine] = 0
         summary['machine_percentages'][machine] = copy.deepcopy(BLANK_CLASSES)
         summary['machine_consistent'][machine] = copy.deepcopy(BLANK_CONSISTENT)
         summary['machine_consistent_percentages'][machine] = copy.deepcopy(BLANK_CONSISTENT)
@@ -61,6 +61,8 @@ def main(data, latex_file):
                       (key, machine))
             else:
                 for p_exec in data_dicts[machine]['wallclock_times'][key]:
+                    summary['machine_pexecs'][machine] += 1
+                    summary['machine_iterations'][machine] += len(p_exec)
                     summary['total_pexecs'] += 1
                     summary['total_iterations'] += len(p_exec)
                 vm_bench = ' '.join((vm, bench))
@@ -195,7 +197,13 @@ def write_latex_summary(summary, tex_file):
         fd.write('%%% Total executions and iterations.\n')
         fd.write('%%%\n')
         fd.write('\\newcommand{\\totalpexecs}{%d}\n' % summary['total_pexecs'])
-        fd.write('\\newcommand{\\totaliterations}{%s}\n' % locale.format('%d', summary['total_iterations'], grouping=True))
+        fd.write('\\newcommand{\\totaliterations}{%d}\n' % summary['total_iterations'])
+        for machine in sorted(summary['machine_pexecs']):
+            fd.write('\\newcommand{\\%s}{%s}\n' %
+                     (_reformat(machine) + 'totalpexecs', summary['machine_pexecs'][machine]))
+        for machine in sorted(summary['machine_iterations']):
+            fd.write('\\newcommand{\\%s}{%s}\n' %
+                     (_reformat(machine) + 'totaliterations', summary['machine_iterations'][machine]))
         fd.write('%%%\n')
         fd.write('%%% Total classifications over all executions.\n')
         fd.write('%%%\n')
