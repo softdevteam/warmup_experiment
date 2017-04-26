@@ -6,6 +6,7 @@ from krun.vm_defs import (PythonVMDef, LuaVMDef, JavaVMDef, GraalVMDef,
                           NativeCodeVMDef, find_internal_jvmci_java_home,
                           find_internal_jvmci_java_bin, PyPyVMDef)
 from krun import EntryPoint
+from krun.util import run_shell_cmd
 
 # Who to mail
 MAIL_TO = []
@@ -203,3 +204,11 @@ POST_EXECUTION_CMDS.append(
     "%s || ( sleep 2; %s ) || true " % (SCP_CMD, SCP_CMD))
 POST_EXECUTION_CMDS.append("%s %s 'test ! -e %s/%s.stop'" %
                            (SSH_BATCH, REMOTE_LOGIN, REMOTE_DIR, HOSTNAME))
+
+# Check SSH connection first to avoid crashing later.
+# If this crashes, check:
+#   1) The SSH identity file (id_rsa) is present.
+#   2) You have accepted the remote server's host key (in interactive mode).
+#   3) Remote host exists and is up!
+CHECK_SSH_CMD = "%s %s true" % (SSH_BATCH, REMOTE_LOGIN)
+run_shell_cmd(CHECK_SSH_CMD)
