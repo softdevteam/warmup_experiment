@@ -57,22 +57,22 @@ build-startup: build-krun
 		JAVA_LDFLAGS=-L${JAVA_HOME}/lib \
 		JAVAC=${JAVAC} ENABLE_JAVA=1 ${MAKE}
 
-bench-no-reboots: build-krun build-benchmarks
+bench-no-reboots:
 	${PYTHON} krun/krun.py warmup.krun
 
-bench-with-reboots: build-krun build-benchmarks
+bench-with-reboots:
 	${PYTHON} krun/krun.py --hardware-reboots warmup.krun
 
-bench-startup-no-reboots: build-startup build-benchmarks
+bench-startup-no-reboots:
 	${PYTHON} krun/krun.py startup.krun
 
-bench-startup-with-reboots: build-startup build-benchmarks
+bench-startup-with-reboots:
 	${PYTHON} krun/krun.py --hardware-reboots startup.krun
 
-bench-dacapo: build-krun build-vms
+bench-dacapo:
 	PYTHONPATH=krun/ JAVA_HOME=${JAVA_HOME} LD_LIBRARY_PATH=${GCC_LIB_DIR} ${PYTHON} extbench/rundacapo.py
 
-bench-octane: build-krun build-vms
+bench-octane:
 	PYTHONPATH=krun/ LD_LIBRARY_PATH=${GCC_LIB_DIR}:${LIBKRUN_DIR} ${PYTHON} extbench/runoctane.py
 
 plot-warmup-results:
