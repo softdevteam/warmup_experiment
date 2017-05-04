@@ -209,4 +209,4 @@ POST_EXECUTION_CMDS.append("%s %s 'test ! -e %s/%s.stop'" %
 #   2) You have accepted the remote server's host key (in interactive mode).
 #   3) Remote host exists and is up!
 CHECK_SSH_CMD = "%s %s true" % (SSH_BATCH, REMOTE_LOGIN)
-run_shell_cmd(CHECK_SSH_CMD)
+PRE_EXECUTION_CMDS.insert(0, CHECK_SSH_CMD)
