@@ -320,6 +320,12 @@ build_v8() {
     cd ${wrkdir}/v8 || exit $?
     git checkout ${V8_V} || exit $?
     patch -Ep1 < ${PATCH_DIR}/v8.diff || exit $?
+
+    # depot tools fetches non-fixed versions of stuff. This script rewinds the
+    # many repositories it has fetched to fixed versions. The script we call
+    # here is auto-generated.
+    sh -x ../../bin/fix_v8_versions.sh || exit $?
+
     cd ${wrkdir}/v8/tools/clang || exit $?
     patch -Ep1 < ${PATCH_DIR}/v8_clang.diff || exit $?
 
