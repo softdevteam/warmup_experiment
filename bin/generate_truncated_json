@@ -1,0 +1,143 @@
+#!/usr/bin/python2.7
+
+# Copyright (c) 2017 King's College London
+# created by the Software Development Team <http://soft-dev.org/>
+#
+# The Universal Permissive License (UPL), Version 1.0
+#
+# Subject to the condition set forth below, permission is hereby granted to any
+# person obtaining a copy of this software, associated documentation and/or
+# data (collectively the "Software"), free of charge and under any and all
+# copyright rights in the Software, and any and all patent rights owned or
+# freely licensable by each licensor hereunder covering either (i) the
+# unmodified Software as contributed to or provided by such licensor, or (ii)
+# the Larger Works (as defined below), to deal in both
+#
+# (a) the Software, and
+# (b) any piece of software and/or hardware listed in the lrgrwrks.txt file if
+# one is included with the Software (each a "Larger Work" to which the Software
+# is contributed by such licensors),
+#
+# without restriction, including without limitation the rights to copy, create
+# derivative works of, display, perform, and distribute the Software and make,
+# use, sell, offer for sale, import, export, have made, and have sold the
+# Software and the Larger Work(s), and to sublicense the foregoing rights on
+# either these or other terms.
+#
+# This license is subject to the following condition: The above copyright
+# notice and either this complete permission notice or at a minimum a reference
+# to the UPL must be included in all copies or substantial portions of the
+# Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+import argparse
+import os.path
+import sys
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+from warmup.krun_results import read_krun_results_file, write_krun_results_file
+
+MAX_ITERS = 1950
+MIN_ITERS = 100
+ITER_STEP = -50
+_BLANK_BENCHMARK = { 'wallclock_times': dict(), # Measurement data.
+                    'core_cycle_counts': dict(), 'aperf_counts': dict(),
+                    'mperf_counts': dict(), 'audit': dict(), 'config': '',
+                    'reboots': 0, 'starting_temperatures': list(),
+                    'eta_estimates': list(), 'error_flag': list(),
+                    'all_outliers': dict(), 'unique_outliers': dict(),
+                    'common_outliers': dict(), }
+
+
+def parse_krun_file_with_changepoints(json_files):
+    """Simplified version of the same function from krun_results."""
+
+    data_dictionary = dict()
+    window_size = None
+    for filename in json_files:
+        assert os.path.exists(filename), 'File %s does not exist.' % filename
+        data = read_krun_results_file(filename)
+        machine_name = data['audit']['uname'].split(' ')[1]
+        if '.' in machine_name:  # Remove domain, if there is one.
+            machine_name = machine_name.split('.')[0]
+        if machine_name not in data_dictionary:
+            data_dictionary[machine_name] = data
+        else:
+            assert 'Found two datasets from machine %s (expected one)' % machine_name
+        if window_size is None:
+            window_size = data['window_size']
+        else:
+            assert window_size == data['window_size'], \
+                   ('Cannot summarise categories generated with different window-size '
+                    'options. Please re-run the mark_outliers_in_json script.')
+    return data['audit'], window_size, data_dictionary
+
+
+def copy_results(last_iter, audit, window_size, from_results, to_results):
+    """Copy results into a new dict. ASSUME only one machine per results file."""
+
+    to_results['audit'] = audit
+    to_results['window_size'] = window_size
+    for mc in from_results:
+        for key in from_results[mc]['wallclock_times']:
+            to_results['wallclock_times'][key] = list()
+            to_results['all_outliers'][key] = list()
+            to_results['unique_outliers'][key] = list()
+            to_results['common_outliers'][key] = list()
+            for p_exec in xrange(len(from_results[mc]['wallclock_times'][key])):
+                to_results['wallclock_times'][key].append(from_results[mc]['wallclock_times'][key][p_exec][:last_iter])
+                to_results['all_outliers'][key].append(list())
+                for value in from_results[mc]['all_outliers'][key][p_exec]:
+                    if value < last_iter:
+                        to_results['all_outliers'][key][p_exec].append(value)
+                to_results['unique_outliers'][key].append(list())
+                for value in from_results[mc]['unique_outliers'][key][p_exec]:
+                    if value < last_iter:
+                        to_results['unique_outliers'][key][p_exec].append(value)
+                to_results['common_outliers'][key].append(list())
+                for value in from_results[mc]['common_outliers'][key][p_exec]:
+                    if value < last_iter:
+                        to_results['common_outliers'][key][p_exec].append(value)
+
+
+def generate_truncated_json(json_file):
+    """Generate an output file for each truncated data set."""
+
+    bin_dir = os.path.dirname(os.path.abspath(__file__))
+    cpt_script = os.path.join(bin_dir, 'mark_changepoints_in_json')
+    directory = os.path.dirname(json_file)
+    audit, window_size, original_json = parse_krun_file_with_changepoints([json_file])
+    for last_iter in range(MAX_ITERS, MIN_ITERS, ITER_STEP):
+        print 'Truncated to iteration:', last_iter
+        new_json_data = _BLANK_BENCHMARK
+        copy_results(last_iter, audit, window_size, original_json, new_json_data)
+        outfile = os.path.join(directory, ('truncated_%g.json.bz2') % last_iter)
+        write_krun_results_file(new_json_data, outfile)
+        os.system('%s %s' % (cpt_script, outfile))
+
+
+def create_cli_parser():
+    """Create a parser to deal with command line switches."""
+
+    script = os.path.basename(__file__)
+    description = (('Generate results files by repeatedly truncating a Krun data file.\n' +
+                    '\n\nExample usage:\n\n' +
+                    '\t$ python %s results.json.bz2') % script)
+    parser = argparse.ArgumentParser(description=description,
+                                     formatter_class=argparse.RawTextHelpFormatter)
+    parser.add_argument('results_file', action='store', default='.', type=str,
+                        help='Results file to be truncated.')
+    return parser
+
+
+if __name__ == '__main__':
+    parser = create_cli_parser()
+    options = parser.parse_args()
+    generate_truncated_json(options.results_file)
