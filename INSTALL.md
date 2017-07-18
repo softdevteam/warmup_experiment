@@ -33,7 +33,7 @@ Debian-based systems:
 ```sh
 $ sudo apt-get install build-essential python2.7 pypy bzip2 libssl-dev \
        pkg-config libcurl4-openssl-dev python-numpy python-matplotlib \
-       python-pip texlive-latex-extra wget xorg-dev \
+       python-pip texlive-latex-extra wget xorg-dev python2.7-dev \
        libreadline-dev libbz2-dev liblzma-dev libpcre3-dev gfortran
 $ ./build_stats.sh
 ```
