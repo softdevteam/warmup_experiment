@@ -47,6 +47,8 @@ from warmup.krun_results import read_krun_results_file, write_krun_results_file
 MAX_ITERS = 1950
 MIN_ITERS = 100
 ITER_STEP = -50
+WINDOW_PROPORTION = 0.1  # Needed for outlier script options.
+STEADY_PROPORTION = 0.25  # Needed for changepoint script options.
 _BLANK_BENCHMARK = { 'wallclock_times': dict(), # Measurement data.
                     'core_cycle_counts': dict(), 'aperf_counts': dict(),
                     'mperf_counts': dict(), 'audit': dict(), 'config': '',
@@ -88,29 +90,26 @@ def copy_results(last_iter, audit, window_size, from_results, to_results):
     for mc in from_results:
         for key in from_results[mc]['wallclock_times']:
             to_results['wallclock_times'][key] = list()
-            to_results['all_outliers'][key] = list()
-            to_results['unique_outliers'][key] = list()
-            to_results['common_outliers'][key] = list()
             for p_exec in xrange(len(from_results[mc]['wallclock_times'][key])):
                 to_results['wallclock_times'][key].append(from_results[mc]['wallclock_times'][key][p_exec][:last_iter])
-                to_results['all_outliers'][key].append(list())
-                for value in from_results[mc]['all_outliers'][key][p_exec]:
-                    if value < last_iter:
-                        to_results['all_outliers'][key][p_exec].append(value)
-                to_results['unique_outliers'][key].append(list())
-                for value in from_results[mc]['unique_outliers'][key][p_exec]:
-                    if value < last_iter:
-                        to_results['unique_outliers'][key][p_exec].append(value)
-                to_results['common_outliers'][key].append(list())
-                for value in from_results[mc]['common_outliers'][key][p_exec]:
-                    if value < last_iter:
-                        to_results['common_outliers'][key][p_exec].append(value)
+
+
+def create_outlier_filename(in_file_name, window):
+    directory = os.path.dirname(in_file_name)
+    basename = os.path.basename(in_file_name)
+    if basename.endswith('.json.bz2'):
+        root_name = basename[:-9]
+    else:
+        root_name = os.path.splitext(basename)[0]
+    base_out = ('%s_outliers_w%d.json.bz2' % (root_name, window))
+    return os.path.join(directory, base_out)
 
 
 def generate_truncated_json(json_file):
     """Generate an output file for each truncated data set."""
 
     bin_dir = os.path.dirname(os.path.abspath(__file__))
+    outlier_script = os.path.join(bin_dir, 'mark_outliers_in_json')
     cpt_script = os.path.join(bin_dir, 'mark_changepoints_in_json')
     directory = os.path.dirname(json_file)
     audit, window_size, original_json = parse_krun_file_with_changepoints([json_file])
@@ -120,7 +119,10 @@ def generate_truncated_json(json_file):
         copy_results(last_iter, audit, window_size, original_json, new_json_data)
         outfile = os.path.join(directory, ('truncated_%g.json.bz2') % last_iter)
         write_krun_results_file(new_json_data, outfile)
-        os.system('%s %s' % (cpt_script, outfile))
+        window = int(last_iter * WINDOW_PROPORTION)
+        os.system('%s %s --window %d' % (outlier_script, outfile, window))
+        steady = int(last_iter * STEADY_PROPORTION)
+        os.system('%s %s --steady %d' % (cpt_script, create_outlier_filename(outfile, window), steady))
 
 
 def create_cli_parser():
