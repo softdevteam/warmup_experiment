@@ -142,7 +142,7 @@ N_EXECUTIONS = 30  # Number of fresh processes.
 
 if sys.platform.startswith("linux"):
     # Assumes systemd is used for init.
-    PING_HOST = "bencher2.soft-dev.org"
+    PING_HOST = "bencher8.soft-dev.org"
     PRE_EXECUTION_CMDS = [
         # Stop network first. If an interface accepts a DHCP lease during one
         # of the later commands below, it can cause the command to be
@@ -191,7 +191,7 @@ else:
 # We allow failure, otherwise Krun will halt the experiment if (e.g.) the
 # SSH server hostname is temporarily unavailable.
 HOSTNAME = platform.node().split(".")[0]
-REMOTE_LOGIN = "vext01@bencher2.soft-dev.org"
+REMOTE_LOGIN = "vext01@bencher8.soft-dev.org"
 REMOTE_DIR = "research/krun_results/"
 
 SSH_BATCH = "ssh -o 'BatchMode yes' -i id_rsa"

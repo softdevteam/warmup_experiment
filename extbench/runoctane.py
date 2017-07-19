@@ -22,7 +22,7 @@ if sys.platform.startswith("linux"):
 	    (WARMUP_DIR, LD_LIBRARY_PATH, WARMUP_DIR)
 if os.getenv("SSH_DO_COPY"):
     SSH_KEY = "~kruninit/warmup_experiment/id_rsa"
-    SSH_HOST = "bencher2.soft-dev.org"
+    SSH_HOST = "bencher8.soft-dev.org"
     SSH_USER = "vext01"
     SSH_COPY_DIR = "research/krun_results"
     SSH_DO_COPY = True
