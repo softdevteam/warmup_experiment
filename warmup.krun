@@ -8,9 +8,25 @@ from krun.vm_defs import (PythonVMDef, LuaVMDef, JavaVMDef, GraalVMDef,
 from krun import EntryPoint
 from krun.util import run_shell_cmd
 
+def ghz(x):
+    return x * 1000 * 1000 * 1000
+
+# we say a core was idle if APERF was less than 1/1000th a busy count (per second)
+IDLE_DIVIDE = 1000
+
+# Rough rate of APERF increment per second.
+# On our machines, APERF happens to increment at the same rate as the base
+# frequency.
+BUSY_THRESHOLDS = {
+    "bencher5": ghz(3.6) / IDLE_DIVIDE,
+    "bencher7": ghz(3.5) / IDLE_DIVIDE,
+    # bencher6 not listed, as Krun doesn't support APERF on BSD
+}
+
 # Who to mail
 MAIL_TO = []
 
+HOSTNAME = platform.node().split(".")[0]
 DIR = os.getcwd()
 JKRUNTIME_DIR = os.path.join(DIR, "krun", "libkruntime", "")
 
@@ -141,8 +157,12 @@ SKIP = [
 N_EXECUTIONS = 30  # Number of fresh processes.
 
 if sys.platform.startswith("linux"):
+    AMPERF_RATIO_BOUNDS = 0.995, 1.005
+    AMPERF_BUSY_THRESHOLD = BUSY_THRESHOLDS[HOSTNAME]
+
+if sys.platform.startswith("linux"):
     # Assumes systemd is used for init.
-    PING_HOST = "bencher2.soft-dev.org"
+    PING_HOST = "bencher8.soft-dev.org"
     PRE_EXECUTION_CMDS = [
         # Stop network first. If an interface accepts a DHCP lease during one
         # of the later commands below, it can cause the command to be
@@ -190,8 +210,7 @@ else:
 #
 # We allow failure, otherwise Krun will halt the experiment if (e.g.) the
 # SSH server hostname is temporarily unavailable.
-HOSTNAME = platform.node().split(".")[0]
-REMOTE_LOGIN = "vext01@bencher2.soft-dev.org"
+REMOTE_LOGIN = "vext01@bencher8.soft-dev.org"
 REMOTE_DIR = "research/krun_results/"
 
 SSH_BATCH = "ssh -o 'BatchMode yes' -i id_rsa"

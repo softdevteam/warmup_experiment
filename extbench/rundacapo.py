@@ -39,7 +39,7 @@ if os.uname()[0].startswith("Linux"):
     JAVA_VMS["graal"] = "%s/work/mx/mx --java-home=%s -p %s/work/graal/ vm -XX:+UseJVMCICompiler" % (WARMUP_DIR, JVMCI_JAVA_HOME, WARMUP_DIR)
 if os.getenv("SSH_DO_COPY"):
     SSH_KEY = "~kruninit/warmup_experiment/id_rsa"
-    SSH_HOST = "bencher2.soft-dev.org"
+    SSH_HOST = "bencher8.soft-dev.org"
     SSH_USER = "vext01"
     SSH_COPY_DIR = "research/krun_results"
     SSH_DO_COPY = True
