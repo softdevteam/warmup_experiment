@@ -157,7 +157,7 @@ SKIP = [
 N_EXECUTIONS = 30  # Number of fresh processes.
 
 if sys.platform.startswith("linux"):
-    AMPERF_RATIO_BOUNDS = 0.995, 1.005
+    AMPERF_RATIO_BOUNDS = 0.99, 1.01
     AMPERF_BUSY_THRESHOLD = BUSY_THRESHOLDS[HOSTNAME]
 
 if sys.platform.startswith("linux"):
