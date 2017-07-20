@@ -172,12 +172,14 @@ if sys.platform.startswith("linux"):
         "sudo systemctl stop cron",
         "sudo systemctl stop atd",
         "sudo systemctl stop postfix",
+        "sudo systemctl stop ssh",
     ]
 
     POST_EXECUTION_CMDS = [
         # The network doesn't always come up properly on debian. We keep trying
         # until we can ping a host on the network.
         "while true; do ping -c 3 -q %s && break; sudo systemctl stop networking; sleep 5; sudo systemctl start networking; done" % PING_HOST,
+        "sudo systemctl start ssh || true",
         "sudo systemctl start cron || true",
         "sudo systemctl start atd || true",
         "sudo systemctl start postfix || true",
@@ -188,11 +190,13 @@ elif sys.platform.startswith("openbsd"):
         "sudo /etc/rc.d/cron stop",
         "sudo /etc/rc.d/smtpd stop",
         "sudo /etc/rc.d/pflogd stop",
+        "sudo /etc/rc.d/sshd stop",
         "for intf in `ifconfig  | grep -e '^[a-z]' | cut -f 1 -d ':' | grep -v '^lo0$'`; do sudo ifconfig $intf down; done",
     ]
 
     POST_EXECUTION_CMDS = [
         "sudo sh /etc/netstart",
+        "sudo /etc/rc.d/sshd start || true",
         "sudo /etc/rc.d/ntpd start || true",
         "sudo /etc/rc.d/cron start || true",
         "sudo /etc/rc.d/smtpd start || true",
