@@ -44,9 +44,9 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from warmup.krun_results import read_krun_results_file, write_krun_results_file
 
-MAX_ITERS = 1950
-MIN_ITERS = 100
-ITER_STEP = -50
+MAX_ITERS = 1990
+MIN_ITERS = 10
+ITER_STEP = -10
 WINDOW_PROPORTION = 0.1  # Needed for outlier script options.
 STEADY_PROPORTION = 0.25  # Needed for changepoint script options.
 _BLANK_BENCHMARK = { 'wallclock_times': dict(), # Measurement data.
