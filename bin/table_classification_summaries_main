@@ -55,7 +55,7 @@ from warmup.summary_statistics import collect_summary_statistics, convert_to_lat
 
 
 VM_NAMES_MAP = {
-    'JRubyTruffle': 'JRuby+Truffle',
+    'JRubyTruffle': 'TruffleRuby',
     'Hotspot': 'HotSpot'
 }
 
