@@ -577,7 +577,7 @@ TRUFFLERUBY_V=graal-vm-0.22
 TRUFFLERUBY_BUILDPACK_DIR=${wrkdir}/truffleruby-buildpack
 TRUFFLERUBY_BUILDPACK_TARBALL=truffleruby-buildpack-${TRUFFLERUBY_V}-20170502.tgz
 build_truffleruby() {
-    echo "\n===> Download and build truffle+jruby\n"
+    echo "\n===> Download and build TruffleRuby\n"
 
     # maven caches dependencies, we dont ever want to pick those up, only
     # what's in the jruby build pack.
