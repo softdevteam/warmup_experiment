@@ -1,0 +1,233 @@
+#!/usr/bin/python2.7
+
+# Copyright (c) 2017 King's College London
+# created by the Software Development Team <http://soft-dev.org/>
+#
+# The Universal Permissive License (UPL), Version 1.0
+#
+# Subject to the condition set forth below, permission is hereby granted to any
+# person obtaining a copy of this software, associated documentation and/or
+# data (collectively the "Software"), free of charge and under any and all
+# copyright rights in the Software, and any and all patent rights owned or
+# freely licensable by each licensor hereunder covering either (i) the
+# unmodified Software as contributed to or provided by such licensor, or (ii)
+# the Larger Works (as defined below), to deal in both
+#
+# (a) the Software, and
+# (b) any piece of software and/or hardware listed in the lrgrwrks.txt file if
+# one is included with the Software (each a "Larger Work" to which the Software
+# is contributed by such licensors),
+#
+# without restriction, including without limitation the rights to copy, create
+# derivative works of, display, perform, and distribute the Software and make,
+# use, sell, offer for sale, import, export, have made, and have sold the
+# Software and the Larger Work(s), and to sublicense the foregoing rights on
+# either these or other terms.
+#
+# This license is subject to the following condition: The above copyright
+# notice and either this complete permission notice or at a minimum a reference
+# to the UPL must be included in all copies or substantial portions of the
+# Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+import argparse
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as pyplot
+from matplotlib.backends.backend_pdf import PdfPages
+import os.path
+import numpy
+import random
+import sys
+
+# We use a custom install of rpy2, relative to the top-level of the repo.
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                                'work', 'pylibs'))
+# R packages are stored relative to the top-level of the repo.
+os.environ['PATH'] = ':'.join([os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                               'work', 'R-inst', 'bin'), os.environ.get('PATH', '')])
+os.environ['LD_LIBRARY_PATH'] = ':'.join([os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                                         'work', 'R-inst', 'lib', 'R', 'lib'), os.environ.get('LD_LIBRARY_PATH', '')])
+os.environ['R_LIBS_USER'] = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                                         'work', 'R-inst', 'lib', 'R', 'library')
+
+import rpy2
+import rpy2.interactive.packages
+import rpy2.robjects
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+from warmup.krun_results import parse_krun_file_with_changepoints
+from warmup.plotting import add_margin_to_axes, compute_grid_offsets, style_axis, STYLE_DICT
+
+# Set matplotlib styles, similar to Seaborn 'whitegrid'.
+for style in STYLE_DICT:
+    matplotlib.rcParams[style] = STYLE_DICT[style]
+
+NUMBER_TRIALS = 1000
+ALPHA = 0.01  # Significance level.
+MIN_PEXECS = 2
+MAX_PEXECS = 29
+ORIGINAL_PEXECS = 30
+
+CATEGORIES = ['warmup', 'slowdown', 'flat', 'no steady state']
+
+# Default (PDF) font sizes
+TICK_FONTSIZE = 8
+AXIS_FONTSIZE = 8
+
+GRID_MAJOR_X_DIVS = 10
+GRID_MAJOR_Y_DIVS = 10
+
+LINE_COLOUR = 'k'
+LINE_WIDTH = 1
+
+
+def parse_json(json_file):
+    """Return only classifications from original file."""
+
+    data = None
+    _, data = parse_krun_file_with_changepoints([json_file])
+    assert data is not None, 'No original results file.'
+    assert len(data.keys()) == 1, 'Expected one machine per results file.'
+    machine = data.keys()[0]
+    return data[machine]['classifications']
+
+
+def all_same_category(classifications):
+    """Return True if all classifications fell into one category."""
+
+    total = len(classifications)
+    for category in CATEGORIES:
+        if classifications.count(category) == total:
+            return True
+    return False
+
+
+def generate_trials(json_file):
+    """Generate NUMBER_TRIALS Bernoulli trials for classifications.
+    Ignore <VM, benchmark> pairs with consistent classifications.
+    """
+
+    classifications = parse_json(json_file)  # Original data.
+    rangen = random.Random()
+    trials = dict()
+    for n_pexecs in xrange(MIN_PEXECS, MAX_PEXECS + 1):
+        trials[n_pexecs] = dict()
+        for key in classifications:
+            if len(classifications[key]) > 0 and not all_same_category(classifications[key]):
+                trials[n_pexecs][key] = list()
+                for _ in xrange(NUMBER_TRIALS):
+                    counts = [0, 0, 0, 0]
+                    for _ in xrange(n_pexecs):
+                        next_class = rangen.choice(classifications[key])
+                        counts[CATEGORIES.index(next_class)] += 1
+                    trials[n_pexecs][key].append(counts)
+    return classifications, trials
+
+
+def do_cis_differ((x1, y1), (x2, y2)):
+    """Given two CIs return True if they do NOT overlap."""
+
+    assert (y1 > x1 or x1 == y1) and (y2 > x2 or x2 == y2)
+    return y1 < x2 or y2 < x1
+
+
+def count_changed_trials(classifications, trials):
+    """What proportion of trials changed classifications?"""
+
+    mci = rpy2.interactive.packages.importr('MultinomialCI')
+    num_similar = dict()  # n_pexecs -> int
+    num_different = dict()  # n_pexecs -> int
+    # Generate confidence intervals for the data in the original experiment.
+    original_cis = dict()
+    for key in classifications:
+        if len(classifications[key]) == 0 or all_same_category(classifications[key]):
+            continue  # Avoid skipped and consistent benchmarks.
+        counts = [classifications[key].count(category) for category in CATEGORIES]
+        original_cis[key] = numpy.array(mci.multinomialCI(rpy2.robjects.FloatVector(counts), ALPHA))
+        # print 'original:', key, original_cis[key]
+    # Compare to data from the Bernoulli trials.
+    for n_pexecs in xrange(MIN_PEXECS, MAX_PEXECS + 1):
+        num_similar[n_pexecs] = 0
+        num_different[n_pexecs] = 0
+        for key in classifications:
+            if len(classifications[key]) == 0 or all_same_category(classifications[key]):
+                # If the original pexecs for this key all had same classification,
+                # no pexecs will have changed in the trials.
+                num_similar[n_pexecs] += NUMBER_TRIALS
+            else:
+                # Of the NUMBER_TRIALS we generated for this n_pexecs, how many
+                # trials resulted in a significantly different set of classifications
+                # to the original? Here be dragons.
+                for trial in xrange(NUMBER_TRIALS):
+                    trial_ci = numpy.array(mci.multinomialCI(rpy2.robjects.FloatVector(trials[n_pexecs][key][trial]), ALPHA))
+                    for category in CATEGORIES:
+                        index = CATEGORIES.index(category)
+                        if do_cis_differ(original_cis[key][index], trial_ci[index]):
+                            num_different[n_pexecs] += 1
+                            break
+                    else:
+                        num_similar[n_pexecs] += 1
+    return num_similar, num_different
+
+
+def draw_plot(same, changed, outfile):
+    """Plot 'same' data and write to PDF file."""
+
+    pdf = PdfPages(outfile)
+    fig, axis = pyplot.subplots()
+    # Prepare data.
+    assert same.keys() == changed.keys()
+    x_vals = sorted(same.keys())
+    y_vals = [float(same[x]) / (changed[x] + same[x]) * 100.0 for x in sorted(same.keys())]
+    min_x, max_x = 0, int(ORIGINAL_PEXECS)
+    min_y, max_y = 0.0, 100.0  # Percentages.
+    # Plot data.
+    axis.plot(x_vals, y_vals, marker='.', markersize=6, linestyle='-', color=LINE_COLOUR)
+    # Re-style the chart.
+    xlim = (min_x - (min_x % 100), max_x)
+    major_xticks = range(xlim[0], xlim[1] + 2, 2)
+    major_yticks = compute_grid_offsets(min_y - (min_y % 10), max_y, GRID_MAJOR_Y_DIVS)
+    style_axis(axis, major_xticks, [], major_yticks, [], TICK_FONTSIZE)
+    axis.set_xticklabels([str(label) for label in major_xticks], rotation=270)
+    axis.set_xlabel('#process executions', fontsize=AXIS_FONTSIZE)
+    axis.set_ylabel('% of VM, benchmark pairs with similar classifications to n=30',
+                    fontsize=AXIS_FONTSIZE)
+    axis.set_xlim(xlim)
+    add_margin_to_axes(axis, x=0.02, y=0.02)
+    # Save figure.
+    pdf.savefig(fig, dpi=fig.dpi, orientation='portrait', bbox_inches='tight')
+    pdf.close()
+    print('Saved: %s' % outfile)
+
+
+def create_cli_parser():
+    """Create a parser to deal with command line switches."""
+
+    script = os.path.basename(__file__)
+    description = (('Generate results files by repeatedly truncating a Krun data file.\n' +
+                    '\n\nExample usage:\n\n' +
+                    '\t$ python %s results.json.bz2') % script)
+    parser = argparse.ArgumentParser(description=description,
+                                     formatter_class=argparse.RawTextHelpFormatter)
+    parser.add_argument('results_file', action='store', default='.', type=str,
+                        help='Results file to be truncated.')
+    parser.add_argument('--plot', '-p', action='store', dest='plot_file',
+                        type=str, help='Name of the PDF file to write plot to.',
+                        required=True)
+    return parser
+
+
+if __name__ == '__main__':
+    parser = create_cli_parser()
+    options = parser.parse_args()
+    classifications, trials = generate_trials(options.results_file)
+    same, changed = count_changed_trials(classifications, trials)
+    draw_plot(same, changed, options.plot_file)
