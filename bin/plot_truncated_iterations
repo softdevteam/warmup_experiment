@@ -51,7 +51,6 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from warmup.krun_results import parse_krun_file_with_changepoints
-from warmup.latex import end_document, preamble
 from warmup.plotting import add_margin_to_axes, compute_grid_offsets, style_axis, STYLE_DICT
 
 # Set matplotlib styles, similar to Seaborn 'whitegrid'.
@@ -105,60 +104,6 @@ def summarise_truncated(data_dir):
     return summary
 
 
-def start_table(format_, headings):
-    return """
-{
-\\begin{longtable}{%s}
-\\toprule
-%s \\\\
-\\midrule
-""" % (format_, headings)
-
-
-def end_table():
-    return """
-\\bottomrule
-\\end{longtable}
-}
-"""
-
-
-def write_table(summary, outfile, with_preamble=False):
-    """Write out a LaTeX table, with or without preamble."""
-
-    table_format = 'l' + ('r' * 6)
-    table_headings = '&'.join(['\\textbf{\\# Iterations}', '\\textbf{\\# Same}',
-                              '\\textbf{\\# Different}', '\\textbf{\\# Delta}',
-                              '\\textbf{\\% Same}', '\\textbf{\\% Different}',
-                              '\\textbf{\\% Delta}',])
-    total_original = float(summary[DEFAULT_ITERS]['same'] + summary[DEFAULT_ITERS]['different'])
-    with open(outfile, 'w') as fp:
-        if with_preamble:
-            fp.write(preamble('Truncated data results'))
-            fp.write('\\centering\n')
-        fp.write(start_table(table_format, table_headings))
-        for last_iter in sorted(summary, reverse=True):
-            total = float(summary[last_iter]['same'] + summary[last_iter]['different'])
-            assert total == total_original
-            if last_iter == DEFAULT_ITERS:
-                fp.write('%d & %d & %d & %s & %.2f & %.2f & %s \\\\' %
-                         (last_iter, summary[last_iter]['same'], summary[last_iter]['different'],
-                          'n/a', summary[last_iter]['same'] / total * 100.0,
-                          summary[last_iter]['different'] / total * 100.0, 'n/a'))
-            else:
-                pc_delta = (summary[last_iter + ITER_STEP]['same'] / total * 100.0) - \
-                             (summary[last_iter]['same'] / total * 100.0)
-                fp.write('%d & %d & %d & %d & %.2f & %.2f & %.2f\\\\' %
-                         (last_iter, summary[last_iter]['same'], summary[last_iter]['different'],
-                          summary[last_iter + ITER_STEP]['same'] - summary[last_iter]['same'],
-                          summary[last_iter]['same'] / total * 100.0,
-                          summary[last_iter]['different'] / total * 100.0, pc_delta))
-        fp.write(end_table())
-        if with_preamble:
-            fp.write(end_document())
-    print('Saved: %s' % outfile)
-
-
 def draw_plot(summary, outfile):
     """Plot 'same' data and write to PDF file."""
 
@@ -198,23 +143,14 @@ def create_cli_parser():
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument('directory', action='store', default='.', type=str,
                         help='Directory containing truncated results files.')
-    parser.add_argument('--texfile', '-t', action='store', dest='latex_file',
-                        type=str, help='Name of the LaTeX file to write table to.',
-                        required=True)
     parser.add_argument('--pdffile', '-p', action='store', dest='plot_file',
                         type=str, help='Name of the PDF file to write plot to.',
                         required=True)
-    parser.add_argument('--with-preamble', action='store_true',
-                        dest='with_preamble', default=False,
-                        help='Write out a whole LaTeX article (not just the table).')
     return parser
 
 
 if __name__ == '__main__':
     parser = create_cli_parser()
     options = parser.parse_args()
-    if options.with_preamble:
-        print 'Writing out full document, with preamble.'
     summary = summarise_truncated(options.directory)
-    write_table(summary, options.latex_file, options.with_preamble)
     draw_plot(summary, options.plot_file)
