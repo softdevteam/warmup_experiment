@@ -176,22 +176,24 @@ def main(data_dct, ratio_bounds, busy_aperf_threshold):
     print("# Pexecs examined: %s" % pexecs_checked)
 
 
+def fatal(msg):
+    sys.stderr.write("%s\n" % msg)
+    sys.exit(1)
+
+
 if __name__ == "__main__":
     if len(sys.argv) != 5:
-        print(__doc__)
-        sys.exit(1)
+        fatal(__doc__)
 
     try:
         lo_ratio, hi_ratio = sys.argv[2].split(",")
         ratio_bounds = float(lo_ratio), float(hi_ratio)
         busy_aperf_threshold = float(sys.argv[3]) / float(sys.argv[4])
     except:
-        print(__doc__)
-        sys.exit(1)
+        fatal(__doc__)
 
     data_dct = read_krun_results_file(sys.argv[1])
     if "all_outliers" not in data_dct:
-        print("please supply a results file with outlier annotated")
-        sys.exit(1)
+        fatal("Please supply a results file with outlier annotated")
 
     main(data_dct, ratio_bounds, busy_aperf_threshold)
