@@ -38,7 +38,7 @@
 # SOFTWARE.
 
 """
-usage: check_amperfs.py <results_file> <aperf/mperf-ratio-bounds>
+usage: check_amperfs <results_file> <aperf/mperf-ratio-bounds>
             <busy-aperf-count-estimate> <busy-threshold-factor>
 
 Checks if the CPU has clocked down or entered turbo mode during Krun
