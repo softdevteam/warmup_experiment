@@ -190,4 +190,8 @@ if __name__ == "__main__":
         sys.exit(1)
 
     data_dct = read_krun_results_file(sys.argv[1])
+    if "all_outliers" not in data_dct:
+        print("please supply a results file with outlier annotated")
+        sys.exit(1)
+
     main(data_dct, ratio_bounds, busy_aperf_threshold)
