@@ -38,11 +38,13 @@
 # SOFTWARE.
 
 import argparse
+import json
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as pyplot
 from matplotlib.backends.backend_pdf import PdfPages
 import os.path
+import multiprocessing
 import numpy
 import random
 import sys
@@ -65,6 +67,7 @@ import rpy2.robjects
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from warmup.krun_results import parse_krun_file_with_changepoints
 from warmup.plotting import add_margin_to_axes, compute_grid_offsets, style_axis, STYLE_DICT
+from warmup.summary_statistics import collect_summary_statistics
 
 # Set matplotlib styles, similar to Seaborn 'whitegrid'.
 for style in STYLE_DICT:
@@ -73,10 +76,19 @@ for style in STYLE_DICT:
 NUMBER_TRIALS = 1000
 ALPHA = 0.01  # Significance level.
 MIN_PEXECS = 2
-MAX_PEXECS = 29
-ORIGINAL_PEXECS = 30
+MAX_PEXECS = 30  # Must match start_ends variable in generate_trials().
+DEFAULT_PEXECS = 30
+# List indices (used in favour of dictionary keys).
+CLASSIFICATIONS = 0  # Indices for top-level summary lists.
+STEADY_ITER = 1
+STEADY_STATE_TIME = 2
+INTERSECTION = 3
+NPEXECS = 4
+SAME = 0  # Indices for nested lists.
+DIFFERENT = 1
 
 CATEGORIES = ['warmup', 'slowdown', 'flat', 'no steady state']
+MCI = rpy2.interactive.packages.importr('MultinomialCI')
 
 # Default (PDF) font sizes
 TICK_FONTSIZE = 8
@@ -85,20 +97,10 @@ AXIS_FONTSIZE = 8
 GRID_MAJOR_X_DIVS = 10
 GRID_MAJOR_Y_DIVS = 10
 
-LINE_COLOUR = 'k'
-LINE_WIDTH = 1
+LINE_WIDTH = 0.4
+MARKER_SIZE = 1
 
-
-def parse_json(json_file):
-    """Return only classifications from original file."""
-
-    data = None
-    _, data = parse_krun_file_with_changepoints([json_file])
-    assert data is not None, 'No original results file.'
-    assert len(data.keys()) == 1, 'Expected one machine per results file.'
-    machine = data.keys()[0]
-    return data[machine]['classifications']
-
+EXPORT_SIZE = [12, 5]
 
 def all_same_category(classifications):
     """Return True if all classifications fell into one category."""
@@ -110,99 +112,334 @@ def all_same_category(classifications):
     return False
 
 
-def generate_trials(json_file):
+def do_intervals_differ((x1, y1), (x2, y2)):
+    """Given two IQRs or CIs return True if they do NOT overlap."""
+
+    assert y1 >= x1 and y2 >= x2
+    return y1 < x2 or y2 < x1
+
+
+def do_mean_cis_differ(mean1, ci1, mean2, ci2):
+    """Given two means +/- CIs return True if they do NOT overlap."""
+
+    assert ci1 >= 0.0 and ci2 >= 0.0, 'Found negative confidence interval from bootstrapping.'
+    x1 = mean1 - ci1
+    y1 = mean1 + ci1
+    x2 = mean2 - ci2
+    y2 = mean2 + ci2
+    return do_intervals_differ((x1, y1), (x2, y2))
+
+
+def all_flat(classifications):
+    """Return True if all pexecs in a detailed classification dict are 'flat'."""
+
+    return (classifications['warmup'] == 0 and classifications['slowdown'] == 0
+            and classifications['no steady state'] == 0)
+
+
+def all_nss(classifications):
+    """Return True if all pexecs in a detailed classification dict are 'no steady state'."""
+
+    return (classifications['warmup'] == 0 and classifications['slowdown'] == 0 and
+            classifications['flat'] == 0)
+
+
+def any_nss(classifications):
+    """Return True if any pexec in a detailed classification dict is 'no steady state'."""
+
+    return classifications['no steady state'] > 0
+
+
+def parse_json(json_file):
+    """Return only classifications from original file."""
+
+    data = None
+    classifier, data = parse_krun_file_with_changepoints([json_file])
+    delta = classifier['delta']
+    steady = classifier['steady']
+    assert data is not None, 'No original results file.'
+    assert len(data.keys()) == 1, 'Expected one machine per results file.'
+    return delta, steady, data
+
+
+def generate_trials(cores, json_file):
     """Generate NUMBER_TRIALS Bernoulli trials for classifications.
     Ignore <VM, benchmark> pairs with consistent classifications.
     """
 
-    classifications = parse_json(json_file)  # Original data.
+    delta, steady, data = parse_json(json_file)  # Original data.
+    machine = data.keys()[0]
     rangen = random.Random()
-    trials = dict()
+    data_copies = dict()  # n_pexecs -> trial -> full experiment data.
     for n_pexecs in xrange(MIN_PEXECS, MAX_PEXECS + 1):
-        trials[n_pexecs] = dict()
-        for key in classifications:
-            if len(classifications[key]) > 0 and not all_same_category(classifications[key]):
-                trials[n_pexecs][key] = list()
-                for _ in xrange(NUMBER_TRIALS):
-                    counts = [0, 0, 0, 0]
-                    for _ in xrange(n_pexecs):
-                        next_class = rangen.choice(classifications[key])
-                        counts[CATEGORIES.index(next_class)] += 1
-                    trials[n_pexecs][key].append(counts)
-    return classifications, trials
+        data_copies[n_pexecs] = list()
+        for key in data[machine]['wallclock_times']:
+            if len(data[machine]['wallclock_times'][key]) == 0:  # Skipped benchmark.
+                continue
+            for trial in xrange(NUMBER_TRIALS):
+                data_copies[n_pexecs].append({'wallclock_times': dict(), 'classifications': dict(),
+                                              'changepoints': dict(), 'changepoint_means': dict(),
+                                              'changepoint_vars': dict(), 'all_outliers': dict()})
+                data_copies[n_pexecs][trial]['wallclock_times'][key] = list()
+                data_copies[n_pexecs][trial]['classifications'][key] = list()
+                data_copies[n_pexecs][trial]['changepoints'][key] = list()
+                data_copies[n_pexecs][trial]['changepoint_means'][key] = list()
+                data_copies[n_pexecs][trial]['changepoint_vars'][key] = list()
+                data_copies[n_pexecs][trial]['all_outliers'][key] = list()
+                for _ in xrange(n_pexecs):
+                    index = rangen.randint(0, len(data[machine]['wallclock_times'][key]) - 1)  # Inclusive interval.
+                    data_copies[n_pexecs][trial]['wallclock_times'][key].append(data[machine]['wallclock_times'][key][index])
+                    data_copies[n_pexecs][trial]['classifications'][key].append(data[machine]['classifications'][key][index])
+                    data_copies[n_pexecs][trial]['changepoints'][key].append(data[machine]['changepoints'][key][index])
+                    data_copies[n_pexecs][trial]['changepoint_means'][key].append(data[machine]['changepoint_means'][key][index])
+                    data_copies[n_pexecs][trial]['changepoint_vars'][key].append(data[machine]['changepoint_vars'][key][index])
+                    data_copies[n_pexecs][trial]['all_outliers'][key].append(data[machine]['all_outliers'][key][index])
+    # Generate summary data for each bootstrap trial.
+    summary = dict()
+    for n_pexecs in xrange(MIN_PEXECS, MAX_PEXECS + 1):
+        summary[n_pexecs] = list()
+
+    if cores not in (4, 8, 16, 32):
+        raise ValueError('Invalid number of cores (%d)' % cores)
+    print('Start parallel execution.')
+    # start_ends describes which work is done on which core, and must match the
+    # physical machine. Intervals are [inclusive, exclusive).
+    # The second number in the last tuple in the list must by 1 + MAX_PEXECS.
+    if cores == 4:
+        start_ends = [(2, 11), (11, 21), (21, 31)]
+    elif cores == 8:
+        start_ends = [(2, 6), (6, 10), (10, 14), (14, 18), (18, 22), (22, 26), (26, 31)]
+    elif cores == 16:
+        start_ends = [(2, 4), (4, 6), (6, 8), (8, 10),
+                      (10, 12), (12, 14), (14, 16), (16, 18),
+                      (18, 20), (20, 22), (22, 24), (24, 26),
+                      (26, 28), (28, 30), (30, 31),]
+    elif cores == 32:
+        start_ends = [(2, 3), (3, 4), (4, 5), (5, 6),
+                      (6, 7), (7, 8), (8, 9), (9, 10), (10, 11),
+                      (11, 12), (12, 13), (13, 14), (14, 15), (15, 16),
+                      (16, 17), (17, 18), (18, 19), (19, 20), (20, 21),
+                      (21, 22), (22, 23), (23, 24), (24, 25), (25, 26),
+                      (26, 27), (27, 28), (28, 29), (29, 30), (30, 31)]
+    jobs = list()
+    summaries = list()
+    queue = multiprocessing.Queue()
+    for i in xrange(len(start_ends)):
+        args = [queue, data_copies, start_ends[i][0], start_ends[i][1], i, machine, delta, steady]
+        p = multiprocessing.Process(target=_collect_statistics, args=args)
+        jobs.append(p)
+        p.start()
+    for _ in xrange(len(jobs)):
+        summaries.append(queue.get())
+    print('End parallel execution.')
+
+    for partial in summaries:
+        for n_pexecs in partial.keys():
+            summary[n_pexecs] = partial[n_pexecs]
+
+    # Summary data for the original dataset.
+    original_summary = collect_summary_statistics(data, delta, steady)
+    keys = data[machine]['wallclock_times'].keys()
+    with open('shuffled_pexecs.json', 'w') as fd:
+        data_dump = {'keys': keys, 'summary': summary, 'original': original_summary}
+        json.dump(data_dump, fd)
+        print('Saved: %s' % 'shuffled_pexecs.json')
+    return keys, original_summary, summary
 
 
-def do_cis_differ((x1, y1), (x2, y2)):
-    """Given two CIs return True if they do NOT overlap."""
+def _collect_statistics(queue, data_copies, start, end, nth, machine, delta, steady):
+    summary = dict()
+    for n_pexecs in xrange(start, end):
+        if n_pexecs not in summary:
+            summary[n_pexecs] = list()
+        for trial in xrange(NUMBER_TRIALS):
+            summary[n_pexecs].append(dict())
+            for key in data_copies[n_pexecs][trial]:
+                summary[n_pexecs][trial] = collect_summary_statistics({machine: data_copies[n_pexecs][trial]}, delta, steady)
+    queue.put(summary)
 
-    assert (y1 > x1 or x1 == y1) and (y2 > x2 or x2 == y2)
-    return y1 < x2 or y2 < x1
 
-
-def count_changed_trials(classifications, trials):
+def count_changed_trials(keys, original, shuffled):
     """What proportion of trials changed classifications?"""
 
-    mci = rpy2.interactive.packages.importr('MultinomialCI')
-    num_similar = dict()  # n_pexecs -> int
-    num_different = dict()  # n_pexecs -> int
-    # Generate confidence intervals for the data in the original experiment.
-    original_cis = dict()
-    for key in classifications:
-        if len(classifications[key]) == 0 or all_same_category(classifications[key]):
-            continue  # Avoid skipped and consistent benchmarks.
-        counts = [classifications[key].count(category) for category in CATEGORIES]
-        original_cis[key] = numpy.array(mci.multinomialCI(rpy2.robjects.FloatVector(counts), ALPHA))
-        # print 'original:', key, original_cis[key]
     # Compare to data from the Bernoulli trials.
+    pexecs = [pexec for pexec in xrange(MIN_PEXECS, MAX_PEXECS + 1)]
+    summary = [[[0, 0] for _ in pexecs], [[0, 0] for _ in pexecs],
+               [[0, 0] for _ in pexecs], [[0, 0] for _ in pexecs],
+               pexecs]
+    machine = original['machines'].keys()[0]
+
+    # Generate CIs for DEFAULT_PEXECS classification data.
+    class_cis = dict()
+    for key in keys:
+        bench, vm = key.split(':')[:-1]
+        if vm not in original['machines'][machine].keys() or bench not in original['machines'][machine][vm].keys():
+            continue  # Skipped benchmark
+        cats = [original['machines'][machine][vm][bench]['process_executons'][p]['classification'] \
+                for p in xrange(len(original['machines'][machine][vm][bench]['process_executons']))]
+        class_counts = [cats.count(category) for category in CATEGORIES]
+        class_cis[key] = numpy.array(MCI.multinomialCI(rpy2.robjects.FloatVector(class_counts), ALPHA))
+    # Compute summary data.
     for n_pexecs in xrange(MIN_PEXECS, MAX_PEXECS + 1):
-        num_similar[n_pexecs] = 0
-        num_different[n_pexecs] = 0
-        for key in classifications:
-            if len(classifications[key]) == 0 or all_same_category(classifications[key]):
-                # If the original pexecs for this key all had same classification,
-                # no pexecs will have changed in the trials.
-                num_similar[n_pexecs] += NUMBER_TRIALS
-            else:
-                # Of the NUMBER_TRIALS we generated for this n_pexecs, how many
-                # trials resulted in a significantly different set of classifications
-                # to the original? Here be dragons.
-                for trial in xrange(NUMBER_TRIALS):
-                    trial_ci = numpy.array(mci.multinomialCI(rpy2.robjects.FloatVector(trials[n_pexecs][key][trial]), ALPHA))
-                    for category in CATEGORIES:
-                        index = CATEGORIES.index(category)
-                        if do_cis_differ(original_cis[key][index], trial_ci[index]):
-                            num_different[n_pexecs] += 1
-                            break
+        n_pexec_idx = n_pexecs - MIN_PEXECS  # Index in the summary[XXX] list.
+        if not n_pexecs in summary:
+            summary[CLASSIFICATIONS][n_pexec_idx] =  [0, 0]  # [ <SAME>, <DIFFERENT> ]
+            summary[STEADY_ITER][n_pexec_idx] = [0, 0]
+            summary[STEADY_STATE_TIME][n_pexec_idx] = [0, 0]
+            summary[INTERSECTION][n_pexec_idx] = [0, 0]
+        for trial in xrange(NUMBER_TRIALS):
+            for key in keys:
+                intersection = True
+                bench, vm = key.split(':')[:-1]
+                if vm not in original['machines'][machine].keys() or bench not in original['machines'][machine][vm].keys():
+                    continue  # Skipped benchmark
+                # Simplify names.
+                original_key = original['machines'][machine][vm][bench]
+                shuffled_key = shuffled[n_pexecs][trial]['machines'][machine][vm][bench]
+                # Classifications are available, whether or not summary statistics can be generated.
+                trunc_cat = [shuffled_key['process_executons'][p]['classification'] for p in xrange(len(shuffled_key['process_executons']))]
+                trunc_counts = [trunc_cat.count(category) for category in CATEGORIES]
+                trunc_cis = numpy.array(MCI.multinomialCI(rpy2.robjects.FloatVector(trunc_counts), ALPHA))
+                for category in CATEGORIES:
+                    index = CATEGORIES.index(category)
+                    if do_intervals_differ(class_cis[key][index], trunc_cis[index]):
+                        summary[CLASSIFICATIONS][n_pexec_idx][DIFFERENT] += 1
+                        intersection = False
+                        break
+                else:
+                    summary[CLASSIFICATIONS][n_pexec_idx][SAME] += 1
+                # Case 1) All flat.
+                if (all_flat(shuffled_key['detailed_classification']) and all_flat(original_key['detailed_classification'])):
+                    summary[STEADY_ITER][n_pexec_idx][SAME] += 1
+                    if original_key['steady_state_time_ci'] is None:
+                        summary[STEADY_STATE_TIME][n_pexec_idx][DIFFERENT] += 1
+                        intersection = False
+                    elif do_mean_cis_differ(original_key['steady_state_time'], original_key['steady_state_time_ci'],
+                                            shuffled_key['steady_state_time'], shuffled_key['steady_state_time_ci']):
+                        summary[STEADY_STATE_TIME][n_pexec_idx][DIFFERENT] += 1
+                        intersection = False
                     else:
-                        num_similar[n_pexecs] += 1
-    return num_similar, num_different
+                        summary[STEADY_STATE_TIME][n_pexec_idx][SAME] += 1
+                    if intersection:
+                        summary[INTERSECTION][n_pexec_idx][SAME] += 1
+                    else:
+                        summary[INTERSECTION][n_pexec_idx][DIFFERENT] += 1
+                # Case 2) One ALL FLAT, one not.
+                elif (all_flat(shuffled_key['detailed_classification']) or all_flat(original_key['detailed_classification'])):
+                    if (any_nss(shuffled_key['detailed_classification']) or any_nss(original_key['detailed_classification'])):
+                        summary[STEADY_ITER][n_pexec_idx][DIFFERENT] += 1
+                    elif (all_flat(original_key['detailed_classification']) and
+                          do_intervals_differ((1.0, 1.0), shuffled_key['steady_state_iteration_iqr'])):
+                        summary[STEADY_ITER][n_pexec_idx][DIFFERENT] += 1
+                    elif (all_flat(shuffled_key['detailed_classification']) and
+                          do_intervals_differ((1.0, 1.0), original_key['steady_state_iteration_iqr'])):
+                        summary[STEADY_ITER][n_pexec_idx][DIFFERENT] += 1
+                    else:
+                        summary[STEADY_ITER][n_pexec_idx][SAME] += 1
+                    if (any_nss(shuffled_key['detailed_classification']) or any_nss(original_key['detailed_classification'])):
+                        summary[STEADY_STATE_TIME][n_pexec_idx][DIFFERENT] += 1
+                    elif do_mean_cis_differ(original_key['steady_state_time'], original_key['steady_state_time_ci'],
+                                            shuffled_key['steady_state_time'], shuffled_key['steady_state_time_ci']):
+                        summary[STEADY_STATE_TIME][n_pexec_idx][DIFFERENT] += 1
+                    else:
+                        summary[STEADY_STATE_TIME][n_pexec_idx][SAME] += 1
+                    summary[INTERSECTION][n_pexec_idx][DIFFERENT] += 1
+                # Case 3) One contains an NSS (therefore no steady iter / perf available).
+                elif (any_nss(shuffled_key['detailed_classification']) or any_nss(original_key['detailed_classification'])):
+                    if intersection:
+                        summary[INTERSECTION][n_pexec_idx][SAME] += 1
+                    else:
+                        summary[INTERSECTION][n_pexec_idx][DIFFERENT] += 1
+                # Case 4) All three measures should be available in both the DEFAULT_ITER and last_iter cases.
+                else:
+                    # If n_pexecs is small, and the steady_iters are all identical,
+                    # we sometimes get odd IQRs like [7.000000000000001, 7.0], so
+                    # deal with this as a special case to avoid triggering the assertion
+                    # in do_intervals_differ.
+                    if len(set(shuffled_key['steady_state_iteration_list'])) == 1:
+                        fake_iqr = (float(shuffled_key['steady_state_iteration_list'][0]), float(shuffled_key['steady_state_iteration_list'][0]))
+                        if do_intervals_differ(original_key['steady_state_iteration_iqr'], fake_iqr):
+                            summary[STEADY_ITER][n_pexec_idx][DIFFERENT] += 1
+                            intersection = False
+                        else:
+                            summary[STEADY_ITER][n_pexec_idx][SAME] += 1
+                    elif do_intervals_differ(original_key['steady_state_iteration_iqr'], shuffled_key['steady_state_iteration_iqr']):
+                        summary[STEADY_ITER][n_pexec_idx][DIFFERENT] += 1
+                        intersection = False
+                    else:
+                        summary[STEADY_ITER][n_pexec_idx][SAME] += 1
+                    if do_mean_cis_differ(original_key['steady_state_time'], original_key['steady_state_time_ci'],
+                                          shuffled_key['steady_state_time'], shuffled_key['steady_state_time_ci']):
+                        summary[STEADY_STATE_TIME][n_pexec_idx][DIFFERENT] += 1
+                        intersection = False
+                    else:
+                        summary[STEADY_STATE_TIME][n_pexec_idx][SAME] += 1
+                    # Store intersection of all characteristics.
+                    if intersection:
+                        summary[INTERSECTION][n_pexec_idx][SAME] += 1
+                    else:
+                        summary[INTERSECTION][n_pexec_idx][DIFFERENT] += 1
+                assert (summary[INTERSECTION][n_pexec_idx][SAME] + summary[INTERSECTION][n_pexec_idx][DIFFERENT]) == \
+                    (summary[CLASSIFICATIONS][n_pexec_idx][SAME] + summary[CLASSIFICATIONS][n_pexec_idx][DIFFERENT]), \
+                    'Wrong number of data for shuffled pexec %d' % n_pexecs
+    return summary
 
 
-def draw_plot(same, changed, outfile):
+def draw_plot(summary, outfile):
     """Plot 'same' data and write to PDF file."""
 
     pdf = PdfPages(outfile)
     fig, axis = pyplot.subplots()
     # Prepare data.
-    assert same.keys() == changed.keys()
-    x_vals = sorted(same.keys())
-    y_vals = [float(same[x]) / (changed[x] + same[x]) * 100.0 for x in sorted(same.keys())]
-    min_x, max_x = 0, int(ORIGINAL_PEXECS)
+    total_classifications = [float(summary[CLASSIFICATIONS][index][SAME] + summary[CLASSIFICATIONS][index][DIFFERENT]) \
+                             for index, _ in enumerate(sorted(summary[NPEXECS]))]
+    data_classifications = [float(summary[CLASSIFICATIONS][index][SAME]) / total_classifications[index] * 100.0 \
+                            for index, _ in enumerate(sorted(summary[NPEXECS]))]
+    total_iter = [float(summary[STEADY_ITER][index][SAME] + summary[STEADY_ITER][index][DIFFERENT]) \
+                  for index, _ in enumerate(sorted(summary[NPEXECS]))]
+    data_iter = [summary[STEADY_ITER][index][SAME] / total_iter[index] * 100.0 \
+                 for index, _ in enumerate(sorted(summary[NPEXECS]))]
+    total_time = [float(summary[STEADY_STATE_TIME][index][SAME] + summary[STEADY_STATE_TIME][index][DIFFERENT]) \
+                  for index, _ in enumerate(sorted(summary[NPEXECS]))]
+    data_time = [float(summary[STEADY_STATE_TIME][index][SAME]) / total_time[index] * 100.0 \
+                 for index, _ in enumerate(sorted(summary[NPEXECS]))]
+    total_intersection = [float(summary[INTERSECTION][index][SAME] + summary[INTERSECTION][index][DIFFERENT]) \
+                          for index, _ in enumerate(sorted(summary[NPEXECS]))]
+    raw_intersection = [float(summary[INTERSECTION][index][SAME]) / total_intersection[index] * 100.0 \
+                         for index, _ in enumerate(sorted(summary[INTERSECTION]))]
+    data_intersection = [min(raw_intersection[index], data_time[index], data_iter[index], data_classifications[index])
+                         for index, _ in enumerate(sorted(summary[NPEXECS]))]
+    for pexec in xrange(len(data_intersection)):
+        assert (data_intersection[pexec] <= data_classifications[pexec] and
+                data_intersection[pexec] <= data_iter[pexec] and
+                data_intersection[pexec] <= data_time[pexec])
+    min_x, max_x = 0, int(DEFAULT_PEXECS)
     min_y, max_y = 0.0, 100.0  # Percentages.
     # Plot data.
-    axis.plot(x_vals, y_vals, marker='.', markersize=6, linestyle='-', color=LINE_COLOUR)
+    xvals = sorted(summary[NPEXECS])
+    axis.plot(xvals, data_classifications,
+              marker='.', markersize=MARKER_SIZE, linestyle='-', color='#d7191c', label='Classifications')
+    axis.plot(xvals, data_iter, marker='^', linewidth=LINE_WIDTH,
+              markersize=MARKER_SIZE, linestyle='-', color='#018571', label='Steady iteration (# or s)')
+    axis.plot(xvals, data_time, marker='.', linewidth=LINE_WIDTH,
+              markersize=MARKER_SIZE, linestyle='-', color='#7b3294', label='Steady performance (s)')
+    axis.plot(xvals, data_intersection, marker='.', linewidth=LINE_WIDTH,
+              markersize=MARKER_SIZE, linestyle='-', color='k', label='Overall')
     # Re-style the chart.
     xlim = (min_x - (min_x % 100), max_x)
     major_xticks = range(xlim[0], xlim[1] + 2, 2)
     major_yticks = compute_grid_offsets(min_y - (min_y % 10), max_y, GRID_MAJOR_Y_DIVS)
     style_axis(axis, major_xticks, [], major_yticks, [], TICK_FONTSIZE)
     axis.set_xticklabels([str(label) for label in major_xticks], rotation=270)
-    axis.set_xlabel('#process executions', fontsize=AXIS_FONTSIZE)
-    axis.set_ylabel('% of VM, benchmark pairs with similar classifications to n=30',
-                    fontsize=AXIS_FONTSIZE)
+    axis.set_xlabel('Process executions', fontsize=AXIS_FONTSIZE)
+    axis.set_ylabel('%% similarity to n=%d' % DEFAULT_PEXECS, fontsize=AXIS_FONTSIZE)
     axis.set_xlim(xlim)
     add_margin_to_axes(axis, x=0.02, y=0.02)
+    # Add a legend.
+    handles, labels = axis.get_legend_handles_labels()
+    pyplot.legend(loc='upper center', ncol=4, bbox_to_anchor=(0.5, 1.1), fontsize=AXIS_FONTSIZE)
     # Save figure.
+    fig.set_size_inches(*EXPORT_SIZE)
     pdf.savefig(fig, dpi=fig.dpi, orientation='portrait', bbox_inches='tight')
     pdf.close()
     print('Saved: %s' % outfile)
@@ -212,22 +449,44 @@ def create_cli_parser():
     """Create a parser to deal with command line switches."""
 
     script = os.path.basename(__file__)
-    description = (('Generate results files by repeatedly truncating a Krun data file.\n' +
-                    '\n\nExample usage:\n\n' +
+    description = (('Plot how many process executions would generate statistically '
+                    'similar results to a given input file.\n\n\nExample usage:\n\n'
                     '\t$ python %s results.json.bz2') % script)
     parser = argparse.ArgumentParser(description=description,
                                      formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument('results_file', action='store', default='.', type=str,
-                        help='Results file to be truncated.')
-    parser.add_argument('--plot', '-p', action='store', dest='plot_file',
+    parser.add_argument('--cores', '-c', action='store', dest='cores',
+                        type=int, help='Number of CPU cores to use.',
+                        default=4, required=False)
+    parser.add_argument('--outfile', '-o', action='store', dest='outfile',
                         type=str, help='Name of the PDF file to write plot to.',
                         required=True)
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument('-s', '--summary', action='store', default=None,
+                       type=str, help=('Read summary data from JSON file rather than '
+                                       'generating from a directory of truncated results.'))
+    group.add_argument('-f', '--file', action='store', default='.', type=str,
+                        help='Results file to be truncated.')
     return parser
 
 
 if __name__ == '__main__':
     parser = create_cli_parser()
     options = parser.parse_args()
-    classifications, trials = generate_trials(options.results_file)
-    same, changed = count_changed_trials(classifications, trials)
-    draw_plot(same, changed, options.plot_file)
+    if options.summary is None:
+        if options.cores not in (4, 8, 16, 32):
+            print('Invalid argument to --cores or -c. Try 4, 8, 16 or 32.')
+            sys.exit(1)
+        print('Assuming machine with %d cores.' % options.cores)
+        keys, original, summary = generate_trials(options.cores, options.file)
+        pexec_summary = count_changed_trials(keys, original, summary)
+    else:
+        with open(options.summary, 'r') as fd:
+            json_summary = json.load(fd)
+        if json_summary is None:
+            print('Could not open %s.' % options.summary)
+            sys.exit(1)
+        summary = dict()
+        for key in json_summary['summary']:
+            summary[int(key)] = json_summary['summary'][key]
+        pexec_summary = count_changed_trials(json_summary['keys'], json_summary['original'], summary)
+    draw_plot(pexec_summary, options.outfile)
