@@ -54,6 +54,10 @@ from warmup.latex import start_table, STYLE_SYMBOLS
 from warmup.summary_statistics import collect_summary_statistics, convert_to_latex
 
 
+# The miniumum number of rows for each benchmark section in the table. If the
+# data is for fewer VMs, then the section will be padded with blank rows.
+MIN_VM_ROWS = 6
+
 VM_NAMES_MAP = {
     'JRubyTruffle': 'TruffleRuby',
     'Hotspot': 'HotSpot'
@@ -184,6 +188,9 @@ def write_latex_table(machine, all_benchs, summary, steady_state, tex_file,
                     fp.write('\\\\[-3pt] \n')
                 else:
                     fp.write('\\\\ \n')
+                vm_idx += 1
+            while vm_idx < MIN_VM_ROWS:
+                fp.write('\\\\ \n')
                 vm_idx += 1
             if split_row_idx < benchs_per_split - 1:
                 fp.write('\\midrule\n')
