@@ -78,4 +78,9 @@ BENCHMARKS = {
     'binarytrees': 18,
 }
 
+# Do not check A/MPERF ratios for the startup experiment.
+del(BUSY_THRESHOLDS)
+del(AMPERF_RATIO_BOUNDS)
+del(AMPERF_BUSY_THRESHOLD)
+
 N_EXECUTIONS = 200  # Number of fresh processes.
