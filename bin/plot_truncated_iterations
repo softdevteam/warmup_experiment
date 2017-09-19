@@ -1,0 +1,377 @@
+#!/usr/bin/python2.7
+
+# Copyright (c) 2017 King's College London
+# created by the Software Development Team <http://soft-dev.org/>
+#
+# The Universal Permissive License (UPL), Version 1.0
+#
+# Subject to the condition set forth below, permission is hereby granted to any
+# person obtaining a copy of this software, associated documentation and/or
+# data (collectively the "Software"), free of charge and under any and all
+# copyright rights in the Software, and any and all patent rights owned or
+# freely licensable by each licensor hereunder covering either (i) the
+# unmodified Software as contributed to or provided by such licensor, or (ii)
+# the Larger Works (as defined below), to deal in both
+#
+# (a) the Software, and
+# (b) any piece of software and/or hardware listed in the lrgrwrks.txt file if
+# one is included with the Software (each a "Larger Work" to which the Software
+# is contributed by such licensors),
+#
+# without restriction, including without limitation the rights to copy, create
+# derivative works of, display, perform, and distribute the Software and make,
+# use, sell, offer for sale, import, export, have made, and have sold the
+# Software and the Larger Work(s), and to sublicense the foregoing rights on
+# either these or other terms.
+#
+# This license is subject to the following condition: The above copyright
+# notice and either this complete permission notice or at a minimum a reference
+# to the UPL must be included in all copies or substantial portions of the
+# Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+import argparse
+import glob
+import json
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as pyplot
+from matplotlib.backends.backend_pdf import PdfPages
+import numpy
+import os
+import os.path
+import sys
+
+# We use a custom install of rpy2, relative to the top-level of the repo.
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                                'work', 'pylibs'))
+# R packages are stored relative to the top-level of the repo.
+os.environ['PATH'] = ':'.join([os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                               'work', 'R-inst', 'bin'), os.environ.get('PATH', '')])
+os.environ['LD_LIBRARY_PATH'] = ':'.join([os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                                         'work', 'R-inst', 'lib', 'R', 'lib'), os.environ.get('LD_LIBRARY_PATH', '')])
+os.environ['R_LIBS_USER'] = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                                         'work', 'R-inst', 'lib', 'R', 'library')
+
+import rpy2
+import rpy2.interactive.packages
+import rpy2.robjects
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+from warmup.krun_results import parse_krun_file_with_changepoints
+from warmup.plotting import add_margin_to_axes, compute_grid_offsets, style_axis, STYLE_DICT
+from warmup.summary_statistics import collect_summary_statistics
+
+# Set matplotlib styles, similar to Seaborn 'whitegrid'.
+for style in STYLE_DICT:
+    matplotlib.rcParams[style] = STYLE_DICT[style]
+
+ALPHA = 0.01  # Significance level.
+CATEGORIES = ['warmup', 'slowdown', 'flat', 'no steady state']
+MCI = rpy2.interactive.packages.importr('MultinomialCI')
+# List indices (used in favour of dictionary keys).
+CLASSIFICATIONS = 0  # Indices for top-level summary lists.
+STEADY_ITER = 1
+STEADY_STATE_TIME = 2
+INTERSECTION = 3
+LAST_ITERS = 4
+SAME = 0  # Indices for nested lists.
+DIFFERENT = 1
+
+
+# Default (PDF) font sizes
+TICK_FONTSIZE = 8
+AXIS_FONTSIZE = 8
+
+GRID_MAJOR_X_DIVS = 10
+GRID_MAJOR_Y_DIVS = 10
+
+LINE_WIDTH = 0.4
+MARKER_SIZE = 1
+
+DEFAULT_ITERS = 2000  # Iterations in original data file.
+ITER_STEP = 10  # Truncated data files each differ by ITER_STEP iterations.
+
+DEFAULT_SUMMARY_FILE = 'truncated_summary.json'
+EXPORT_SIZE = [12, 5]
+
+pyplot.figure(tight_layout=True)
+
+
+def do_intervals_differ((x1, y1), (x2, y2)):
+    """Given two IQRs or CIs return True if they do NOT overlap."""
+
+    assert y1 >= x1 and y2 >= x2
+    return y1 < x2 or y2 < x1
+
+
+def do_mean_cis_differ(mean1, ci1, mean2, ci2):
+    """Given two means +/- CIs return True if they do NOT overlap."""
+
+    assert ci1 >= 0.0 and ci2 >= 0.0, 'Found negative confidence interval from bootstrapping.'
+    x1 = mean1 - ci1
+    y1 = mean1 + ci1
+    x2 = mean2 - ci2
+    y2 = mean2 + ci2
+    return do_intervals_differ((x1, y1), (x2, y2))
+
+
+def all_flat(classifications):
+    """Return True if all pexecs in a detailed classification dict are 'flat'."""
+
+    return (classifications['warmup'] == 0 and classifications['slowdown'] == 0
+            and classifications['no steady state'] == 0)
+
+
+def all_nss(classifications):
+    """Return True if all pexecs in a detailed classification dict are 'no steady state'."""
+
+    return (classifications['warmup'] == 0 and classifications['slowdown'] == 0 and
+            classifications['flat'] == 0)
+
+
+def any_nss(classifications):
+    """Return True if any pexec in a detailed classification dict is 'no steady state'."""
+
+    return classifications['no steady state'] > 0
+
+
+def summarise_truncated(data_dir, jsonfile):
+    """Summarise classifications in truncated data that match the original."""
+
+    classifiers = dict()
+    original_results = None
+    truncated_summaries = dict()
+    n_files = len(glob.glob(os.path.join(data_dir, '*_changepoints.json.bz2')))
+    for index, filename in enumerate(glob.glob(os.path.join(data_dir, '*_changepoints.json.bz2'))):
+        if 'truncated_' not in filename:  # Original results file.
+            print('Loading original results. File %d of %d' % (index + 1, n_files))
+            classifiers[DEFAULT_ITERS], original_results = parse_krun_file_with_changepoints([filename])
+            truncated_summaries[DEFAULT_ITERS] = collect_summary_statistics(original_results,
+                                                     classifiers[DEFAULT_ITERS]['delta'], classifiers[DEFAULT_ITERS]['steady'])
+        else:
+            last_iter = int(os.path.basename(filename).split('.')[0].split('_')[1])
+            print('Loading results file truncated to %d iterations. File %d of %d.' %  (last_iter, index + 1, n_files))
+            classifiers[last_iter], truncated_results = parse_krun_file_with_changepoints([filename])
+            truncated_summaries[last_iter] = collect_summary_statistics(truncated_results,
+                                                 classifiers[last_iter]['delta'], classifiers[last_iter]['steady'])
+            del truncated_results
+    assert original_results is not None, 'No original results file.'
+    assert len(original_results.keys()) == 1, 'Expected one machine per results file.'
+    machine = original_results.keys()[0]
+    # Generate CIs for DEFAULT_ITER classification data.
+    class_cis = dict()
+    for key in original_results[machine]['classifications']:
+        if len(original_results[machine]['classifications'][key]) == 0:  # Skipped benchmark.
+            continue
+        class_counts = [original_results[machine]['classifications'][key].count(category) for category in CATEGORIES]
+        class_cis[key] = numpy.array(MCI.multinomialCI(rpy2.robjects.FloatVector(class_counts), ALPHA))
+    # Generate summary of results to be plotted.
+    last_iters = [iter_ for iter_ in sorted(truncated_summaries)]
+    summary = [[[0, 0] for _ in truncated_summaries], [[0, 0] for _ in truncated_summaries],
+               [[0, 0] for _ in truncated_summaries], [[0, 0] for _ in truncated_summaries],
+               last_iters]
+    for last_iter in last_iters:
+        index = last_iters.index(last_iter)
+        for key in original_results[machine]['classifications']:
+            if len(original_results[machine]['classifications'][key]) == 0:  # Skipped benchmark.
+                continue
+            intersection = True
+            bench, vm = key.split(':')[:-1]
+            # Classifications are available, whether or not summary statistics can be generated.
+            trunc_cat = [truncated_summaries[last_iter]['machines'][machine][vm][bench]['process_executons'][p]['classification'] \
+                         for p in xrange(len(truncated_summaries[last_iter]['machines'][machine][vm][bench]['process_executons']))]
+            trunc_counts = [trunc_cat.count(category) for category in CATEGORIES]
+            trunc_cis = numpy.array(MCI.multinomialCI(rpy2.robjects.FloatVector(trunc_counts), ALPHA))
+            for category in CATEGORIES:
+                cat_index = CATEGORIES.index(category)
+                if do_intervals_differ(class_cis[key][cat_index], trunc_cis[cat_index]):
+                    summary[CLASSIFICATIONS][index][DIFFERENT] += 1
+                    intersection = False
+                    break
+            else:
+                summary[CLASSIFICATIONS][index][SAME] += 1
+            sample = truncated_summaries[last_iter]['machines'][machine][vm][bench]
+            base_case = truncated_summaries[DEFAULT_ITERS]['machines'][machine][vm][bench]
+            # Case 1) All flat.
+            if (all_flat(sample['detailed_classification']) and all_flat(base_case['detailed_classification'])):
+                summary[STEADY_ITER][index][SAME] += 1
+                if base_case['steady_state_time_ci'] is None:
+                    summary[STEADY_STATE_TIME][index][DIFFERENT] += 1
+                    intersection = False
+                elif do_mean_cis_differ(base_case['steady_state_time'], base_case['steady_state_time_ci'],
+                                        sample['steady_state_time'], sample['steady_state_time_ci']):
+                    summary[STEADY_STATE_TIME][index][DIFFERENT] += 1
+                    intersection = False
+                else:
+                    summary[STEADY_STATE_TIME][index][SAME] += 1
+                if intersection:
+                    summary[INTERSECTION][index][SAME] += 1
+                else:
+                    summary[INTERSECTION][index][DIFFERENT] += 1
+            # Case 2) One ALL FLAT, one not.
+            elif (all_flat(sample['detailed_classification']) or all_flat(base_case['detailed_classification'])):
+                if (any_nss(sample['detailed_classification']) or any_nss(base_case['detailed_classification'])):
+                    summary[STEADY_ITER][index][DIFFERENT] += 1
+                elif (all_flat(base_case['detailed_classification']) and
+                      do_intervals_differ((1.0, 1.0), sample['steady_state_iteration_iqr'])):
+                    summary[STEADY_ITER][index][DIFFERENT] += 1
+                elif (all_flat(sample['detailed_classification']) and
+                      do_intervals_differ((1.0, 1.0), base_case['steady_state_iteration_iqr'])):
+                    summary[STEADY_ITER][index][DIFFERENT] += 1
+                else:
+                    summary[STEADY_ITER][index][SAME] += 1
+                if (any_nss(sample['detailed_classification']) or any_nss(base_case['detailed_classification'])):
+                    summary[STEADY_STATE_TIME][index][DIFFERENT] += 1
+                elif do_mean_cis_differ(base_case['steady_state_time'], base_case['steady_state_time_ci'],
+                                        sample['steady_state_time'], sample['steady_state_time_ci']):
+                    summary[STEADY_STATE_TIME][index][DIFFERENT] += 1
+                else:
+                    summary[STEADY_STATE_TIME][index][SAME] += 1
+                summary[INTERSECTION][index][DIFFERENT] += 1
+            # Case 3) One contains an NSS (therefore no steady iter / perf available).
+            elif (any_nss(sample['detailed_classification']) or
+                  any_nss(base_case['detailed_classification'])):
+                if intersection:
+                    summary[INTERSECTION][index][SAME] += 1
+                else:
+                    summary[INTERSECTION][index][DIFFERENT] += 1
+            # Case 4) All three measures should be available in both the DEFAULT_ITER and last_iter cases.
+            else:
+                # If n_pexecs is small, and the steady_iters are all identical,
+                # we sometimes get odd IQRs like [7.000000000000001, 7.0], so
+                # deal with this as a special case to avoid triggering the assertion
+                # in do_intervals_differ.
+                if len(set(sample['steady_state_iteration_list'])) == 1:
+                    fake_iqr = (float(sample['steady_state_iteration_list'][0]), float(sample['steady_state_iteration_list'][0]))
+                    if do_intervals_differ(base_case['steady_state_iteration_iqr'], fake_iqr):
+                        summary[STEADY_ITER][index][DIFFERENT] += 1
+                        intersection = False
+                    else:
+                        summary[STEADY_ITER][index][SAME] += 1
+                elif do_intervals_differ(base_case['steady_state_iteration_iqr'],
+                                         sample['steady_state_iteration_iqr']):
+                    summary[STEADY_ITER][index][DIFFERENT] += 1
+                    intersection = False
+                else:
+                    summary[STEADY_ITER][index][SAME] += 1
+                if do_mean_cis_differ(base_case['steady_state_time'], base_case['steady_state_time_ci'],
+                                      sample['steady_state_time'], sample['steady_state_time_ci']):
+                    summary[STEADY_STATE_TIME][index][DIFFERENT] += 1
+                    intersection = False
+                else:
+                    summary[STEADY_STATE_TIME][index][SAME] += 1
+                # Store intersection of all characteristics.
+                if intersection:
+                    summary[INTERSECTION][index][SAME] += 1
+                else:
+                    summary[INTERSECTION][index][DIFFERENT] += 1
+            assert (summary[INTERSECTION][index][SAME] + summary[INTERSECTION][index][DIFFERENT]) == \
+                (summary[CLASSIFICATIONS][index][SAME] + summary[CLASSIFICATIONS][index][DIFFERENT]), \
+                'Wrong number of data for truncated iteration %d' % last_iter
+    with open(jsonfile, 'w') as fd:
+        json.dump(summary, fd)
+        print('Saved: %s' % jsonfile)
+    return summary
+
+
+def draw_plot(summary, outfile):
+    """Plot 'same' data and write to PDF file."""
+
+    pdf = PdfPages(outfile)
+    fig, axis = pyplot.subplots()
+    # Prepare data.
+    total_classifications = [float(summary[CLASSIFICATIONS][index][SAME] + summary[CLASSIFICATIONS][index][DIFFERENT]) \
+                             for index, _ in enumerate(sorted(summary[LAST_ITERS]))]
+    data_classifications = [float(summary[CLASSIFICATIONS][index][SAME]) / total_classifications[index] * 100.0 \
+                            for index, _ in enumerate(sorted(summary[LAST_ITERS]))]
+    total_iter = [float(summary[STEADY_ITER][index][SAME] + summary[STEADY_ITER][index][DIFFERENT]) \
+                  for index, _ in enumerate(sorted(summary[LAST_ITERS]))]
+    data_iter = [summary[STEADY_ITER][index][SAME] / total_iter[index] * 100.0 \
+                 for index, _ in enumerate(sorted(summary[LAST_ITERS]))]
+    total_time = [float(summary[STEADY_STATE_TIME][index][SAME] + summary[STEADY_STATE_TIME][index][DIFFERENT]) \
+                  for index, _ in enumerate(sorted(summary[LAST_ITERS]))]
+    data_time = [float(summary[STEADY_STATE_TIME][index][SAME]) / total_time[index] * 100.0 \
+                 for index, _ in enumerate(sorted(summary[LAST_ITERS]))]
+    total_intersection = [float(summary[INTERSECTION][index][SAME] + summary[INTERSECTION][index][DIFFERENT]) \
+                          for index, _ in enumerate(sorted(summary[LAST_ITERS]))]
+    raw_intersection = [float(summary[INTERSECTION][index][SAME]) / total_intersection[index] * 100.0 \
+                         for index, _ in enumerate(sorted(summary[INTERSECTION]))]
+    data_intersection = [min(raw_intersection[index], data_time[index], data_iter[index], data_classifications[index])
+                         for index, _ in enumerate(sorted(summary[LAST_ITERS]))]
+    for iteration in xrange(len(data_intersection)):
+        assert (data_intersection[iteration] <= data_classifications[iteration] and
+                data_intersection[iteration] <= data_iter[iteration] and
+                data_intersection[iteration] <= data_time[iteration])
+    # Plot data.
+    xvals = sorted(summary[LAST_ITERS])
+    axis.plot(xvals, data_classifications, linewidth=LINE_WIDTH,
+               marker='.', markersize=MARKER_SIZE, linestyle='-', color='#d7191c', label='Classifications')
+    axis.plot(xvals, data_iter, marker='^', linewidth=LINE_WIDTH,
+              markersize=MARKER_SIZE, linestyle='-', color='#018571', label='Steady iteration (# or s)')
+    axis.plot(xvals, data_time, marker='.', linewidth=LINE_WIDTH,
+              markersize=MARKER_SIZE, linestyle='-', color='#7b3294', label='Steady performance (s)')
+    axis.plot(xvals, data_intersection, marker='.', linewidth=LINE_WIDTH,
+              markersize=MARKER_SIZE, linestyle='-', color='k', label='Overall')
+    # Re-style the chart.
+    min_x, max_x = 0, int(max(xvals))
+    min_y, max_y = 0.0, 100.0  # Percentages.
+    xlim = (min_x - (min_x % 100), max_x)
+    major_xticks = range(xlim[0], xlim[1] + ITER_STEP * 20, ITER_STEP * 10)
+    major_yticks = compute_grid_offsets(min_y - (min_y % 10), max_y, GRID_MAJOR_Y_DIVS)
+    style_axis(axis, major_xticks, [], major_yticks, [], TICK_FONTSIZE)
+    axis.set_xticklabels([str(label) for label in major_xticks], rotation=270)
+    axis.set_xlabel('In-process iterations', fontsize=AXIS_FONTSIZE)
+    axis.set_ylabel('%% similarity to n=%d' % max_x, fontsize=AXIS_FONTSIZE)
+    axis.set_xlim(xlim)
+    add_margin_to_axes(axis, x=0.02, y=0.02)
+    # Add a legend.
+    handles, labels = axis.get_legend_handles_labels()
+    pyplot.legend(loc='upper center', ncol=4, bbox_to_anchor=(0.5, 1.1), fontsize=AXIS_FONTSIZE)
+    # Save figure.
+    fig.set_size_inches(*EXPORT_SIZE)
+    pdf.savefig(fig, dpi=fig.dpi, orientation='portrait', bbox_inches='tight')
+    pdf.close()
+    print('Saved: %s' % outfile)
+
+
+def create_cli_parser():
+    """Create a parser to deal with command line switches."""
+
+    script = os.path.basename(__file__)
+    description = (('Summarise information generated by generate_truncated_json script.\n' +
+                    '\n\nExample usage:\n\n' +
+                    '\t$ python %s -o summary.tex results.json.bz2') % script)
+    parser = argparse.ArgumentParser(description=description)
+    parser.add_argument('-o', '--outfile', action='store', dest='outfile',
+                        type=str, help='Name of the PDF file to write plot to.',
+                        required=True)
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument('-s', '--summary', action='store', default=None,
+                       type=str, help=('Read summary data from JSON file rather than '
+                                       'generating from a directory of truncated results.'))
+    group.add_argument('-d', '--directory', action='store',  type=str, default=None,
+                       help='Directory containing truncated results files.')
+    return parser
+
+
+if __name__ == '__main__':
+    parser = create_cli_parser()
+    options = parser.parse_args()
+    if options.summary is None:
+        summary = summarise_truncated(options.directory, DEFAULT_SUMMARY_FILE)
+    else:
+        summary = None
+        with open(options.summary, 'r') as fd:
+            summary = json.load(fd)
+        if summary is None:
+            print('Could not open %s.' % options.summary)
+            sys.exit(1)
+    draw_plot(summary, options.outfile)
