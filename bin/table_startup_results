@@ -37,7 +37,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""Create a LaTeX summary of a Krun results file from the startup experiment."""
+"""Generate the TeX code for a LaTeX table summarising the results of the
+startup experiment"""
 
 import argparse
 import json

@@ -37,6 +37,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+"""
+Given a full set of results, generate new JSON files with truncated iterations.
+MUST be run before plot_truncated_iterations.
+"""
+
+
 import argparse
 import os.path
 import sys

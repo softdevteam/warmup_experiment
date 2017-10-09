@@ -37,6 +37,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+"""
+Plot a chart describing the effect of re-running an experiment with fewer iterations.
+MUST be run after generate_truncated_json.
+"""
+
 import os
 import sys
 
