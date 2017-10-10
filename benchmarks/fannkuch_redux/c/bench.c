@@ -42,7 +42,7 @@ int flip()
    return i;
 }
 
-inline void rotate(int n)
+void rotate(int n)
 {
    elem c;
    register int i;
