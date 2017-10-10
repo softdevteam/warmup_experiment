@@ -51,7 +51,7 @@ int flip()
    return i;
 }
 
-inline void rotate(int n)
+void rotate(int n)
 {
    printf("inline void rotate(int n)\n");
    elem c;
