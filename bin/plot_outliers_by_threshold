@@ -55,7 +55,7 @@ import os
 import os.path
 import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "warmup_stats"))
 from warmup.plotting import add_margin_to_axes, compute_grid_offsets, style_axis, STYLE_DICT
 
 # Set matplotlib styles, similar to Seaborn 'whitegrid'.

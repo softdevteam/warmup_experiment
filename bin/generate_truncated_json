@@ -47,7 +47,7 @@ import argparse
 import os.path
 import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "warmup_stats"))
 from warmup.krun_results import read_krun_results_file, write_krun_results_file
 
 MAX_ITERS = 1990
@@ -114,9 +114,9 @@ def create_outlier_filename(in_file_name, window):
 def generate_truncated_json(json_file):
     """Generate an output file for each truncated data set."""
 
-    bin_dir = os.path.dirname(os.path.abspath(__file__))
-    outlier_script = os.path.join(bin_dir, 'mark_outliers_in_json')
-    cpt_script = os.path.join(bin_dir, 'mark_changepoints_in_json')
+    warmup_stats_bin_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "warmup_stats", "bin")
+    outlier_script = os.path.join(warmup_stats_bin_dir, 'mark_outliers_in_json')
+    cpt_script = os.path.join(warmup_stats_bin_dir, 'mark_changepoints_in_json')
     directory = os.path.dirname(json_file)
     audit, window_size, original_json = parse_krun_file_with_changepoints([json_file])
     for last_iter in range(MAX_ITERS, MIN_ITERS, ITER_STEP):

@@ -47,7 +47,7 @@ import os.path
 import sys
 
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "warmup_stats"))
 from warmup.krun_results import read_krun_results_file
 from warmup.latex import preamble, end_document, end_table, escape
 from warmup.latex import format_median_ci, machine_name_to_macro, section, start_table

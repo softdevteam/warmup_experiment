@@ -73,7 +73,7 @@ import rpy2
 import rpy2.interactive.packages
 import rpy2.robjects
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "warmup_stats"))
 from warmup.krun_results import parse_krun_file_with_changepoints
 from warmup.plotting import add_margin_to_axes, compute_grid_offsets, style_axis, STYLE_DICT
 from warmup.summary_statistics import collect_summary_statistics
