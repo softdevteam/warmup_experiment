@@ -37,6 +37,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+"""
+Calculate the effect of passing different values of -w to mark_outliers_in_json.
+MUST be run before plot_outliers_by_threshold.
+"""
+
 import argparse
 import bz2
 import json

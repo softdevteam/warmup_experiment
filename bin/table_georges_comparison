@@ -37,9 +37,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""
-Create a LaTeX summary comparing annotated Krun results to those reported by
-the method described in Georges et. al. (2007).
+"""Generate the TeX code for a LaTeX table comparing annotated Krun results to
+those reported by the method described in Georges et. al. (2007).
 """
 
 import argparse
