@@ -1,0 +1,11 @@
+--- hotspot/make/linux/makefiles/gcc.make.orig	2017-10-12 10:54:41.004134460 +0100
++++ hotspot/make/linux/makefiles/gcc.make	2017-10-12 10:54:54.172135597 +0100
+@@ -197,7 +197,7 @@
+ endif
+ 
+ # Compiler warnings are treated as errors
+-WARNINGS_ARE_ERRORS = -Werror
++WARNINGS_ARE_ERRORS =
+ 
+ ifeq ($(USE_CLANG), true)
+   # However we need to clean the code up before we can unrestrictedly enable this option with Clang

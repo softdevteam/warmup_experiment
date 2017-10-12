@@ -95,24 +95,15 @@ echo "===> Working in $wrkdir"
 
 PATCH_DIR=`pwd`/patches/
 
-# System (from OS packages) Java 7, for making a JDK8. We must not use a JDK8
-# to build a JDK8. See README-builds.html in JDK8 src tarball.
 case `uname` in
     Linux)
-        SYS_JDK7_HOME=/usr/lib/jvm/java-7-openjdk-amd64
         SYS_JDK8_HOME=/usr/lib/jvm/java-8-openjdk-amd64
         ;;
     OpenBSD)
-        SYS_JDK7_HOME=/usr/local/jdk-1.7.0
         SYS_JDK8_HOME=/not_used_on_openbsd
         ;;
     *) unknown_platform;;
 esac
-
-if [ ! -d ${SYS_JDK7_HOME} ]; then
-    echo "Can't find system Java 7"
-    exit 1
-fi
 
 # XXX when we stabilise, fix the krun revision.
 build_initial_krun() {
@@ -382,6 +373,7 @@ build_jdk() {
         mv ${JDK_TARBALL_BASE} openjdk
     fi
     cd openjdk || exit $?
+    patch -Ep0 < ${PATCH_DIR}/openjdk.diff || exit $?
     JDK_BUILD_PATH=`dirname ${OUR_CC}`:${PATH}
     case `uname` in
         Linux)
@@ -398,7 +390,7 @@ build_jdk() {
                 --with-zlib=system \
                 --with-milestone=fcs \
                 --with-jobs=$num_jobs \
-                --with-boot-jdk=${SYS_JDK7_HOME} \
+                --with-boot-jdk=${SYS_JDK8_HOME} \
                 || exit $?
             PATH=${JDK_BUILD_PATH} ../make-${GMAKE_V}/make all || exit $?
             ;;
@@ -419,7 +411,7 @@ build_jdk() {
               --with-milestone=fcs \
               --with-jobs=$num_jobs \
               --with-extra-ldflags="-Wl,-z,wxneeded" \
-              --with-boot-jdk=${SYS_JDK7_HOME} \
+              --with-boot-jdk=${SYS_JDK8_HOME} \
               || exit $?
             PATH=${JDK_BUILD_PATH} \
                 COMPILER_WARNINGS_FATAL=false \
@@ -471,6 +463,7 @@ build_bootstrap_jdk() {
     fi
 
     cd  ${BOOT_JDK_BASE}_fullsource || exit $?
+    patch -Ep0 < ${PATCH_DIR}/openjdk.diff || exit $?
     JDK_BUILD_PATH=`dirname ${OUR_CC}`:${PATH}
     env CC=zgcc CXX=zg++ PATH=${JDK_BUILD_PATH} bash configure \
         --disable-option-checking \
@@ -485,7 +478,7 @@ build_bootstrap_jdk() {
         --with-zlib=system \
         --with-milestone=fcs \
         --with-jobs=$num_jobs \
-        --with-boot-jdk=${SYS_JDK7_HOME} \
+        --with-boot-jdk=${SYS_JDK8_HOME} \
         --with-update-version=${BOOT_JDK_UPDATE_V} \
         --with-build-number=b${BOOT_JDK_BUILD_V} \
         || exit $?
@@ -522,6 +515,7 @@ build_graal() {
     hg up ${JVMCI_VERSION} || exit $?
     if [ ! -d ${wrkdir}/graal-jvmci-8/jdk1.8.0 ]; then
         ${MX} sforceimports || exit $?
+        patch -Ep0 < ${PATCH_DIR}/graal-jvmci-8.diff || exit $?
         ${MX} build || exit $?
     fi
 
@@ -647,9 +641,18 @@ build_hhvm() {
 
     # -DBUILD_HACK=OFF since we only need the PHP part of HHVM (faster build)
     # -DENABLE_EXTENSION_LZ4=OFF: https://github.com/facebook/hhvm/issues/7804
+    #
+    # XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX
+    # This fails due to Debian 9 having a libstc++ ABI bump that means C++
+    # objects built with GCC-4.2.1 won't work with system libraries built using
+    # the new ABI. This is a blocker to using Debian 9 and GCC-4.2.1 :(
+    # XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX
+    SAVE_LD_LIBRARY_PATH=${LD_LIBRARY_PATH}
+    unset LD_LIBRARY_PATH
     env LIBKRUN_DIR=${HERE}/krun/libkrun PATH=${HHVM_PATH} CC=${OUR_CC} \
         CXX=${OUR_CXX} sh -c "cmake -DCMAKE_CXX_FLAGS=-I${HERE}/krun/libkrun -DENABLE_EXTENSION_LZ4=OFF -DBUILD_HACK=OFF ." || exit $?
     ${GMAKE} -j $num_jobs VERBOSE=1 || exit $?
+    LD_LIBRARY_PATH=${SAVELD_LIBRARY_PATH}
 
     # remove the symlinks
     rm `dirname ${OUR_CC}`/gcc `dirname ${OUR_CC}`/g++ || exit $?
