@@ -16,6 +16,10 @@ consult the Krun documentation (fetched into `krun/` by `build.sh`), as there
 is a great deal of manual intervention needed to compile a tickless kernel,
 disable Intel P-states, set up `rc.local` etc.
 
+Note that the experiment is designed to run on amd64 machines running Debian 8
+or OpenBSD. Newer versions of Debian do not currently work due to a C++ ABI
+bump which would require a newer C++ compiler (a newer GCC or perhaps clang).
+
 ## Print-traced Benchmarks
 
 The paper mentions that to ensure benchmarks are "AST deterministic",  we
