@@ -28,6 +28,7 @@ check_for bash
 check_for xzdec
 check_for wget
 check_for virtualenv
+check_for zip
 
 case `uname` in
     Linux*)
