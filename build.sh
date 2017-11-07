@@ -28,6 +28,7 @@ check_for bash
 check_for xzdec
 check_for wget
 check_for virtualenv
+check_for zip
 
 case `uname` in
     Linux*)
@@ -113,6 +114,16 @@ if [ ! -d ${SYS_JDK7_HOME} ]; then
     echo "Can't find system Java 7"
     exit 1
 fi
+
+build_warmup_stats() {
+    echo "\n===> Download and build stats\n"
+    if ! [ -d "${HERE}/warmup_stats" ]; then
+        cd ${HERE} && git clone https://github.com/softdevteam/warmup_stats || exit $?
+    fi
+    if ! [ -d "${HERE}/warmup_stats/work/R-inst" ]; then
+        cd ${HERE}/warmup_stats && ./build.sh || exit $?
+    fi
+}
 
 # XXX when we stabilise, fix the krun revision.
 build_initial_krun() {
@@ -703,10 +714,10 @@ build_dacapo() {
     # rezip it. Thus the DaCapo jar we end up running is only minimally changed.
 
     cd ${wrkdir}
-    mkdir dacapo
+    mkdir -p dacapo
     cd dacapo
     wget "https://sourceforge.net/projects/dacapobench/files/9.12-bach/dacapo-9.12-bach-src.zip/download" -O dacapo-9.12-bach.src.zip || exit $?
-    mkdir src
+    mkdir -p src
     cd src
     unzip ../dacapo-9.12-bach.src.zip || exit $?
     cd benchmarks/harness/src/org/dacapo/harness/
@@ -739,7 +750,7 @@ fetch_octane() {
 }
 
 
-fetch_external_benchmarks() {
+build_external_benchmarks() {
     echo "\n===> Download and build misc benchmarks\n"
 
     if [ -f "${HERE}/benchmarks/richards/java/richards.java" ]; then return; fi
@@ -783,7 +794,8 @@ fetch_libkalibera() {
     fi
 }
 
-fetch_external_benchmarks
+build_warmup_stats
+build_external_benchmarks
 build_initial_krun
 build_dacapo
 fetch_octane

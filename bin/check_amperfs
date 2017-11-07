@@ -76,8 +76,7 @@ num_bad_iterations = 0
 num_bad_iterations_outliers = 0
 
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(
-    os.path.abspath(__file__)))))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "warmup_stats"))
 from warmup.krun_results import read_krun_results_file
 
 
