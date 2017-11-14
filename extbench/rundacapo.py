@@ -14,7 +14,8 @@ ITERATIONS = 2000
 PROCESSES = 30
 
 # broken: batik, eclipse, tomcat
-WORKING_BENCHS   = ['avrora', 'fop', 'h2', 'jython', 'luindex', 'lusearch',
+# hanging (sometimes): lusearch
+WORKING_BENCHS   = ['avrora', 'fop', 'h2', 'jython', 'luindex',
                     'pmd', 'sunflow', 'tradebeans', 'tradesoap', 'xalan']
 
 # These fail with a socket error on OpenBSD/JVM, even with the firewall off.
