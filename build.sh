@@ -117,6 +117,14 @@ fi
 
 build_warmup_stats() {
     echo "\n===> Download and build stats\n"
+    # Older OpenBSDs don't have a new enough libzip
+    if [ "`uname`" = "OpenBSD" ]; then
+        ${PYTHON} -c "import sys; sys.exit(`uname -r` < 6.2)"
+        if [ $? != 0 ]; then
+            echo "skipping warmup_stats"
+            return
+        fi
+    fi
     if ! [ -d "${HERE}/warmup_stats" ]; then
         cd ${HERE} && git clone https://github.com/softdevteam/warmup_stats || exit $?
     fi
