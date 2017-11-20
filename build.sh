@@ -125,7 +125,7 @@ build_warmup_stats() {
     fi
 }
 
-# XXX when we stabilise, fix the krun revision.
+KRUN_VERSION=warmup_experiment_results_v1.3
 build_initial_krun() {
     echo "\n===> Download and build krun\n"
     if ! [ -d "${HERE}/krun" ]; then
@@ -137,7 +137,7 @@ build_initial_krun() {
     # libkruntime can itself be built with Java support.
     #
     # Due to the above, We don't care what compiler we use at this stage.
-    cd ${HERE}/krun && ${GMAKE} || exit $?
+    cd ${HERE}/krun && git checkout ${KRUN_VERSION} && ${GMAKE} || exit $?
 }
 
 clean_krun() {
@@ -782,8 +782,7 @@ EOF
 }
 
 
-# XXX fix when benchmarking for real.
-LIBKALIBERA_VERSION=master
+LIBKALIBERA_VERSION=95a9207515139a3f49114d965a163ddd5576c857
 fetch_libkalibera() {
     echo "\n===> Fetch libkalibera\n"
     cd ${wrkdir}
