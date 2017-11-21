@@ -305,6 +305,7 @@ build_pypy() {
 # Make sure you check the tags for the stable branch. Don't use the github
 # mirror to look for tags, as it doesn't have them all.
 V8_V=5.8.283.32
+V8_TARBALL=v8_fullsource_${V8_V}_2017-11-21.tar.gz
 
 # Just take the newest hash at the time of updating.
 DEPOT_TOOLS_V=72048266d5cf68dc06c2cd20e173fbcb6f0dcfd2
@@ -315,35 +316,17 @@ build_v8() {
 
     if [ -f ${wrkdir}/v8/out/native/d8 ]; then return; fi
 
-    # The build actually requires that you clone using this git wrapper tool
-    if [ ! -d ${wrkdir}/depot_tools ]; then
-        git clone "https://chromium.googlesource.com/chromium/tools/depot_tools.git" || exit $?
+    # This tarball is the output of bin/mk_v8_source_tarball.
+    #
+    # Depot tools makes it very difficult to roll a fixed version of V8, so we
+    # do it ourselves. Look there if you want to update the V8 version.
+    if ! [ -f ${wrkdir}/${V8_TARBALL} ]; then
+        cd ${wrkdir}/ && wget ${ARCHIVE_DISTFILES}/${V8_TARBALL} || exit $?
     fi
-    cd depot_tools && git checkout ${DEPOT_TOOLS_V} || exit $?
 
-    cd ${wrkdir}
-    OLDPATH=${PATH}
-    PATH=${wrkdir}/cpython-inst/bin:${wrkdir}/depot_tools:${PATH}
-
-    # 'fetch' uses hooks to to sync heads, but the landmine script it would
-    # call is not OpenBSD aware. We do have a patch, but it is for the $V tag,
-    # not master. We use --nohooks now, then once we switch tag we apply our
-    # patch and sync the heads manually.
-    if [ ! -d ${wrkdir}/v8 ]; then
-        # V8 won't let you 'fetch' into a git sandbox
-        v8tmp=`mktemp -d`
-        cd ${v8tmp} && fetch --nohooks v8 || exit $?
-        mv ${v8tmp}/v8 ${wrkdir}
-        mv ${v8tmp}/.* ${wrkdir}
-    fi
+    tar zxf ${V8_TARBALL} || exit $?
     cd ${wrkdir}/v8 || exit $?
-    git checkout ${V8_V} || exit $?
     patch -Ep1 < ${PATCH_DIR}/v8.diff || exit $?
-
-    # depot tools fetches non-fixed versions of stuff. This script rewinds the
-    # many repositories it has fetched to fixed versions. The script we call
-    # here is auto-generated.
-    sh -x ../../bin/fix_v8_versions || exit $?
 
     cd ${wrkdir}/v8/tools/clang || exit $?
     patch -Ep1 < ${PATCH_DIR}/v8_clang.diff || exit $?
@@ -362,7 +345,6 @@ build_v8() {
 
     # remove the gcc/g++ symlinks from earlier and restore path
     rm `dirname ${OUR_CC}`/gcc `dirname ${OUR_CC}`/g++ || exit $?
-    PATH=${OLDPATH}
 }
 
 # There is a bug in the JDK8 build system which makes it incompatible with GNU make 4
