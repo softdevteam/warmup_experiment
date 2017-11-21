@@ -173,8 +173,6 @@ if sys.platform.startswith("linux"):
         "sudo systemctl stop atd",
         "sudo systemctl stop postfix",
         "sudo systemctl stop systemd-tmpfiles-clean.timer",
-        "sudo systemctl stop dbus",
-        "sudo systemctl stop dbus.socket",
         "sudo systemctl stop ssh",
     ]
 
@@ -187,11 +185,6 @@ if sys.platform.startswith("linux"):
         "sudo systemctl start atd || true",
         "sudo systemctl start postfix || true",
         "sudo systemctl start systemd-tmpfiles-clean.timer || true",
-        "sudo systemctl start dbus",
-        "sudo systemctl start dbus.socket",
-        # these will have been taken down by dbus going down
-        "sudo systemctl start console-kit-daemon",
-        "sudo systemctl start polkitd",
     ]
 elif sys.platform.startswith("openbsd"):
     PRE_EXECUTION_CMDS = [
