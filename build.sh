@@ -115,6 +115,7 @@ if [ ! -d ${SYS_JDK7_HOME} ]; then
     exit 1
 fi
 
+WARMUP_STATS_VERSION=warmup_experiment_results_v1.4
 build_warmup_stats() {
     echo "\n===> Download and build stats\n"
     # Older OpenBSDs don't have a new enough libzip
@@ -128,12 +129,13 @@ build_warmup_stats() {
     if ! [ -d "${HERE}/warmup_stats" ]; then
         cd ${HERE} && git clone https://github.com/softdevteam/warmup_stats || exit $?
     fi
+    cd ${HERE}/warmup_stats && git checkout ${WARMUP_STATS_V} || exit $?
     if ! [ -d "${HERE}/warmup_stats/work/R-inst" ]; then
         cd ${HERE}/warmup_stats && ./build.sh || exit $?
     fi
 }
 
-KRUN_VERSION=warmup_experiment_results_v1.3
+KRUN_VERSION=warmup_experiment_results_v1.4
 build_initial_krun() {
     echo "\n===> Download and build krun\n"
     if ! [ -d "${HERE}/krun" ]; then
