@@ -300,17 +300,9 @@ build_pypy() {
     rm -rf ${usession}
 }
 
-# Look here to know which V8 branch is currently stable:
-# https://omahaproxy.appspot.com/
-#
-# Note that there is often a newer tag in git than is shown on that page.
-# Make sure you check the tags for the stable branch. Don't use the github
-# mirror to look for tags, as it doesn't have them all.
+# We build V8 using a hand rolled tarball. See bin/make_v8_source_tarball.
 V8_V=5.8.283.32
-V8_TARBALL=v8_fullsource_${V8_V}_2017-11-21.tar.gz
-
-# Just take the newest hash at the time of updating.
-DEPOT_TOOLS_V=72048266d5cf68dc06c2cd20e173fbcb6f0dcfd2
+V8_TARBALL=v8_fullsource_${V8_V}_2017-12-12.tar.gz
 
 build_v8() {
     cd ${wrkdir} || exit $?
@@ -318,10 +310,6 @@ build_v8() {
 
     if [ -f ${wrkdir}/v8/out/native/d8 ]; then return; fi
 
-    # This tarball is the output of bin/mk_v8_source_tarball.
-    #
-    # Depot tools makes it very difficult to roll a fixed version of V8, so we
-    # do it ourselves. Look there if you want to update the V8 version.
     if ! [ -f ${wrkdir}/${V8_TARBALL} ]; then
         cd ${wrkdir}/ && wget ${ARCHIVE_DISTFILES}/${V8_TARBALL} || exit $?
     fi

@@ -13,15 +13,6 @@ echo "===> Working in $WRKDIR"
 
 # Look here to know which V8 branch is currently stable:
 # https://omahaproxy.appspot.com/
-#
-# Note that there is often a newer tag in git than is shown on that page.
-# Make sure you check the tags for the stable branch. Don't use the github
-# mirror to look for tags, as it doesn't have them all.
-#
-# XXX If you are updating the V8 version, you probably want to change/remove
-# the part of this script that rewinds the git versions of the dependencies.
-# Perhaps checkout the deps with the same date as the V8 release instead (then
-# you can also kill fix_v8_versions and find_v8_git_versions too)
 V8_V=5.8.283.32
 V8_TARBALL=v8_fullsource_${V8_V}_`date +%F`.tar.gz
 
@@ -32,10 +23,6 @@ if [ -f ${WRKDIR}/${V8_TARBALL} ]; then
 fi
 
 # The build requires that you clone using this git wrapper: depot_tools
-#
-# We've tried using a fixed version of depot tools in the past. It has a
-# tendency to update itself and switching of auto-update causes other
-# problems.
 if [ ! -d ${WRKDIR}/depot_tools ]; then
     git clone "https://chromium.googlesource.com/chromium/tools/depot_tools.git"
 fi
@@ -47,16 +34,14 @@ PATH=${WRKDIR}/cpython-inst/bin:${WRKDIR}/depot_tools:${PATH}
 if [ ! -d ${WRKDIR}/v8 ]; then
     # V8 won't let you 'fetch' into a git sandbox
     v8tmp=`mktemp -d`
-    cd ${v8tmp} && fetch --nohooks v8
+    cd ${v8tmp}
+    fetch v8
+    cd ${v8tmp}/v8
+    git checkout ${V8_V}
+    gclient sync
     mv ${v8tmp}/v8 ${v8tmp}/.gclient* ${WRKDIR}
+    cd ${TOPDIR}
 fi
-cd ${WRKDIR}/v8
-git checkout ${V8_V}
-
-# depot tools fetches non-fixed versions of stuff. This script rewinds the
-# many repositories it has fetched to fixed versions. The script we call
-# here is auto-generated.
-sh -x ${TOPDIR}/bin/fix_v8_versions
 
 # Make tarball smaller
 find ${WRKDIR}/v8 -name '.git' -type 'd' | xargs rm -rf
