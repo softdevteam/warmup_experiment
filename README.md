@@ -20,6 +20,29 @@ Note that the experiment is designed to run on amd64 machines running Debian 8
 or OpenBSD. Newer versions of Debian do not currently work due to a C++ ABI
 bump which would require a newer C++ compiler (a newer GCC or perhaps clang).
 
+Calling `build.sh` will also install our
+[warmup_stats](https://github.com/softdevteam/warmup_stats) code, which includes
+a number of scripts to format benchmark results as plots or tables (similar to
+those seen in the paper), and diff between results files. `warmup_stats` has a
+number of dependencies, some of which are also needed by the code in this
+repository, in particular:
+
+  * Python 2.7 - the code here is not Python 3.x ready
+  * bzip2 / bunzip2 and bzip2 (including header files)
+  * curl (including header files)
+  * gcc and make
+  * liblzma library (including header files)
+  * Python modules: numpy, pip, libcap
+  * openssl (including header files)
+  * pkg-config
+  * pcre library (including header files)
+  * readline (including header files)
+  * wget
+
+The [install instructions](https://github.com/softdevteam/warmup_stats/blob/mas
+ter/INSTALL.md) for `warmup_stats` contain more details.
+
+
 ## Print-traced Benchmarks
 
 The paper mentions that to ensure benchmarks are "AST deterministic",  we
