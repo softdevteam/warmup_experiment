@@ -696,7 +696,7 @@ build_dacapo() {
     cd ${wrkdir}
     mkdir -p dacapo
     cd dacapo
-    wget "https://sourceforge.net/projects/dacapobench/files/9.12-bach/dacapo-9.12-bach-src.zip/download" -O dacapo-9.12-bach.src.zip || exit $?
+    wget "https://sourceforge.net/projects/dacapobench/files/archive/9.12-bach/dacapo-9.12-bach-src.zip/download" -O dacapo-9.12-bach.src.zip || exit $?
     mkdir -p src
     cd src
     unzip ../dacapo-9.12-bach.src.zip || exit $?
@@ -706,7 +706,7 @@ build_dacapo() {
     ant harness || exit $?
 
     cd ${wrkdir}/dacapo
-    wget "http://downloads.sourceforge.net/project/dacapobench/9.12-bach/dacapo-9.12-bach.jar?r=https%3A%2F%2Fsourceforge.net%2Fprojects%2Fdacapobench%2Ffiles%2F&ts=1474888492&use_mirror=freefr" -O dacapo-9.12-bach.jar  || exit $?
+    wget "http://downloads.sourceforge.net/project/dacapobench/archive/9.12-bach/dacapo-9.12-bach.jar?r=https%3A%2F%2Fsourceforge.net%2Fprojects%2Fdacapobench%2Ffiles%2F&ts=1474888492&use_mirror=freefr" -O dacapo-9.12-bach.jar  || exit $?
     mkdir bin
     cd bin
     unzip ../dacapo-9.12-bach.jar || exit $?
