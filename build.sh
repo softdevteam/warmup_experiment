@@ -115,7 +115,7 @@ if [ ! -d ${SYS_JDK7_HOME} ]; then
     exit 1
 fi
 
-WARMUP_STATS_VERSION=warmup_experiment_results_v1.4
+WARMUP_STATS_VERSION=726eaa39930c9dabc0df8fcef7a42b7f6465001d
 build_warmup_stats() {
     echo "\n===> Download and build stats\n"
     # Older OpenBSDs don't have a new enough libzip
@@ -135,7 +135,7 @@ build_warmup_stats() {
     fi
 }
 
-KRUN_VERSION=warmup_experiment_results_v1.4
+KRUN_VERSION=33720eb442c504ea1a02e578aa4a8631398403f2
 build_initial_krun() {
     echo "\n===> Download and build krun\n"
     if ! [ -d "${HERE}/krun" ]; then
