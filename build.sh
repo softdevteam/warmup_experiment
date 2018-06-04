@@ -110,10 +110,10 @@ case `uname` in
     *) unknown_platform;;
 esac
 
-if [ ! -d ${SYS_JDK7_HOME} ]; then
-    echo "Can't find system Java 7"
-    exit 1
-fi
+#if [ ! -d ${SYS_JDK7_HOME} ]; then
+#    echo "Can't find system Java 7"
+#    exit 1
+#fi
 
 WARMUP_STATS_VERSION=726eaa39930c9dabc0df8fcef7a42b7f6465001d
 build_warmup_stats() {
@@ -135,7 +135,7 @@ build_warmup_stats() {
     fi
 }
 
-KRUN_VERSION=33720eb442c504ea1a02e578aa4a8631398403f2
+KRUN_VERSION=master
 build_initial_krun() {
     echo "\n===> Download and build krun\n"
     if ! [ -d "${HERE}/krun" ]; then
@@ -773,29 +773,52 @@ fetch_libkalibera() {
     fi
 }
 
+
+# XXX Uses the system clang.
+CHAKRA_CORE_VERSION=1.8.4
+CHAKRA_CORE_TARBALL=chakra_core-${CHAKRA_CORE_VERSION}.tar.gz
+CHAKRA_CORE_DIR=${wrkdir}/ChakraCore-${CHAKRA_CORE_VERSION}
+build_chakracore() {
+    echo "\n===> Fetch and build ChakraCore\n"
+    cd ${wrkdir}
+
+    if [ ! -e "${CHAKRA_CORE_TARBALL}" ]; then
+        wget https://github.com/Microsoft/ChakraCore/archive/v1.8.4.tar.gz || exit $?
+        mv v${CHAKRA_CORE_VERSION}.tar.gz ${CHAKRA_CORE_TARBALL} || exit $?
+    fi
+
+    if [ ! -d "${CHAKRA_CORE_DIR}" ]; then
+        tar zxf ${CHAKRA_CORE_TARBALL} || exit $?
+    fi
+
+    cd ${CHAKRA_CORE_DIR}
+    ./build.sh || exit $?
+}
+
 build_warmup_stats
 build_external_benchmarks
-build_initial_krun
-build_dacapo
+#build_initial_krun
+#build_dacapo
 fetch_octane
-build_gcc
-apply_gcc_lib_path
-fetch_libkalibera
-build_cpython
-build_luajit
-build_pypy
-build_v8
-build_gmake
-build_jdk
+#build_gcc
+#apply_gcc_lib_path
+#fetch_libkalibera
+#build_cpython
+#build_luajit
+#build_pypy
+#build_v8
+#build_gmake
+#build_jdk
 case `uname` in
     Linux)
-        build_bootstrap_jdk
-        build_graal
-        fetch_maven
-        build_truffleruby
-        build_hhvm
-        build_autoconf
-        build_spidermonkey
+#        build_bootstrap_jdk
+#        build_graal
+#        fetch_maven
+#        build_truffleruby
+#        build_hhvm
+#        build_autoconf
+#        build_spidermonkey
+        build_chakracore
     ;;
 esac
 clean_krun
