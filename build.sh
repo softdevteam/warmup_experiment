@@ -14,21 +14,21 @@ check_for () {
     fi
 }
 
-check_for ant
+#check_for ant
 check_for cc
 check_for g++
 check_for bunzip2
 check_for git
-check_for hg
+#check_for hg
 check_for python
-check_for svn
+#check_for svn
 check_for unzip
-check_for xml2-config
+#check_for xml2-config
 check_for bash
-check_for xzdec
+#check_for xzdec
 check_for wget
-check_for virtualenv
-check_for zip
+#check_for virtualenv
+#check_for zip
 
 case `uname` in
     Linux*)
@@ -135,7 +135,7 @@ build_warmup_stats() {
     fi
 }
 
-KRUN_VERSION=master
+KRUN_VERSION=00b2da1df2cb07adb026ea759b5da4f848bf0ab1
 build_initial_krun() {
     echo "\n===> Download and build krun\n"
     if ! [ -d "${HERE}/krun" ]; then
@@ -791,15 +791,17 @@ build_chakracore() {
         tar zxf ${CHAKRA_CORE_TARBALL} || exit $?
     fi
 
-    cd ${CHAKRA_CORE_DIR}
-    ./build.sh || exit $?
+    if [ ! -e "${CHAKRA_CORE_DIR}/out/Release/ch" ]; then
+        cd ${CHAKRA_CORE_DIR}
+        ./build.sh || exit $?
+    fi
 }
 
 build_warmup_stats
 build_external_benchmarks
-#build_initial_krun
+build_initial_krun
 #build_dacapo
-fetch_octane
+#fetch_octane
 #build_gcc
 #apply_gcc_lib_path
 #fetch_libkalibera
