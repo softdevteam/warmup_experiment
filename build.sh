@@ -789,11 +789,13 @@ build_chakracore() {
 
     if [ ! -d "${CHAKRA_CORE_DIR}" ]; then
         tar zxf ${CHAKRA_CORE_TARBALL} || exit $?
+        cd ${CHAKRA_CORE_DIR}
+        patch -Ep1 < ${PATCH_DIR}/chakracore.diff || exit $?
     fi
 
     if [ ! -e "${CHAKRA_CORE_DIR}/out/Release/ch" ]; then
         cd ${CHAKRA_CORE_DIR}
-        ./build.sh || exit $?
+        ./build.sh --libkrun=${HERE}/krun/libkrun || exit $?
     fi
 }
 

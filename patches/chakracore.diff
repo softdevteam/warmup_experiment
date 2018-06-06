@@ -1,0 +1,237 @@
+diff --git a/bin/ch/CMakeLists.txt b/bin/ch/CMakeLists.txt
+index 210ee6d4e..4903fc486 100644
+--- a/bin/ch/CMakeLists.txt
++++ b/bin/ch/CMakeLists.txt
+@@ -36,6 +36,7 @@ target_include_directories (ch
+   ../../lib/Runtime
+   ../../lib/Parser
+   ${Wasm_dep}
++  ${LIBKRUN_PATH}
+   )
+ 
+ if(STATIC_LIBRARY)
+@@ -110,6 +111,7 @@ endif()
+ target_link_libraries (ch
+   ${lib_target}
+   ${CC_LTO_ENABLED}
++  ${LIBKRUN_PATH}/libkruntime.so
+   )
+ 
+ if(NOT CC_XCODE_PROJECT)
+diff --git a/bin/ch/WScriptJsrt.cpp b/bin/ch/WScriptJsrt.cpp
+index 77d0583ec..61d7b6cc2 100644
+--- a/bin/ch/WScriptJsrt.cpp
++++ b/bin/ch/WScriptJsrt.cpp
+@@ -4,6 +4,7 @@
+ //-------------------------------------------------------------------------------------------------------
+ #include "stdafx.h"
+ #include <vector>
++#include <libkruntime.h>
+ 
+ #if defined(_X86_) || defined(_M_IX86)
+ #define CPU_ARCH_TEXT "x86"
+@@ -952,6 +953,16 @@ bool WScriptJsrt::Initialize()
+     IfFalseGo(WScriptJsrt::InstallObjectsOnObject(global, "read", LoadTextFileCallback));
+     IfFalseGo(WScriptJsrt::InstallObjectsOnObject(global, "readbuffer", LoadBinaryFileCallback));
+ 
++    // Krun stuff
++    IfFalseGo(WScriptJsrt::InstallObjectsOnObject(global, "krun_init", KrunInitCallback));
++    IfFalseGo(WScriptJsrt::InstallObjectsOnObject(global, "krun_done", KrunDoneCallback));
++    IfFalseGo(WScriptJsrt::InstallObjectsOnObject(global, "krun_measure", KrunMeasureCallback));
++    IfFalseGo(WScriptJsrt::InstallObjectsOnObject(global, "krun_get_num_cores", KrunGetNumCoresCallback));
++    IfFalseGo(WScriptJsrt::InstallObjectsOnObject(global, "krun_get_core_cycles_double", KrunGetCoreCyclesDoubleCallback));
++    IfFalseGo(WScriptJsrt::InstallObjectsOnObject(global, "krun_get_aperf_double", KrunGetAperfDoubleCallback));
++    IfFalseGo(WScriptJsrt::InstallObjectsOnObject(global, "krun_get_mperf_double", KrunGetMperfDoubleCallback));
++    IfFalseGo(WScriptJsrt::InstallObjectsOnObject(global, "krun_get_wallclock", KrunGetWallclockCallback));
++
+     JsValueRef console;
+     IfJsrtErrorFail(ChakraRTInterface::JsCreateObject(&console), false);
+     IfFalseGo(WScriptJsrt::InstallObjectsOnObject(console, "log", EchoCallback));
+@@ -1073,6 +1084,122 @@ JsValueRef __stdcall WScriptJsrt::RegisterModuleSourceCallback(JsValueRef callee
+     return returnValue;
+ }
+ 
++JsValueRef __stdcall WScriptJsrt::KrunInitCallback(JsValueRef callee, bool isConstructCall,
++    JsValueRef *arguments, unsigned short argumentCount, void *callbackState)
++{
++    krun_init();
++    return nullptr;
++}
++
++JsValueRef __stdcall WScriptJsrt::KrunDoneCallback(JsValueRef callee, bool isConstructCall,
++    JsValueRef *arguments, unsigned short argumentCount, void *callbackState)
++{
++    krun_done();
++    return nullptr;
++}
++
++JsValueRef __stdcall WScriptJsrt::KrunMeasureCallback(JsValueRef callee, bool isConstructCall,
++    JsValueRef *arguments, unsigned short argumentCount, void *callbackState)
++{
++    JsValueRef returnValue = nullptr;
++
++    if (argumentCount < 2)
++    {
++        return JS_INVALID_REFERENCE;
++    }
++
++    int idx;
++    IfJsrtErrorFail(ChakraRTInterface::JsNumberToInt(arguments[1], &idx), JS_INVALID_REFERENCE);
++    krun_measure(idx);
++    return nullptr;
++}
++
++JsValueRef __stdcall WScriptJsrt::KrunGetNumCoresCallback(JsValueRef callee, bool isConstructCall,
++    JsValueRef *arguments, unsigned short argumentCount, void *callbackState)
++{
++    int cores = krun_get_num_cores();
++    JsValueRef ret;
++    IfJsrtErrorFail(ChakraRTInterface::JsDoubleToNumber((double) cores, &ret), JS_INVALID_REFERENCE);
++    return ret;
++}
++
++JsValueRef __stdcall WScriptJsrt::KrunGetCoreCyclesDoubleCallback(JsValueRef callee, bool isConstructCall,
++    JsValueRef *arguments, unsigned short argumentCount, void *callbackState)
++{
++    JsValueRef returnValue = nullptr;
++
++    if (argumentCount < 3)
++    {
++        return JS_INVALID_REFERENCE;
++    }
++
++    int idx, core;
++    IfJsrtErrorFail(ChakraRTInterface::JsNumberToInt(arguments[1], &idx), JS_INVALID_REFERENCE);
++    IfJsrtErrorFail(ChakraRTInterface::JsNumberToInt(arguments[2], &core), JS_INVALID_REFERENCE);
++    double val = krun_get_core_cycles_double(idx, core);
++
++    JsValueRef ret;
++    IfJsrtErrorFail(ChakraRTInterface::JsDoubleToNumber(val, &ret), JS_INVALID_REFERENCE);
++    return ret;
++}
++
++JsValueRef __stdcall WScriptJsrt::KrunGetAperfDoubleCallback(JsValueRef callee, bool isConstructCall,
++    JsValueRef *arguments, unsigned short argumentCount, void *callbackState)
++{
++    JsValueRef returnValue = nullptr;
++
++    if (argumentCount < 3)
++    {
++        return JS_INVALID_REFERENCE;
++    }
++
++    int idx, core;
++    IfJsrtErrorFail(ChakraRTInterface::JsNumberToInt(arguments[1], &idx), JS_INVALID_REFERENCE);
++    IfJsrtErrorFail(ChakraRTInterface::JsNumberToInt(arguments[2], &core), JS_INVALID_REFERENCE);
++    double val = krun_get_aperf_double(idx, core);
++
++    JsValueRef ret;
++    IfJsrtErrorFail(ChakraRTInterface::JsDoubleToNumber(val, &ret), JS_INVALID_REFERENCE);
++    return ret;
++}
++
++JsValueRef __stdcall WScriptJsrt::KrunGetMperfDoubleCallback(JsValueRef callee, bool isConstructCall,
++    JsValueRef *arguments, unsigned short argumentCount, void *callbackState)
++{
++    JsValueRef returnValue = nullptr;
++
++    if (argumentCount < 3)
++    {
++        return JS_INVALID_REFERENCE;
++    }
++
++    int idx, core;
++    IfJsrtErrorFail(ChakraRTInterface::JsNumberToInt(arguments[1], &idx), JS_INVALID_REFERENCE);
++    IfJsrtErrorFail(ChakraRTInterface::JsNumberToInt(arguments[2], &core), JS_INVALID_REFERENCE);
++    double val = krun_get_mperf_double(idx, core);
++
++    JsValueRef ret;
++    IfJsrtErrorFail(ChakraRTInterface::JsDoubleToNumber(val, &ret), JS_INVALID_REFERENCE);
++    return ret;
++}
++
++JsValueRef __stdcall WScriptJsrt::KrunGetWallclockCallback(JsValueRef callee, bool isConstructCall,
++    JsValueRef *arguments, unsigned short argumentCount, void *callbackState)
++{
++    if (argumentCount < 2)
++    {
++        return JS_INVALID_REFERENCE;
++    }
++
++    int idx;
++    IfJsrtErrorFail(ChakraRTInterface::JsNumberToInt(arguments[1], &idx), JS_INVALID_REFERENCE);
++    double val = krun_get_wallclock(idx);
++
++    JsValueRef ret;
++    IfJsrtErrorFail(ChakraRTInterface::JsDoubleToNumber(val, &ret), JS_INVALID_REFERENCE);
++    return ret;
++}
++
+ JsValueRef __stdcall WScriptJsrt::LoadTextFileCallback(JsValueRef callee, bool isConstructCall, JsValueRef *arguments, unsigned short argumentCount, void *callbackState)
+ {
+     HRESULT hr = E_FAIL;
+diff --git a/bin/ch/WScriptJsrt.h b/bin/ch/WScriptJsrt.h
+index bced3319d..3affc5af9 100644
+--- a/bin/ch/WScriptJsrt.h
++++ b/bin/ch/WScriptJsrt.h
+@@ -120,6 +120,14 @@ class WScriptJsrt
+     static JsValueRef CALLBACK LoadBinaryFileCallback(JsValueRef callee, bool isConstructCall, JsValueRef *arguments, unsigned short argumentCount, void *callbackState);
+     static JsValueRef CALLBACK LoadTextFileCallback(JsValueRef callee, bool isConstructCall, JsValueRef *arguments, unsigned short argumentCount, void *callbackState);
+     static JsValueRef CALLBACK RegisterModuleSourceCallback(JsValueRef callee, bool isConstructCall, JsValueRef *arguments, unsigned short argumentCount, void *callbackState);
++    static JsValueRef CALLBACK KrunInitCallback(JsValueRef callee, bool isConstructCall, JsValueRef *arguments, unsigned short argumentCount, void *callbackState);
++    static JsValueRef CALLBACK KrunDoneCallback(JsValueRef callee, bool isConstructCall, JsValueRef *arguments, unsigned short argumentCount, void *callbackState);
++    static JsValueRef CALLBACK KrunMeasureCallback(JsValueRef callee, bool isConstructCall, JsValueRef *arguments, unsigned short argumentCount, void *callbackState);
++    static JsValueRef CALLBACK KrunGetNumCoresCallback(JsValueRef callee, bool isConstructCall, JsValueRef *arguments, unsigned short argumentCount, void *callbackState);
++    static JsValueRef CALLBACK KrunGetCoreCyclesDoubleCallback(JsValueRef callee, bool isConstructCall, JsValueRef *arguments, unsigned short argumentCount, void *callbackState);
++    static JsValueRef CALLBACK KrunGetAperfDoubleCallback(JsValueRef callee, bool isConstructCall, JsValueRef *arguments, unsigned short argumentCount, void *callbackState);
++    static JsValueRef CALLBACK KrunGetMperfDoubleCallback(JsValueRef callee, bool isConstructCall, JsValueRef *arguments, unsigned short argumentCount, void *callbackState);
++    static JsValueRef CALLBACK KrunGetWallclockCallback(JsValueRef callee, bool isConstructCall, JsValueRef *arguments, unsigned short argumentCount, void *callbackState);
+     static JsValueRef CALLBACK FlagCallback(JsValueRef callee, bool isConstructCall, JsValueRef *arguments, unsigned short argumentCount, void *callbackState);
+ 
+     static JsValueRef CALLBACK BroadcastCallback(JsValueRef callee, bool isConstructCall, JsValueRef *arguments, unsigned short argumentCount, void *callbackState);
+diff --git a/build.sh b/build.sh
+index 6996bb114..e649e69bc 100755
+--- a/build.sh
++++ b/build.sh
+@@ -46,6 +46,7 @@ PRINT_USAGE() {
+     echo " -h, --help            Show help"
+     echo "     --icu=PATH        Path to ICU include folder (see example below)"
+     echo " -j[=N], --jobs[=N]    Multicore build, allow N jobs at once."
++    echo "     --libkrun=PATH    Path to libkrun"
+     echo " -n, --ninja           Build with ninja instead of make."
+     echo "     --no-icu          Compile without unicode/icu support."
+     echo "     --no-jit          Disable JIT"
+@@ -216,6 +217,12 @@ while [[ $# -gt 0 ]]; do
+         ICU_PATH="-DICU_INCLUDE_PATH_SH=${ICU_PATH}"
+         ;;
+ 
++    --libkrun=*)
++        LIBKRUN_PATH=$1
++        eval LIBKRUN_PATH=${LIBKRUN_PATH:10}
++        LIBKRUN_PATH="-DLIBKRUN_PATH=${LIBKRUN_PATH}"
++        ;;
++
+     --libs-only)
+         LIBS_ONLY_BUILD="-DLIBS_ONLY_BUILD_SH=1"
+         ;;
+@@ -575,6 +582,11 @@ if [[ $WB_CHECK || $WB_ANALYZE ]]; then
+     fi
+ fi
+ 
++if [ "${LIBKRUN_PATH}" = "" ]; then
++    echo "Please pass --libkrun=/path/to/libkrun"
++    exit 1
++fi
++
+ # prepare DbgController.js.h
+ CH_DIR="${CHAKRACORE_DIR}/bin/ch"
+ "${CH_DIR}/jstoc.py" "${CH_DIR}/DbgController.js" controllerScript
+@@ -605,7 +617,7 @@ echo $EXTRA_DEFINES
+ cmake $CMAKE_GEN $CC_PREFIX $ICU_PATH $LTO $STATIC_LIBRARY $ARCH $TARGET_OS \
+     $ENABLE_CC_XPLAT_TRACE $EXTRA_DEFINES -DCMAKE_BUILD_TYPE=$BUILD_TYPE $SANITIZE $NO_JIT $INTL_ICU \
+     $WITHOUT_FEATURES $WB_FLAG $WB_ARGS $CMAKE_EXPORT_COMPILE_COMMANDS $LIBS_ONLY_BUILD\
+-    $VALGRIND $BUILD_RELATIVE_DIRECTORY
++    $VALGRIND $BUILD_RELATIVE_DIRECTORY ${LIBKRUN_PATH}
+ 
+ _RET=$?
+ if [[ $? == 0 ]]; then
