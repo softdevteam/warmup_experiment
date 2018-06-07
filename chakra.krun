@@ -1,0 +1,53 @@
+import os
+import sys
+import platform
+from krun.vm_defs import JavascriptVMDef
+from krun import EntryPoint
+from krun.util import run_shell_cmd
+
+def ghz(x):
+    return x * 1000 * 1000 * 1000
+
+IDLE_DIVIDE = 1000
+
+BUSY_THRESHOLDS = {
+    "bencher11": ghz(3.7) / IDLE_DIVIDE,
+}
+
+MAIL_TO = []
+
+HOSTNAME = platform.node().split(".")[0]
+DIR = os.getcwd()
+
+HEAP_LIMIT = 2097152  # 2GiB
+STACK_LIMIT = 8192  # 8 MiB
+
+IN_PROC_ITERS = 200
+N_EXECUTIONS = 1
+
+VARIANTS = {
+    "default-javascript": EntryPoint("bench.js", subdir="javascript"),
+}
+
+VMS = {
+    'ChakraCore': {
+        'vm_def': JavascriptVMDef('work/ChakraCore/out/Release/ch'),
+        'variants': ['default-javascript'],
+        'n_iterations': IN_PROC_ITERS,
+    },
+}
+
+BENCHMARKS = {
+    'binarytrees': 25,
+    'richards': 500,
+    'spectralnorm': 3,
+    'nbody': 15,
+    'fasta': 100,
+    'fannkuch_redux': 200,
+}
+
+SKIP = []
+
+if sys.platform.startswith("linux"):
+    AMPERF_RATIO_BOUNDS = 0.995, 1.005
+    AMPERF_BUSY_THRESHOLD = BUSY_THRESHOLDS[HOSTNAME]
