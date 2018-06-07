@@ -777,25 +777,26 @@ fetch_libkalibera() {
 # XXX Uses the system clang.
 CHAKRA_CORE_VERSION=1.8.4
 CHAKRA_CORE_TARBALL=chakra_core-${CHAKRA_CORE_VERSION}.tar.gz
-CHAKRA_CORE_DIR=${wrkdir}/ChakraCore-${CHAKRA_CORE_VERSION}
+CHAKRA_CORE_DIR=${wrkdir}/ChakraCore
 build_chakracore() {
     echo "\n===> Fetch and build ChakraCore\n"
     cd ${wrkdir}
 
     if [ ! -e "${CHAKRA_CORE_TARBALL}" ]; then
-        wget https://github.com/Microsoft/ChakraCore/archive/v1.8.4.tar.gz || exit $?
+        wget https://github.com/Microsoft/ChakraCore/archive/v${CHAKRA_CORE_VERSION}.tar.gz || exit $?
         mv v${CHAKRA_CORE_VERSION}.tar.gz ${CHAKRA_CORE_TARBALL} || exit $?
     fi
 
     if [ ! -d "${CHAKRA_CORE_DIR}" ]; then
         tar zxf ${CHAKRA_CORE_TARBALL} || exit $?
+        mv ChakraCore-${CHAKRA_CORE_VERSION} ${CHAKRA_CORE_DIR} || exit $?
         cd ${CHAKRA_CORE_DIR}
         patch -Ep1 < ${PATCH_DIR}/chakracore.diff || exit $?
     fi
 
     if [ ! -e "${CHAKRA_CORE_DIR}/out/Release/ch" ]; then
         cd ${CHAKRA_CORE_DIR}
-        ./build.sh --libkrun=${HERE}/krun/libkrun || exit $?
+        ./build.sh --libkrun=${HERE}/krun/libkrun -j ${num_jobs} || exit $?
     fi
 }
 
