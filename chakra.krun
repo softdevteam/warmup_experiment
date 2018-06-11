@@ -1,7 +1,7 @@
 import os
 import sys
 import platform
-from krun.vm_defs import JavascriptVMDef
+from krun.vm_defs import JavascriptVMDef, V8VMDef
 from krun import EntryPoint
 from krun.util import run_shell_cmd
 
@@ -31,7 +31,7 @@ VARIANTS = {
 
 VMS = {
     'ChakraCore': {
-        'vm_def': JavascriptVMDef('work/ChakraCore/out/Release/ch'),
+        'vm_def': JavascriptVMDef('work/ChakraCore/out/Release/ch_wrapper.sh'),
         'variants': ['default-javascript'],
         'n_iterations': IN_PROC_ITERS,
     },

@@ -89,6 +89,7 @@ fi
 HERE=`pwd`
 wrkdir=${HERE}/work
 PATCH_DIR=${HERE}/patches
+MISC_DIR=${HERE}/misc
 ARCHIVE_DISTFILES=https://archive.org/download/softdev_warmup_experiment_artefacts/distfiles/
 
 mkdir -p ${wrkdir}
@@ -797,6 +798,10 @@ build_chakracore() {
     if [ ! -e "${CHAKRA_CORE_DIR}/out/Release/ch" ]; then
         cd ${CHAKRA_CORE_DIR}
         ./build.sh --libkrun=${HERE}/krun/libkrun -j ${num_jobs} || exit $?
+    fi
+
+    if [ ! -e "${CHAKRA_CORE_DIR}/out/Release/ch/ch_wrapper.sh" ]; then
+        sed s@%%CHAKRA_DIR%%@${CHAKRA_CORE_DIR}@ ${MISC_DIR}/ch_wrapper.sh > ${CHAKRA_CORE_DIR}/out/Release/ch_wrapper.sh || exit $?
     fi
 }
 
