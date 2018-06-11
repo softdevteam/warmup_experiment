@@ -60,21 +60,20 @@ if sys.platform.startswith("linux"):
         # of the later commands below, it can cause the command to be
         # "cancelled" by systemd. Bringing the network itself down can fail in
         # the same way, so keep trying (with sleeps between).
-        "while true; do sudo systemctl stop networking; sleep 5; ping -q -c 10 %s || break; done" % PING_HOST,
+        "while true; do sudo ifdown -a; sleep 5; ping -q -c 10 %s || break; done" % PING_HOST,
         "sudo systemctl stop cron",
-        "sudo systemctl stop atd",
+        # "sudo systemctl stop atd",
         "sudo systemctl stop postfix",
         "sudo systemctl stop systemd-tmpfiles-clean.timer",
         "sudo systemctl stop ssh",
     ]
 
     POST_EXECUTION_CMDS = [
-        # The network doesn't always come up properly on debian. We keep trying
-        # until we can ping a host on the network.
-        "while true; do ping -c 3 -q %s && break; sudo systemctl stop networking; sleep 5; sudo systemctl start networking; done" % PING_HOST,
+        # Make sure the interface we need to come up is marked 'auto' in /etc/networking/interfaces!
+        "while true; do ping -c 3 -q %s && break; sudo ifdown -a; sleep 5; sudo ifup -a; done" % PING_HOST,
         "sudo systemctl start ssh || true",
         "sudo systemctl start cron || true",
-        "sudo systemctl start atd || true",
+        # "sudo systemctl start atd || true",
         "sudo systemctl start postfix || true",
         "sudo systemctl start systemd-tmpfiles-clean.timer || true",
     ]
