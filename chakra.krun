@@ -22,8 +22,8 @@ DIR = os.getcwd()
 HEAP_LIMIT = 2097152  # 2GiB
 STACK_LIMIT = 8192  # 8 MiB
 
-IN_PROC_ITERS = 200
-N_EXECUTIONS = 1
+IN_PROC_ITERS = 2000
+N_EXECUTIONS = 5
 
 VARIANTS = {
     "default-javascript": EntryPoint("bench.js", subdir="javascript"),
@@ -51,3 +51,75 @@ SKIP = []
 if sys.platform.startswith("linux"):
     AMPERF_RATIO_BOUNDS = 0.995, 1.005
     AMPERF_BUSY_THRESHOLD = BUSY_THRESHOLDS[HOSTNAME]
+
+if sys.platform.startswith("linux"):
+    # Assumes systemd is used for init.
+    PING_HOST = "bencher8.soft-dev.org"
+    PRE_EXECUTION_CMDS = [
+        # Stop network first. If an interface accepts a DHCP lease during one
+        # of the later commands below, it can cause the command to be
+        # "cancelled" by systemd. Bringing the network itself down can fail in
+        # the same way, so keep trying (with sleeps between).
+        "while true; do sudo systemctl stop networking; sleep 5; ping -q -c 10 %s || break; done" % PING_HOST,
+        "sudo systemctl stop cron",
+        "sudo systemctl stop atd",
+        "sudo systemctl stop postfix",
+        "sudo systemctl stop systemd-tmpfiles-clean.timer",
+        "sudo systemctl stop ssh",
+    ]
+
+    POST_EXECUTION_CMDS = [
+        # The network doesn't always come up properly on debian. We keep trying
+        # until we can ping a host on the network.
+        "while true; do ping -c 3 -q %s && break; sudo systemctl stop networking; sleep 5; sudo systemctl start networking; done" % PING_HOST,
+        "sudo systemctl start ssh || true",
+        "sudo systemctl start cron || true",
+        "sudo systemctl start atd || true",
+        "sudo systemctl start postfix || true",
+        "sudo systemctl start systemd-tmpfiles-clean.timer || true",
+    ]
+elif sys.platform.startswith("openbsd"):
+    PRE_EXECUTION_CMDS = [
+        "sudo /etc/rc.d/ntpd stop",
+        "sudo /etc/rc.d/cron stop",
+        "sudo /etc/rc.d/smtpd stop",
+        "sudo /etc/rc.d/pflogd stop",
+        "sudo /etc/rc.d/sshd stop",
+        "for intf in `ifconfig  | grep -e '^[a-z]' | cut -f 1 -d ':' | grep -v '^lo0$'`; do sudo ifconfig $intf down; done",
+    ]
+
+    POST_EXECUTION_CMDS = [
+        "sudo sh /etc/netstart",
+        "sudo /etc/rc.d/sshd start || true",
+        "sudo /etc/rc.d/ntpd start || true",
+        "sudo /etc/rc.d/cron start || true",
+        "sudo /etc/rc.d/smtpd start || true",
+        "sudo /etc/rc.d/pflogd start || true",
+    ]
+else:
+    assert False
+
+
+# Copy off results after each execution -- soft-dev specific!
+#
+# This assumes a no-password SSH key named 'id_rsa' is present in this
+# directory, and that the corresponding public key is installed on the correct
+# user on the remote machine.
+#
+# We allow failure, otherwise Krun will halt the experiment if (e.g.) the
+# SSH server hostname is temporarily unavailable.
+REMOTE_LOGIN = "vext01@bencher8.soft-dev.org"
+REMOTE_DIR = "research/krun_results/"
+COOKIE_PATH = os.path.join(REMOTE_DIR, HOSTNAME + ".stop")
+SSH_BATCH = "ssh -o 'BatchMode yes' -i id_rsa"
+
+SCP_CMD = ("tar czf - ${KRUN_RESULTS_FILE} ${KRUN_LOG_FILE} ${KRUN_MANIFEST_FILE} | "
+           "%s %s 'cat > %s/%s.tgz'" %
+           (SSH_BATCH, REMOTE_LOGIN, REMOTE_DIR, HOSTNAME))
+POST_EXECUTION_CMDS.append(
+    "%s || ( sleep 2; %s ) || true " % (SCP_CMD, SCP_CMD))
+
+# Crash if the "stop cookie" exists on the remote host.
+# Allows us to stop machines with no remote management.
+POST_EXECUTION_CMDS.append("{0} {1} ls {2} 2> /dev/null | grep {2}; exit $((! $?))".format(
+    SSH_BATCH, REMOTE_LOGIN, COOKIE_PATH))
