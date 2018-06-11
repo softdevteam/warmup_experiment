@@ -19,7 +19,7 @@ index 210ee6d4e..4903fc486 100644
  
  if(NOT CC_XCODE_PROJECT)
 diff --git a/bin/ch/WScriptJsrt.cpp b/bin/ch/WScriptJsrt.cpp
-index 77d0583ec..61d7b6cc2 100644
+index 77d0583ec..b884529b8 100644
 --- a/bin/ch/WScriptJsrt.cpp
 +++ b/bin/ch/WScriptJsrt.cpp
 @@ -4,6 +4,7 @@
@@ -30,7 +30,7 @@ index 77d0583ec..61d7b6cc2 100644
  
  #if defined(_X86_) || defined(_M_IX86)
  #define CPU_ARCH_TEXT "x86"
-@@ -952,6 +953,16 @@ bool WScriptJsrt::Initialize()
+@@ -952,6 +953,17 @@ bool WScriptJsrt::Initialize()
      IfFalseGo(WScriptJsrt::InstallObjectsOnObject(global, "read", LoadTextFileCallback));
      IfFalseGo(WScriptJsrt::InstallObjectsOnObject(global, "readbuffer", LoadBinaryFileCallback));
  
@@ -43,11 +43,12 @@ index 77d0583ec..61d7b6cc2 100644
 +    IfFalseGo(WScriptJsrt::InstallObjectsOnObject(global, "krun_get_aperf_double", KrunGetAperfDoubleCallback));
 +    IfFalseGo(WScriptJsrt::InstallObjectsOnObject(global, "krun_get_mperf_double", KrunGetMperfDoubleCallback));
 +    IfFalseGo(WScriptJsrt::InstallObjectsOnObject(global, "krun_get_wallclock", KrunGetWallclockCallback));
++    IfFalseGo(WScriptJsrt::InstallObjectsOnObject(global, "printErr", PrintErrCallback));
 +
      JsValueRef console;
      IfJsrtErrorFail(ChakraRTInterface::JsCreateObject(&console), false);
      IfFalseGo(WScriptJsrt::InstallObjectsOnObject(console, "log", EchoCallback));
-@@ -1073,6 +1084,122 @@ JsValueRef __stdcall WScriptJsrt::RegisterModuleSourceCallback(JsValueRef callee
+@@ -1073,6 +1085,142 @@ JsValueRef __stdcall WScriptJsrt::RegisterModuleSourceCallback(JsValueRef callee
      return returnValue;
  }
  
@@ -167,14 +168,34 @@ index 77d0583ec..61d7b6cc2 100644
 +    return ret;
 +}
 +
++JsValueRef __stdcall WScriptJsrt::PrintErrCallback(JsValueRef callee, bool isConstructCall,
++    JsValueRef *arguments, unsigned short argumentCount, void *callbackState)
++{
++    if (argumentCount < 2)
++    {
++        return JS_INVALID_REFERENCE;
++    }
++
++    AutoString s;
++    HRESULT hr = E_FAIL;
++    JsErrorCode errorCode = JsNoError;
++    IfJsrtErrorSetGo(s.Initialize(arguments[1]));
++    if (errorCode == JsNoError) {
++        fprintf(stderr, "%s\n", s.GetString());
++    }
++
++Error:
++    return nullptr;
++}
++
  JsValueRef __stdcall WScriptJsrt::LoadTextFileCallback(JsValueRef callee, bool isConstructCall, JsValueRef *arguments, unsigned short argumentCount, void *callbackState)
  {
      HRESULT hr = E_FAIL;
 diff --git a/bin/ch/WScriptJsrt.h b/bin/ch/WScriptJsrt.h
-index bced3319d..3affc5af9 100644
+index bced3319d..b10f68582 100644
 --- a/bin/ch/WScriptJsrt.h
 +++ b/bin/ch/WScriptJsrt.h
-@@ -120,6 +120,14 @@ class WScriptJsrt
+@@ -120,6 +120,15 @@ class WScriptJsrt
      static JsValueRef CALLBACK LoadBinaryFileCallback(JsValueRef callee, bool isConstructCall, JsValueRef *arguments, unsigned short argumentCount, void *callbackState);
      static JsValueRef CALLBACK LoadTextFileCallback(JsValueRef callee, bool isConstructCall, JsValueRef *arguments, unsigned short argumentCount, void *callbackState);
      static JsValueRef CALLBACK RegisterModuleSourceCallback(JsValueRef callee, bool isConstructCall, JsValueRef *arguments, unsigned short argumentCount, void *callbackState);
@@ -186,6 +207,7 @@ index bced3319d..3affc5af9 100644
 +    static JsValueRef CALLBACK KrunGetAperfDoubleCallback(JsValueRef callee, bool isConstructCall, JsValueRef *arguments, unsigned short argumentCount, void *callbackState);
 +    static JsValueRef CALLBACK KrunGetMperfDoubleCallback(JsValueRef callee, bool isConstructCall, JsValueRef *arguments, unsigned short argumentCount, void *callbackState);
 +    static JsValueRef CALLBACK KrunGetWallclockCallback(JsValueRef callee, bool isConstructCall, JsValueRef *arguments, unsigned short argumentCount, void *callbackState);
++    static JsValueRef CALLBACK PrintErrCallback(JsValueRef callee, bool isConstructCall, JsValueRef *arguments, unsigned short argumentCount, void *callbackState);
      static JsValueRef CALLBACK FlagCallback(JsValueRef callee, bool isConstructCall, JsValueRef *arguments, unsigned short argumentCount, void *callbackState);
  
      static JsValueRef CALLBACK BroadcastCallback(JsValueRef callee, bool isConstructCall, JsValueRef *arguments, unsigned short argumentCount, void *callbackState);
