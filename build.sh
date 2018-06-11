@@ -136,7 +136,7 @@ build_warmup_stats() {
     fi
 }
 
-KRUN_VERSION=a5f1202c9b99c3e8cc3ba3605e60b5b1392c2a5c
+KRUN_VERSION=chakra
 build_initial_krun() {
     echo "\n===> Download and build krun\n"
     if ! [ -d "${HERE}/krun" ]; then
@@ -802,6 +802,7 @@ build_chakracore() {
 
     if [ ! -e "${CHAKRA_CORE_DIR}/out/Release/ch/ch_wrapper.sh" ]; then
         sed s@%%CHAKRA_DIR%%@${CHAKRA_CORE_DIR}@ ${MISC_DIR}/ch_wrapper.sh > ${CHAKRA_CORE_DIR}/out/Release/ch_wrapper.sh || exit $?
+        chmod +x ${CHAKRA_CORE_DIR}/out/Release/ch_wrapper.sh
     fi
 }
 
