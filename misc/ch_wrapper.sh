@@ -1,20 +1,11 @@
 #!/bin/sh
 #
-# ChakraCore doesn't support command line arguments or environment vars, so we
-# have to write a script containing the iteration runner arguments. The script
-# is the loaded using `LoadScriptFile` inside the iteration runner.
+# ChakraCore's command line handling doesn't sit well with Krun (-end-args
+# means it cannot simply append arguments on to the end of the invocation).
+# This wrapper script exposes `ch` in a more regular way, so that we pass
+# command line arguments in the usual manner.
 
-script_out=/tmp/chakra_args.js
 script_name=$1
 shift
 
-
-echo "this.arguments = {};" > ${script_out}
-for idx in `seq 0 $(($# - 1))`; do
-    echo "this.arguments[${idx}] = \"$1\";" >> ${script_out}
-    shift
-done
-
-%%CHAKRA_DIR%%/out/Release/ch ${script_name}
-
-rm ${SCRIPT_OUT}
+%%CHAKRA_DIR%%/out/Release/ch ${script_name} -args $@ -endargs
