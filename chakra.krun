@@ -23,7 +23,7 @@ HEAP_LIMIT = 2097152  # 2GiB
 STACK_LIMIT = 8192  # 8 MiB
 
 IN_PROC_ITERS = 2000
-N_EXECUTIONS = 5
+N_EXECUTIONS = 15
 
 VARIANTS = {
     "default-javascript": EntryPoint("bench.js", subdir="javascript"),
