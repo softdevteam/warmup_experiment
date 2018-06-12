@@ -806,8 +806,8 @@ build_chakracore() {
     fi
 }
 
-build_warmup_stats
-build_external_benchmarks
+#build_warmup_stats
+#build_external_benchmarks
 build_initial_krun
 #build_dacapo
 #fetch_octane
