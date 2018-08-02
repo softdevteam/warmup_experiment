@@ -14,20 +14,20 @@ check_for () {
     fi
 }
 
-check_for ant
+#check_for ant
 check_for cc
 check_for g++
 check_for bunzip2
 check_for git
-check_for hg
+#check_for hg
 check_for python
-check_for svn
+#check_for svn
 check_for unzip
-check_for xml2-config
+#check_for xml2-config
 check_for bash
-check_for xzdec
+#check_for xzdec
 check_for wget
-check_for virtualenv
+#check_for virtualenv
 check_for zip
 
 case `uname` in
@@ -110,10 +110,10 @@ case `uname` in
     *) unknown_platform;;
 esac
 
-if [ ! -d ${SYS_JDK7_HOME} ]; then
-    echo "Can't find system Java 7"
-    exit 1
-fi
+#if [ ! -d ${SYS_JDK7_HOME} ]; then
+#    echo "Can't find system Java 7"
+#    exit 1
+#fi
 
 WARMUP_STATS_VERSION=726eaa39930c9dabc0df8fcef7a42b7f6465001d
 build_warmup_stats() {
@@ -135,7 +135,7 @@ build_warmup_stats() {
     fi
 }
 
-KRUN_VERSION=33720eb442c504ea1a02e578aa4a8631398403f2
+KRUN_VERSION=849909767bfd40042956e461d19f088ca0131613
 build_initial_krun() {
     echo "\n===> Download and build krun\n"
     if ! [ -d "${HERE}/krun" ]; then
@@ -775,27 +775,27 @@ fetch_libkalibera() {
 
 build_warmup_stats
 build_external_benchmarks
-build_initial_krun
-build_dacapo
-fetch_octane
-build_gcc
-apply_gcc_lib_path
-fetch_libkalibera
-build_cpython
-build_luajit
-build_pypy
-build_v8
-build_gmake
-build_jdk
-case `uname` in
-    Linux)
-        build_bootstrap_jdk
-        build_graal
-        fetch_maven
-        build_truffleruby
-        build_hhvm
-        build_autoconf
-        build_spidermonkey
-    ;;
-esac
+#build_initial_krun
+#build_dacapo
+#fetch_octane
+#build_gcc
+#apply_gcc_lib_path
+#fetch_libkalibera
+#build_cpython
+#build_luajit
+#build_pypy
+#build_v8
+#build_gmake
+#build_jdk
+#case `uname` in
+#    Linux)
+#        build_bootstrap_jdk
+#        build_graal
+#        fetch_maven
+#        build_truffleruby
+#        build_hhvm
+#        build_autoconf
+#        build_spidermonkey
+#    ;;
+#esac
 clean_krun

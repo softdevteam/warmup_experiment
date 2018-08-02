@@ -6,21 +6,13 @@ STEADY_STATE_EXPECTED ?= 500
 OUTLIER_THRESHOLD ?= 8
 PLOTS_NO_CPTS = plots_w${WINDOW_SIZE}.pdf
 PLOTS_WITH_CPTS = plots_w${WINDOW_SIZE}_changepoints.pdf
-ifeq (${UNAME}, Linux)
-	JAVA_HOME = ${PWD}/work/openjdk/build/linux-x86_64-normal-server-release/images/j2sdk-image
-	JAVAC = ${PWD}/work/openjdk/build/linux-x86_64-normal-server-release/jdk/bin/javac
-	JAVA_INC = ${JAVA_HOME}/include/linux
-	GCC_LIB_DIR = ${PWD}/work/gcc-inst/lib64
-endif
-ifeq (${UNAME}, OpenBSD)
-	JAVA_HOME = ${PWD}/work/openjdk/build/bsd-x86_64-normal-server-release/images/j2sdk-image
-	JAVAC = ${PWD}/work/openjdk/build/bsd-x86_64-normal-server-release/jdk/bin/javac
-	JAVA_INC = ${JAVA_HOME}/include/openbsd
-	GCC_LIB_DIR = ${PWD}/work/gcc-inst/lib
-endif
+
+JAVA_HOME = /usr/lib/jvm/java-8-openjdk-amd64/
+JAVAC = /usr/bin/javac
+JAVA_INC = ${JAVA_HOME}/include/linux
 LIBKRUN_DIR=${PWD}/krun/libkrun
 
-CC=${PWD}/work/gcc-inst/bin/zgcc
+CC=/usr/bin/gcc
 R_LD_LIBRARY_PATH=${PWD}/work/R-inst/lib/R/lib
 
 all: build-benchmarks build-startup
@@ -40,18 +32,17 @@ build-vms:
 
 build-benchmarks: build-krun
 	cd benchmarks && \
-		env LD_LIBRARY_PATH=${GCC_LIB_DIR} \
-		CC=${CC} JAVAC=${JAVAC} ${MAKE}
+		env CC=${CC} JAVAC=${JAVAC} ${MAKE}
 
 build-krun: build-vms
-	cd krun && env LD_LIBRARY_PATH=${GCC_LIB_DIR} CC=${CC} \
+	cd krun && env CC=${CC} \
 		JAVA_CPPFLAGS='"-I${JAVA_HOME}/include -I${JAVA_INC}"' \
 		JAVA_LDFLAGS=-L${JAVA_HOME}/lib \
 		JAVAC=${JAVAC} ENABLE_JAVA=1 ${MAKE}
 
 build-startup: build-krun
 	cd startup_runners && \
-		env LD_LIBRARY_PATH=${GCC_LIB_DIR} CC=${CC} \
+		env CC=${CC} \
 		JAVA_CPPFLAGS='"-I${JAVA_HOME}/include \
 		-I${JAVA_HOME}/include/linux"' \
 		JAVA_LDFLAGS=-L${JAVA_HOME}/lib \

@@ -1,0 +1,126 @@
+import os
+import sys
+import platform
+from krun.vm_defs import JavaVMDef
+from krun import EntryPoint
+from krun.util import run_shell_cmd
+
+def ghz(x):
+    return x * 1000 * 1000 * 1000
+
+# we say a core was idle if APERF was less than 1/1000th a busy count (per second)
+IDLE_DIVIDE = 1000
+
+# Rough rate of APERF increment per second.
+# On our machines, APERF happens to increment at the same rate as the base
+# frequency.
+BUSY_THRESHOLDS = {
+    "bencher5": ghz(3.6) / IDLE_DIVIDE,
+    "bencher7": ghz(3.5) / IDLE_DIVIDE,
+    "bencher11": ghz(3.7) / IDLE_DIVIDE,
+    # bencher6 not listed, as Krun doesn't support APERF on BSD
+}
+
+# Who to mail
+MAIL_TO = []
+
+HOSTNAME = platform.node().split(".")[0]
+DIR = os.getcwd()
+JKRUNTIME_DIR = os.path.join(DIR, "krun", "libkruntime", "")
+
+GCC_ENV = {"LD_LIBRARY_PATH": os.path.join(DIR, "work/gcc-inst/lib64")}
+
+HEAP_LIMIT = 4194304 # 4GiB
+STACK_LIMIT = 8192  # 8 MiB
+
+# Variant name -> EntryPoint
+VARIANTS = {
+    "default-java": EntryPoint("KrunEntry", subdir="java"),
+}
+
+ITERATIONS_ALL_VMS = 2000
+
+VMS = {
+    'HotSpot': {
+        'vm_def': JavaVMDef("jdks/hotspot/bin/java"),
+        'variants': ['default-java'],
+        'n_iterations': ITERATIONS_ALL_VMS,
+    },
+    'OpenJ9': {
+        'vm_def': JavaVMDef("jdks/openj9/bin/java"),
+        'variants': ['default-java'],
+        'n_iterations': ITERATIONS_ALL_VMS,
+    },
+}
+
+BENCHMARKS = {
+    'binarytrees': 25,
+    'richards': 500,
+    'spectralnorm': 3,
+    'nbody': 15,
+    'fasta': 100,
+    'fannkuch_redux': 200,
+}
+
+# list of "bench:vm:variant"
+SKIP = []
+
+N_EXECUTIONS = 15  # Number of fresh processes.
+
+if sys.platform.startswith("linux"):
+    AMPERF_RATIO_BOUNDS = 0.995, 1.005
+    AMPERF_BUSY_THRESHOLD = BUSY_THRESHOLDS[HOSTNAME]
+
+if sys.platform.startswith("linux"):
+    # Assumes systemd is used for init.
+    PING_HOST = "bencher8.soft-dev.org"
+    PRE_EXECUTION_CMDS = [
+        # Stop network first. If an interface accepts a DHCP lease during one
+        # of the later commands below, it can cause the command to be
+        # "cancelled" by systemd. Bringing the network itself down can fail in
+        # the same way, so keep trying (with sleeps between).
+        "while true; do sudo ifdown -a; sleep 5; ping -q -c 10 %s || break; done" % PING_HOST,
+        "sudo systemctl stop cron",
+        #"sudo systemctl stop atd",
+        "sudo systemctl stop postfix",
+        "sudo systemctl stop systemd-tmpfiles-clean.timer",
+        "sudo systemctl stop ssh",
+    ]
+
+    POST_EXECUTION_CMDS = [
+        # The network doesn't always come up properly on debian. We keep trying
+        # until we can ping a host on the network.
+        "while true; do ping -c 3 -q %s && break; sudo ifdown -a; sleep 5; sudo ifup -a; done" % PING_HOST,
+        "sudo systemctl start ssh || true",
+        "sudo systemctl start cron || true",
+        #"sudo systemctl start atd || true",
+        "sudo systemctl start postfix || true",
+        "sudo systemctl start systemd-tmpfiles-clean.timer || true",
+    ]
+else:
+    assert False
+
+
+# Copy off results after each execution -- soft-dev specific!
+#
+# This assumes a no-password SSH key named 'id_rsa' is present in this
+# directory, and that the corresponding public key is installed on the correct
+# user on the remote machine.
+#
+# We allow failure, otherwise Krun will halt the experiment if (e.g.) the
+# SSH server hostname is temporarily unavailable.
+REMOTE_LOGIN = "vext01@bencher8.soft-dev.org"
+REMOTE_DIR = "research/krun_results/"
+COOKIE_PATH = os.path.join(REMOTE_DIR, HOSTNAME + ".stop")
+SSH_BATCH = "ssh -o 'BatchMode yes' -i id_rsa"
+
+SCP_CMD = ("tar czf - ${KRUN_RESULTS_FILE} ${KRUN_LOG_FILE} ${KRUN_MANIFEST_FILE} | "
+           "%s %s 'cat > %s/%s.tgz'" %
+           (SSH_BATCH, REMOTE_LOGIN, REMOTE_DIR, HOSTNAME))
+POST_EXECUTION_CMDS.append(
+    "%s || ( sleep 2; %s ) || true " % (SCP_CMD, SCP_CMD))
+
+# Crash if the "stop cookie" exists on the remote host.
+# Allows us to stop machines with no remote management.
+POST_EXECUTION_CMDS.append("{0} {1} ls {2} 2> /dev/null | grep {2}; exit $((! $?))".format(
+    SSH_BATCH, REMOTE_LOGIN, COOKIE_PATH))
