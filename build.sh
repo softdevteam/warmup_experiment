@@ -135,7 +135,7 @@ build_warmup_stats() {
     fi
 }
 
-KRUN_VERSION=33720eb442c504ea1a02e578aa4a8631398403f2
+KRUN_VERSION=019513d7ebb0bf74a55fd31a34b92f85e80854bd
 build_initial_krun() {
     echo "\n===> Download and build krun\n"
     if ! [ -d "${HERE}/krun" ]; then
