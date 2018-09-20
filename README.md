@@ -39,8 +39,7 @@ repository, in particular:
   * readline (including header files)
   * wget
 
-The [install instructions](https://github.com/softdevteam/warmup_stats/blob/mas
-ter/INSTALL.md) for `warmup_stats` contain more details.
+The [install instructions](https://github.com/softdevteam/warmup_stats/blob/master/INSTALL.md) for `warmup_stats` contain more details.
 
 
 ## Print-traced Benchmarks
