@@ -1,0 +1,41 @@
+Except as otherwise noted (below and/or in individual files), this project is
+licensed under the Apache License, Version 2.0 <LICENSE-APACHE>
+<http://www.apache.org/licenses/LICENSE-2.0> or the MIT license <LICENSE-MIT>
+<http://opensource.org/licenses/MIT>, at your option.
+
+Copyright is retained by contributors and/or the organisations they
+represent(ed) -- this project does not require copyright assignment. Please see
+version control history for a full list of contributors. Note that some files
+may include explicit copyright and/or licensing notices.
+
+The following contributors wish to explicitly make it known that the copyright
+of their contributions is retained by an organisation:
+
+    Carl Friedrich Bolz-Tereick <cfbolz@gmx.de>: copyright retained by
+      King's College London
+    Edd Barrett <vext01@gmail.com>: copyright retained by
+      King's College London
+    Sarah Mount <sarah.mount@gmail.com>: copyright retained by
+      King's College London
+    Laurence Tratt <laurie@tratt.net>: copyright retained by
+      King's College London
+
+Benchmarks from the Computer Language Benchmarks Game are under a revised BSD
+license:
+
+  http://shootout.alioth.debian.org/license.php
+
+The Richards benchmark is in the public domain (Martin Richards confirmed
+"everything in my bench distribution is in the public domain except for the
+directory sunjava.").
+
+The Lua Richards benchmark is in the public domain:
+
+  http://www.dcc.ufrj.br/~fabiom/richards_lua.zip
+
+The Java Richards benchmark is distributed under a license from Sun
+Microsystems:
+
+  http://web.archive.org/web/20050825101121/http://www.sunlabs.com/people/mario/java_benchmarking/index.html
+
+(see also http://www.wolczko.com/java_benchmarking.html)
