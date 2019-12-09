@@ -58,28 +58,3 @@ Special notes:
  * Java benchmarks have and additional `trace_KrunEntry.java` file as well.
  * Since we cannot distribute Java Richards, a patch is required to derive the
    tracing version (`patches/trace_java_richards.diff`)
-
-
-## License Information
-
-All original files are distributed under the UPL license.
-
-Benchmarks from the Computer Language Benchmarks Game are under a revised BSD
-license:
-
-  http://shootout.alioth.debian.org/license.php
-
-The Richards benchmark is in the public domain (Martin Richards confirmed
-"everything in my bench distribution is in the public domain except for the
-directory sunjava.").
-
-The Lua Richards benchmark is in the public domain:
-
-  http://www.dcc.ufrj.br/~fabiom/richards_lua.zip
-
-The Java Richards benchmark is distributed under a license from Sun
-Microsystems:
-
-  http://web.archive.org/web/20050825101121/http://www.sunlabs.com/people/mario/java_benchmarking/index.html
-
-(see also http://www.wolczko.com/java_benchmarking.html)
